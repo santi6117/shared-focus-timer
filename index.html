@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shared Focus Timer</title>
+
+  <!--
+    ============================================================
+    Shared Focus Timer — index.html
+    ============================================================
+    A focus timer for two people. Each person runs their OWN timer
+    independently; a small corner widget shows whether the other person's
+    timer is currently running.
+
+    This single file contains everything: markup, styles, and all logic.
+    No build step, no npm, no bundler — Firebase loads from <script> tags.
+    That is a deliberate constraint (roadmap §4): this project introduces
+    exactly one new concept (real-time sync), not five.
+
+    Sections below, in order:
+      1. STYLES        — the whole visual layer (roadmap §6b)
+      2. MARKUP        — background layer, presence widget, timer, stats
+      3. CONFIG + IDENTITY — which slot in the shared tree this browser owns
+      4. AUTH          — silent anonymous sign-in
+      5. TIMER + SYNC  — the actual app logic
+      6. STATS         — the session log and the day/week/lifetime widget
+
+    Data model lives in roadmap.md §4. Short version:
+      room/<person>     : live timer state, for the presence widget
+      sessions/<person> : append-only log of completed sessions, for stats
+    Nobody ever writes into the other person's subtree.
+  -->
+
+  <style>
+    /* ============================================================
+       1. STYLES
+       ============================================================
+       Direction chosen 2026-09-07: "warm & cozy" — soft paper tones,
+       rounded surfaces, gentle shadows. This is a shared space between
+       two people, not a productivity dashboard, and the palette is doing
+       that work.
+
+       Every color is a custom property here at the top so the whole look
+       can be retuned from one block instead of hunting through rules. */
+    :root {
+      /* --- The animated background (roadmap §6c) --- Built 2026-09-07.
+         Three knobs, and they are the whole control surface. Do NOT build a
+         picker or an upload flow; that scope is deferred to v2 (roadmap §7).
+
+         --bg-base  shows through anywhere the colour blobs don't reach. It is
+                    a warm amber rather than a pale cream on purpose: a pale
+                    base reads as a bald spot if a blob ever drifts off it,
+                    while a saturated one just reads as more background.
+         --bg-cycle is the master speed. Every blob's loop is a multiple of
+                    this, so retiming the whole animation is one number. 90s
+                    reads as "it changed while I wasn't looking" rather than
+                    as motion — deliberate for a focus app, where anything
+                    visibly moving in peripheral vision costs attention.
+         --bg-veil  is how much pale wash sits over the middle, where the
+                    timer card is. 0 = full-strength colour edge to edge,
+                    1 = the centre goes nearly white. */
+      --bg-base: #f0c9a2;
+      --bg-cycle: 30s;
+      /* --bg-tour is the SECOND time knob, added 2026-09-07 after the first
+         version read as too stationary. --bg-cycle is how fast the colours
+         churn in place; --bg-tour is how long one lap around the screen
+         takes. They're independent on purpose — churning fast while
+         travelling slowly is a completely different feel from the reverse,
+         and one number couldn't express both. */
+      --bg-tour: 150s;
+      --bg-veil: 0.5;
+
+      --surface: #fffaf3;          /* cards and widgets */
+      --surface-sunk: #f7efe4;     /* inputs, insets */
+      --ink: #3d332b;              /* primary text */
+      --ink-soft: #97877a;         /* labels, secondary text */
+      --accent: #d6713e;           /* terracotta: the one "loud" color */
+      --accent-ink: #fffaf3;       /* text sitting on the accent */
+      --line: #e8dac8;             /* hairline borders */
+
+      --radius: 20px;
+      --radius-sm: 12px;
+      --shadow: 0 10px 30px rgba(90, 62, 40, 0.10);
+      --shadow-sm: 0 4px 14px rgba(90, 62, 40, 0.08);
+
+      --font: "Segoe UI", ui-rounded, system-ui, -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      font-family: var(--font);
+      color: var(--ink);
+      background: var(--surface-sunk);
+    }
+
+    /* ---- The background (roadmap §6c) ----
+       Built 2026-09-07 from Santi's reference image: a smeared rainbow that
+       swirls continuously. It stays its own element rather than a background
+       on <body> so it can be swapped or faded independently of everything
+       drawn on top of it.
+
+       Three stacked layers inside the one element:
+         1. eight soft-edged colour blobs, each drifting on its own loop
+         2. ::before — a pale wash over the middle, so the timer card sits on
+            calm ground while the edges keep full colour
+         3. ::after  — film grain, which is what stops a gradient this large
+            from banding into visible stripes on a laptop panel
+
+       THE ONE REAL DECISION HERE: there is no blur filter anywhere. The
+       obvious way to melt blobs together is filter: blur(), and it looks
+       great, but a fullscreen blur is recomputed every frame for as long as
+       the blobs are moving — and this page is meant to sit open for hours at
+       a time. Long radial-gradient falloffs (solid colour → fully
+       transparent across 68% of each blob's radius) give the same melted
+       look for free. The only property being animated is `transform`, which
+       the compositor handles on the GPU without waking the main thread. */
+    #backgroundLayer {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      overflow: hidden;          /* blobs are deliberately larger than the
+                                    viewport; this clips the overhang */
+      background: var(--bg-base);
+    }
+
+    /* Each colour is TWO nested elements, and the nesting is the whole
+       trick. The outer .orbit is a zero-size point pinned to the centre of
+       the screen that does nothing but rotate. The .blob inside it is
+       offset sideways by --r, so rotating the parent carries the blob
+       around a circle of that radius. Nested transforms compose, so the
+       blob can run its own animation at the same time without the two
+       fighting over the single `transform` property.
+
+       This replaced a version where each blob just swung back and forth on
+       a short line. That used animation-direction: alternate, which plays a
+       keyframe forward then backward forever — so a blob could only ever be
+       a pendulum. It moved, but it could never go anywhere, and orange sat
+       in the left corner permanently. Rotation is a closed loop by nature:
+       360° returns exactly to 0°, so it tours without ever needing to
+       retrace itself.
+
+       WHY THIS DOESN'T TURN TO MUD: complementary colours overlapping at
+       equal strength average to grey, so a naive "let everything roam" would
+       silt up within a minute. Here all eight orbits share one path and
+       differ only in start angle, set by a negative animation-delay — which
+       means the blobs are beads on a track, and neighbours stay neighbours.
+       They're threaded onto it in spectral order, so the colour wheel is
+       literally mapped onto the circle: hue neighbours sit next to each
+       other and complements stay half a lap apart. Red meeting pink where
+       the ring closes is fine, because they're hue neighbours too.
+
+       The cool half then laps 18% slower, so the two halves slide against
+       each other over several minutes instead of rotating as one rigid
+       body. That's the one source of warm-on-cool overlap, and because it's
+       always sliding, any muddiness is transient rather than permanent. */
+    .orbit {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 0;
+      height: 0;
+      animation: tour var(--bg-tour) linear infinite;
+      /* linear, not ease-in-out: easing here would make the whole wheel
+         visibly speed up and slow down once a lap, which reads as a machine
+         cycling rather than as drift. */
+    }
+
+    @keyframes tour {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* Start angles, one eighth of a lap apart. A negative animation-delay
+       starts an animation already partway through rather than postponing
+       it, which is what spaces the blobs around the track at load. */
+    .o1 { animation-delay: calc(var(--bg-tour) * -0.000); }
+    .o2 { animation-delay: calc(var(--bg-tour) * -0.125); }
+    .o3 { animation-delay: calc(var(--bg-tour) * -0.250); }
+    .o4 { animation-delay: calc(var(--bg-tour) * -0.375); }
+
+    /* The cool half: slower lap, and delays scaled to match so they still
+       start spread across the far side of the ring. */
+    .o5, .o6, .o7, .o8 { animation-duration: calc(var(--bg-tour) * 1.18); }
+    .o5 { animation-delay: calc(var(--bg-tour) * -0.590); }
+    .o6 { animation-delay: calc(var(--bg-tour) * -0.738); }
+    .o7 { animation-delay: calc(var(--bg-tour) * -0.885); }
+    .o8 { animation-delay: calc(var(--bg-tour) * -1.033); }
+
+    /* The blob itself. --r is its distance from centre, --s its diameter.
+       The negative margins re-centre it on its own orbit point, since
+       left/top would otherwise place its top-left corner there. Margins
+       rather than a translate, so `transform` stays free for the wobble.
+
+       Radii vary from 24 to 46vmax deliberately: eight blobs at one radius
+       would read as a clean spinning ring, which looks mechanical. Uneven
+       radii make it a loose swarm that happens to circulate.
+
+       Gradients end at the same hex with alpha 00, never at `transparent` —
+       `transparent` is rgba(0,0,0,0), so fading to it drags the ramp
+       through black and leaves a grey halo. */
+    .orbit > .blob {
+      position: absolute;
+      left: var(--r);
+      top: 0;
+      width: var(--s);
+      height: var(--s);
+      margin-left: calc(var(--s) / -2);
+      margin-top: calc(var(--s) / -2);
+      border-radius: 50%;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+      animation-direction: alternate;  /* fine HERE: the wobble is meant to
+                                          be a pendulum. Travel is the
+                                          orbit's job, not this one's. */
+      will-change: transform;
+    }
+
+    /* Spectral order around the ring — this ordering is load-bearing, not
+       cosmetic. Reshuffling these colours is what would make it muddy. */
+    .b1 { --r: 38vmax; --s: 100vmax; animation-name: wob-a; animation-duration: calc(var(--bg-cycle) * 1.00);
+          background: radial-gradient(circle, #f0424f 0%, #f0424fcc 30%, #f0424f00 68%); }
+    .b2 { --r: 30vmax; --s: 92vmax;  animation-name: wob-b; animation-duration: calc(var(--bg-cycle) * 1.22);
+          background: radial-gradient(circle, #fb8a2b 0%, #fb8a2bcc 30%, #fb8a2b00 68%); }
+    .b3 { --r: 44vmax; --s: 84vmax;  animation-name: wob-c; animation-duration: calc(var(--bg-cycle) * 0.90);
+          background: radial-gradient(circle, #f9cd35 0%, #f9cd35cc 30%, #f9cd3500 68%); }
+    .b4 { --r: 26vmax; --s: 88vmax;  animation-name: wob-d; animation-duration: calc(var(--bg-cycle) * 1.35);
+          background: radial-gradient(circle, #7ec95a 0%, #7ec95acc 30%, #7ec95a00 68%); }
+    .b5 { --r: 40vmax; --s: 92vmax;  animation-name: wob-b; animation-duration: calc(var(--bg-cycle) * 1.10);
+          background: radial-gradient(circle, #2eb9a6 0%, #2eb9a6cc 30%, #2eb9a600 68%); }
+    .b6 { --r: 32vmax; --s: 96vmax;  animation-name: wob-a; animation-duration: calc(var(--bg-cycle) * 1.45);
+          background: radial-gradient(circle, #4a9ae4 0%, #4a9ae4cc 30%, #4a9ae400 68%); }
+    .b7 { --r: 46vmax; --s: 88vmax;  animation-name: wob-c; animation-duration: calc(var(--bg-cycle) * 1.15);
+          background: radial-gradient(circle, #8a7ce2 0%, #8a7ce2cc 30%, #8a7ce200 68%); }
+    .b8 { --r: 24vmax; --s: 78vmax;  animation-name: wob-d; animation-duration: calc(var(--bg-cycle) * 0.95);
+          background: radial-gradient(circle, #e767b2 0%, #e767b2cc 30%, #e767b200 68%); }
+
+    /* The wobble: small local churn layered on top of the lap. Each blob
+       also scales slightly, which is what makes colours bleed INTO each
+       other rather than slide past each other. Four patterns across eight
+       blobs, every blob on its own period — periods that don't divide
+       evenly into each other or into the lap, so the composition never
+       repeats a frame you'd recognise. */
+    @keyframes wob-a {
+      from { transform: translate3d(0, 0, 0) scale(1); }
+      to   { transform: translate3d(8vmax, 6vmax, 0) scale(1.14); }
+    }
+    @keyframes wob-b {
+      from { transform: translate3d(0, 0, 0) scale(1.10); }
+      to   { transform: translate3d(-9vmax, 7vmax, 0) scale(1); }
+    }
+    @keyframes wob-c {
+      from { transform: translate3d(0, 0, 0) scale(1); }
+      to   { transform: translate3d(7vmax, -8vmax, 0) scale(1.12); }
+    }
+    @keyframes wob-d {
+      from { transform: translate3d(0, 0, 0) scale(1.08); }
+      to   { transform: translate3d(-6vmax, -6vmax, 0) scale(1); }
+    }
+
+    /* The centre wash. Sits above the blobs, below everything in the markup.
+       Without it the timer card floats on full-saturation colour and the
+       corner widgets have to fight for contrast; with it the edges stay as
+       vivid as the reference and only the middle calms down. */
+    #backgroundLayer::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 44% 40% at 50% 48%,
+                    rgba(255, 250, 243, var(--bg-veil)) 0%,
+                    rgba(255, 250, 243, calc(var(--bg-veil) * 0.45)) 52%,
+                    rgba(255, 250, 243, 0) 82%);
+    }
+
+    /* Film grain. Not decoration — a gradient covering a whole screen has so
+       few distinct colours per inch that 8-bit panels render the blends as
+       visible stripes, and a speckle at this scale breaks the stripes up.
+       It's an inline SVG turbulence filter rather than an image file: the
+       browser rasterises it once and tiles the result, so it costs one
+       small paint and no extra HTTP request, and the file stays single. */
+    #backgroundLayer::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.42;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>");
+      background-size: 220px 220px;
+    }
+
+    /* Some people get motion sickness or migraines from drifting backgrounds,
+       and the OS already knows who they are. Freezing the blobs leaves the
+       composition intact — it just becomes a still gradient. */
+    @media (prefers-reduced-motion: reduce) {
+      #backgroundLayer .orbit,
+      #backgroundLayer .blob { animation: none; }
+    }
+
+    /* ---- Center stage: the timer itself ---- */
+    /* Layout decided 2026-09-07: timer centered, everything else pinned to
+       corners. Rejected the alternative (one card holding timer + presence
+       + stats stacked) because it leaves no open middle for a background
+       to actually show through — and the background is a planned feature. */
+    .stage {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 2rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .timer-card {
+      padding: 2.5rem 3rem 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+      min-width: 320px;
+    }
+
+    .eyebrow {
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin: 0;
+    }
+
+    /* font-variant-numeric: tabular-nums stops the digits from jittering
+       horizontally as they change — with a number this large, proportional
+       digits are visibly unstable once per second. */
+    #timerDisplay {
+      font-size: 5.5rem;
+      line-height: 1;
+      font-weight: 300;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+      transition: color 200ms ease;
+    }
+
+    /* The zero cue (roadmap §9, decided 2026-09-07): once the session ends
+       the timer keeps counting UPWARD in the accent color. Chosen over a
+       page-wide flash because it still tells you something useful if you
+       looked away when it fired — namely how long ago you finished. */
+    #timerDisplay.overrun { color: var(--accent); }
+
+    .duration-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.9rem;
+      color: var(--ink-soft);
+    }
+
+    #durationInput {
+      width: 4.5rem;
+      padding: 0.4rem 0.6rem;
+      font: inherit;
+      font-size: 1rem;
+      color: var(--ink);
+      text-align: center;
+      background: var(--surface-sunk);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+    }
+    #durationInput:disabled { opacity: 0.45; }
+
+    .controls { display: flex; gap: 0.6rem; }
+
+    button {
+      font: inherit;
+      font-size: 0.95rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface-sunk);
+      color: var(--ink);
+      cursor: pointer;
+      transition: transform 120ms ease, background 160ms ease;
+    }
+    button:hover { background: #f0e5d6; }
+    button:active { transform: translateY(1px); }
+
+    #startBtn {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--accent-ink);
+    }
+    #startBtn:hover { background: #ad6440; }
+
+    /* ---- Top-right: presence ---- */
+    #presenceWidget {
+      position: fixed;
+      top: 1.25rem;
+      right: 1.25rem;
+      padding: 0.7rem 1.1rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.9rem;
+    }
+
+    /* Two states only, on purpose (roadmap §5a) — a paused timer, a closed
+       tab and an offline laptop are all "not working" and look identical. */
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--line);
+      flex: none;
+    }
+    .dot.live { background: var(--accent); }
+
+    #presenceName { color: var(--ink-soft); }
+    #presenceState { font-variant-numeric: tabular-nums; }
+
+    /* ---- Category picker (in the timer card) ---- */
+    /* Free text, not a configured list. The set of categories is DERIVED
+       from what gets typed rather than declared in a settings screen, so
+       there is no setup step standing between opening the page and starting
+       work, and the vocabulary evolves on its own instead of going stale.
+       It also makes the two people's category sets independent for free:
+       each person's list is just whatever that person typed. */
+    .category-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.55rem;
+      width: 100%;
+    }
+
+    #categoryInput {
+      width: 100%;
+      max-width: 15rem;
+      padding: 0.45rem 0.8rem;
+      font: inherit;
+      font-size: 0.9rem;
+      color: var(--ink);
+      text-align: center;
+      background: var(--surface-sunk);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+    }
+    #categoryInput::placeholder { color: var(--ink-soft); }
+
+    /* Hidden until there are at least two distinct categories — a chip row
+       containing one chip is noise on day one. */
+    #categoryChips {
+      display: none;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.35rem;
+      max-width: 18rem;
+    }
+    #categoryChips.visible { display: flex; }
+
+    .cat-chip {
+      font: inherit;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--ink-soft);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .cat-chip:hover { background: var(--surface-sunk); color: var(--ink); }
+    .cat-chip .swatch { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+    /* ---- Bottom-left dock: stats + category breakdown ---- */
+    /* Both widgets are bottom-anchored siblings in one row. Below 700px they
+       stack instead, because two chips plus the timer card starts crowding
+       the centre of the page on a narrow window. */
+    #cornerDock {
+      position: fixed;
+      bottom: 1.25rem;
+      left: 1.25rem;
+      display: flex;
+      align-items: flex-end;
+      gap: 0.6rem;
+    }
+    @media (max-width: 700px) {
+      #cornerDock { flex-direction: column; align-items: flex-start; }
+    }
+
+    /* Collapsed by default and expands on click (decided 2026-09-07). The
+       always-visible alternative puts three numbers on screen competing with
+       the timer; this keeps one small number out of the way. */
+    #statsWidget {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      font-size: 0.9rem;
+    }
+
+    #statsChip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1rem;
+      cursor: pointer;
+      user-select: none;
+      background: none;
+      border: none;
+      border-radius: 0;
+      width: 100%;
+      text-align: left;
+    }
+    #statsChip:hover { background: var(--surface-sunk); }
+
+    .chip-label { color: var(--ink-soft); }
+    #chipValue { font-variant-numeric: tabular-nums; }
+    #chipCaret { color: var(--ink-soft); font-size: 0.7rem; transition: transform 160ms ease; }
+    #statsWidget.expanded #chipCaret { transform: rotate(180deg); }
+
+    /* Panel sits ABOVE the chip in the DOM. The widget is pinned by its
+       bottom edge, so expanding it grows the box upward — putting the panel
+       first means the chip stays exactly where it was and the detail unfolds
+       above it, instead of the chip itself sliding up the screen. */
+    #statsPanel {
+      display: none;
+      padding: 0.9rem 1rem 0.25rem;
+      border-bottom: 1px solid var(--line);
+    }
+    #statsWidget.expanded #statsPanel { display: block; }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 2rem;
+      padding: 0.35rem 0;
+    }
+    .stat-row span:first-child { color: var(--ink-soft); }
+    .stat-row span:last-child { font-variant-numeric: tabular-nums; }
+
+    .stat-note {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--line);
+      margin-bottom: 0.15rem;
+      font-size: 0.78rem;
+      color: var(--ink-soft);
+    }
+
+    /* ---- Category breakdown widget ---- */
+    #breakdownWidget {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      font-size: 0.9rem;
+      min-width: 11.5rem;
+    }
+
+    #breakdownChip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1rem;
+      cursor: pointer;
+      user-select: none;
+      background: none;
+      border: none;
+      border-radius: 0;
+      width: 100%;
+      text-align: left;
+    }
+    #breakdownChip:hover { background: var(--surface-sunk); }
+    #breakdownCaret { color: var(--ink-soft); font-size: 0.7rem; transition: transform 160ms ease; }
+    #breakdownWidget.expanded #breakdownCaret { transform: rotate(180deg); }
+
+    #breakdownPanel {
+      display: none;
+      padding: 0.9rem 1rem 0.25rem;
+      border-bottom: 1px solid var(--line);
+    }
+    #breakdownWidget.expanded #breakdownPanel { display: block; }
+
+    /* The proportion bar is load-bearing, not decoration. A top three on its
+       own is dishonest — a week spread over six categories renders as though
+       those three were the whole week. Every category gets a segment here,
+       with everything outside the top three collapsed into one neutral
+       remainder, so the shares stay truthful at a glance. */
+    #shareBar {
+      display: flex;
+      height: 6px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--surface-sunk);
+      margin-bottom: 0.7rem;
+    }
+    #shareBar div { height: 100%; }
+
+    .cat-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.28rem 0;
+    }
+    .cat-row .swatch { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+    .cat-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cat-row .time { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+
+    #breakdownMore {
+      font-size: 0.78rem;
+      color: var(--ink-soft);
+      padding-top: 0.15rem;
+    }
+
+    /* Period selector. Cycles Today -> This week -> All time. Kept separate
+       from the chip so one click isn't overloaded with two meanings. */
+    #periodToggle {
+      font: inherit;
+      font-size: 0.75rem;
+      margin-top: 0.55rem;
+      margin-bottom: 0.15rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface-sunk);
+      color: var(--ink-soft);
+      cursor: pointer;
+    }
+    #periodToggle:hover { color: var(--ink); }
+
+    /* ---- Debug strip ---- */
+    /* Kept visible but quiet: the anonymous UID has to be copied into the
+       Firebase security rules by hand (roadmap §4), and digging it out of
+       devtools is a worse experience than a small line of gray text. */
+    #uidDebug {
+      position: fixed;
+      bottom: 0.6rem;
+      right: 1rem;
+      font-size: 0.68rem;
+      color: var(--ink-soft);
+      opacity: 0.7;
+      font-family: ui-monospace, Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       2. MARKUP
+       ============================================================ -->
+
+  <!-- The background (roadmap §6c). Eight colour blobs; the centre wash and
+       the film grain are pseudo-elements on the layer itself, so nothing
+       else in the markup has to know the background exists. aria-hidden
+       because there is nothing here for a screen reader to say. -->
+  <div id="backgroundLayer" aria-hidden="true">
+    <span class="orbit o1"><span class="blob b1"></span></span>
+    <span class="orbit o2"><span class="blob b2"></span></span>
+    <span class="orbit o3"><span class="blob b3"></span></span>
+    <span class="orbit o4"><span class="blob b4"></span></span>
+    <span class="orbit o5"><span class="blob b5"></span></span>
+    <span class="orbit o6"><span class="blob b6"></span></span>
+    <span class="orbit o7"><span class="blob b7"></span></span>
+    <span class="orbit o8"><span class="blob b8"></span></span>
+  </div>
+
+  <!-- Presence: whether the OTHER person is working right now. -->
+  <div id="presenceWidget">
+    <span class="dot" id="presenceDot"></span>
+    <span id="presenceName">&nbsp;</span>
+    <span id="presenceState">connecting…</span>
+  </div>
+
+  <main class="stage">
+    <section class="card timer-card">
+      <p class="eyebrow" id="stageLabel">Focus </p>
+      <div id="timerDisplay">25:00</div>
+
+      <!-- Editable only while the timer isn't running (roadmap §5a). -->
+      <label class="duration-row">
+        Minutes
+        <input id="durationInput" type="number" min="1" max="600" value="25" />
+      </label>
+
+      <div class="controls">
+        <button id="startBtn" type="button">Start</button>
+        <button id="pauseBtn" type="button">Pause</button>
+        <button id="resetBtn" type="button">Reset</button>
+      </div>
+
+      <!-- Free-text category. Editable at any time, including mid-session:
+           the category is not part of the timing math, so changing it costs
+           nothing and there is no "started on the wrong one" failure. -->
+      <div class="category-row">
+        <input id="categoryInput" type="text" maxlength="40"
+               placeholder="working on…" autocomplete="off" />
+        <div id="categoryChips"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom-left dock. Chips are <button>s rather than <div>s so they are
+       keyboard reachable for free. -->
+  <div id="cornerDock">
+  <div id="statsWidget">
+    <div id="statsPanel">
+      <div class="stat-row"><span>Today</span><span id="statToday">—</span></div>
+      <div class="stat-row"><span>This week</span><span id="statWeek">—</span></div>
+      <div class="stat-row"><span>All time</span><span id="statAll">—</span></div>
+      <div class="stat-note" id="statCount">no sessions logged yet</div>
+    </div>
+    <button id="statsChip" type="button">
+      <span class="chip-label">Today</span>
+      <span id="chipValue">—</span>
+      <span id="chipCaret">▲</span>
+    </button>
+  </div>
+
+  <div id="breakdownWidget">
+    <div id="breakdownPanel">
+      <div id="shareBar"></div>
+      <div id="breakdownRows"></div>
+      <div id="breakdownMore"></div>
+      <button id="periodToggle" type="button">This week</button>
+    </div>
+    <button id="breakdownChip" type="button">
+      <span class="chip-label">Split</span>
+      <span id="breakdownTop">—</span>
+      <span id="breakdownCaret">▲</span>
+    </button>
+  </div>
+  </div>
+
+  <div id="uidDebug"></div>
+
+  <!-- ============================================================
+       3. CONFIG + IDENTITY
+       ============================================================ -->
+
+  <!-- Firebase SDKs, loaded like any other script — no terminal involved. -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5QPIpjkOymkcVViRQ2W2ZZ-IG_6rl_zc",
+      authDomain: "shared-focus-timer.firebaseapp.com",
+      projectId: "shared-focus-timer",
+      storageBucket: "shared-focus-timer.firebasestorage.app",
+      messagingSenderId: "757153186313",
+      appId: "1:757153186313:web:063af68600b38538cfaed8",
+      measurementId: "G-TWR6B31MP2"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ---- Identity: which slot does THIS browser control? ----
+    // Chosen over hardcoding two edited copies of the file: a URL parameter,
+    // read once and cached, so both people run the byte-identical file.
+    // Visit once as ?me=santi or ?me=kristina; localStorage remembers after.
+    function resolveRole() {
+      const fromUrl = new URLSearchParams(window.location.search).get("me");
+      if (fromUrl === "santi" || fromUrl === "kristina") {
+        localStorage.setItem("myRole", fromUrl);
+        return fromUrl;
+      }
+      const stored = localStorage.getItem("myRole");
+      if (stored === "santi" || stored === "kristina") return stored;
+
+      document.body.innerHTML =
+        "<div style='font-family: system-ui; padding: 3rem; color:#3d332b;'>" +
+        "Open this page once with <code>?me=santi</code> or <code>?me=kristina</code> " +
+        "on the end of the URL — it remembers after that.</div>";
+      throw new Error("No role set for this browser yet.");
+    }
+
+    const ME = resolveRole();
+    const THEM = ME === "santi" ? "kristina" : "santi";
+    const DISPLAY_NAME = { santi: "Santi", kristina: "Kristina" };
+
+    const myRef = db.ref("room/" + ME);
+    const theirRef = db.ref("room/" + THEM);
+
+    // Append-only session log for the stat tracker (roadmap §6a). Lives in a
+    // sibling subtree rather than inside room/<person> so the presence
+    // listener keeps receiving a tiny fixed-size object on every tick
+    // instead of re-downloading the whole history alongside it.
+    const sessionsRef = db.ref("sessions/" + ME);
+
+    // The category vocabulary — one entry per distinct category this person
+    // has used. History stores the KEY; this map stores the presentable
+    // label and colour. That split is what makes renames free: changing a
+    // label edits one field here and every past session follows, without
+    // any record in the append-only log ever being rewritten.
+    const categoriesRef = db.ref("categories/" + ME);
+
+    // localStorage is per-BROWSER, not per-tab, so two test windows on one
+    // machine (?me=santi and ?me=kristina) would otherwise share one saved
+    // timer. Namespacing by role keeps the simulated two-person test honest.
+    const STORAGE_KEY = "timerData:" + ME;
+  </script>
+
+  <script>
+    // ============================================================
+    // 4. AUTH
+    // ============================================================
+    // Silent anonymous sign-in — no login screen, no email, no password.
+    // Needed because the database URL is visible in page source: without
+    // `auth != null` in the security rules, anyone who views source could
+    // write into the room. Everything database-touching waits for this
+    // callback, since the eventual rules reject a signed-out client.
+    firebase.auth().onAuthStateChanged((user) => {
+      if (!user) return;
+      document.getElementById("uidDebug").textContent =
+        ME + " · uid " + user.uid;
+      initApp();
+    });
+
+    firebase.auth().signInAnonymously().catch((err) => {
+      console.error("Anonymous sign-in failed:", err);
+      document.getElementById("presenceState").textContent = "sign-in failed";
+    });
+  </script>
+
+  <script>
+    // ============================================================
+    // 5. TIMER + SYNC   /   6. STATS
+    // ============================================================
+    function initApp() {
+
+      // A start that lasted a couple of seconds is a misclick, not work.
+      // Below this threshold nothing is written to the session log — it
+      // keeps the history from filling with noise that skews nothing but
+      // the session count.
+      const MIN_LOGGABLE_MS = 5000;
+
+      // ---- Category vocabulary state (roadmap §6d) ----
+      // Declared HERE, at the top of initApp, rather than down in section 7
+      // alongside the rest of the category code. `const` and `let` do not
+      // hoist their VALUES — reading one above its declaration line throws a
+      // ReferenceError rather than giving undefined. logSession() reads
+      // UNCATEGORIZED_KEY and catMap, and logSession() can fire during
+      // startup (a run that ended while the page was gone), which is long
+      // before section 7 has run.
+      //
+      // That was the 2026-09-10 bug: reopening the page with a running timer
+      // already past zero threw here, the throw escaped initApp, and every
+      // line after the first render — the button listeners included — never
+      // executed. Dead buttons, no logged session, and a saved state that
+      // reproduced the crash on every refresh. Four declarations moved up is
+      // the whole structural fix; keep them above logSession().
+      const CATEGORY_PALETTE = [
+        "#c1714a", "#7a9a6e", "#6b8ca8", "#b08968",
+        "#9a7aa0", "#c9a227", "#8a8f7d", "#a8676a"
+      ];
+      const OTHER_COLOR = "#ded0bd";     // the "everything else" segment
+      const UNCATEGORIZED_KEY = "uncategorized";
+
+      // Note that an empty catMap is ambiguous — it means either "this
+      // person has no categories" or "Firebase hasn't answered yet" — and
+      // the two need opposite handling when logging. Anything that writes a
+      // session before the subscription has fired would treat an established
+      // category as brand new and repaint its stored label and colour. See
+      // flushRecovery() for how the one path that can do that is deferred.
+      let catMap = {};
+
+      // ---- Timer state ----
+      // The whole design rests on storing a FACT and deriving the rest:
+      // "this run started at T with R milliseconds left", never a variable
+      // being decremented once a second. That is what makes the countdown
+      // survive a refresh and what makes it syncable — only transitions
+      // cross the network, the ticking is local.
+      //
+      //   duration          fixed session length, ms
+      //   remainingAtStart  ms left as of `startedAt` (NOT the fixed
+      //                     setting — see publish() for why that matters)
+      //   startedAt         local ms of the current run's start
+      //   running           is it counting down right now
+      //   logged            has this run's elapsed time already been
+      //                     written to the session log? guards against
+      //                     double-counting when a run ends at zero and
+      //                     then also gets Reset
+      //   zeroAt            local ms at which this run crossed zero; non-null
+      //                     means we're in the count-up cue (roadmap §9)
+      //   categoryLabel     free text, exactly as typed; "" is uncategorized
+      //   lastTickAt        local ms of the last render while running — a
+      //                     heartbeat. Its AGE at page load is how long this
+      //                     browser was dead, which is the only way to tell
+      //                     an F5 apart from a reboot (see
+      //                     recoverInterruptedRun)
+      function defaultTimer() {
+        return {
+          duration: 1500000,
+          remainingAtStart: 1500000,
+          startedAt: null,
+          running: false,
+          logged: false,
+          zeroAt: null,
+          categoryLabel: "",
+          lastTickAt: null
+        };
+      }
+
+      // Object.assign over the default rather than trusting the stored blob:
+      // saved state written by an older version of this file is missing the
+      // newer fields, and a missing `logged` would silently re-log sessions.
+      function loadTimer() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultTimer();
+        try { return Object.assign(defaultTimer(), JSON.parse(raw)); }
+        catch (e) { return defaultTimer(); }
+      }
+
+      let timer = loadTimer();
+      function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(timer)); }
+
+      // Their timer, mirrored from Firebase. Read-only over here, always.
+      let theirTimer = { running: false, startedAt: null, remainingAtStart: 1500 };
+
+      // Corrects for THIS browser's clock being off from the server's.
+      // Your own timer never needs this: start() stamps startedAt with your
+      // own Date.now() and reads it back with your own Date.now(), so any
+      // clock error cancels. Reading THEIR timer mixes your clock (now) with
+      // the server's (their startedAt, written via ServerValue.TIMESTAMP) —
+      // so a clock disagreement shows up directly as lag or lead on the
+      // presence widget. This tracks the gap and cancels it.
+      let serverTimeOffset = 0;
+      db.ref(".info/serverTimeOffset").on("value", (snap) => {
+        serverTimeOffset = snap.val() || 0;
+      });
+      function serverNow() { return Date.now() + serverTimeOffset; }
+
+      // ---- Element handles ----
+      const displayEl     = document.getElementById("timerDisplay");
+      const stageLabelEl  = document.getElementById("stageLabel");
+      const durationInput = document.getElementById("durationInput");
+      const presenceDot   = document.getElementById("presenceDot");
+      const presenceName  = document.getElementById("presenceName");
+      const presenceState = document.getElementById("presenceState");
+
+      presenceName.textContent = DISPLAY_NAME[THEM];
+      durationInput.value = timer.duration / 60000;
+      durationInput.disabled = timer.running;
+
+      // ---- Derived values ----
+      function getRemaining(t) {
+        return t.running ? t.remainingAtStart - (Date.now() - t.startedAt)
+                         : t.remainingAtStart;
+      }
+
+      // How much of the current run has actually been worked. Clamped at
+      // both ends: an overrun run has negative remaining, which would
+      // otherwise report more elapsed time than the session was long — a
+      // timer left running overnight would log eight hours of "focus".
+      function elapsedMs() {
+        const left = Math.min(Math.max(getRemaining(timer), 0), timer.duration);
+        return timer.duration - left;
+      }
+
+      function formatClock(ms) {
+        const total = Math.max(0, Math.floor(ms / 1000));
+        const minutes = Math.floor(total / 60);
+        const seconds = String(total % 60).padStart(2, "0");
+        return minutes + ":" + seconds;
+      }
+
+      // ---- Shared-tree write ----
+      // Publishes in SECONDS; the local `timer` object stays in milliseconds
+      // and converts only at this boundary.
+      //
+      // Sends `remainingAtStart`, not the fixed `duration`. The first version
+      // sent duration plus a fresh startedAt on every start(), which is only
+      // correct for a run that was never paused: pause at 24:00 and resume,
+      // and that republishes startedAt = now with duration = 25 min, so the
+      // peer recomputes "25 minutes minus time since resume" and their widget
+      // jumps back to 25:00 — the elapsed minute is erased from THEIR view
+      // (yours is unaffected, since your display never reads this back).
+      // "What was actually left at this specific start event" is correct for
+      // a fresh start and a resume alike.
+      function publish(running, startedAtValue) {
+        myRef.set({
+          running: running,
+          startedAt: startedAtValue,
+          remainingAtStart: Math.round(Math.max(0, timer.remainingAtStart) / 1000),
+          // The LABEL, not the key. Publishing the key would force her
+          // browser to look up my categories map to render a name, which
+          // means granting read access to my whole vocabulary for no gain.
+          // The display string keeps the no-cross-reads rule intact.
+          category: timer.categoryLabel ? timer.categoryLabel.trim() : null
+        });
+      }
+
+      // Changing the category mid-session must NOT re-stamp startedAt — a
+      // fresh server timestamp would restart the peer's countdown from the
+      // top. update() touches one field and leaves the timing state alone.
+      function publishCategory() {
+        myRef.update({
+          category: timer.categoryLabel ? timer.categoryLabel.trim() : null
+        });
+      }
+
+      // ---- Session log (roadmap §6a) ----
+      // Append-only: one child per completed session, never updated, never
+      // read by the other person. push() generates a chronologically-ordered
+      // key, so the log sorts itself without a separate index.
+      function logSession(ms) {
+        if (ms < MIN_LOGGABLE_MS) return;
+        const typed = (timer.categoryLabel || "").trim();
+        const key = typed ? normalizeKey(typed) : UNCATEGORIZED_KEY;
+        // An established category keeps its stored spelling. Typing "thesis"
+        // in a hurry must not rewrite "Thesis" everywhere it appears — the
+        // labels in the chips and the breakdown are what get looked at, and
+        // they should be stable. Cost: fixing a capitalisation after the fact
+        // isn't possible from the UI. Cheap to live with, since renaming to a
+        // different WORD makes a new key regardless, so label-overwriting
+        // only ever covered case and spacing anyway.
+        const label = (catMap[key] && catMap[key].label) || typed;
+
+        sessionsRef.push({
+          endedAt: firebase.database.ServerValue.TIMESTAMP,
+          elapsedSeconds: Math.round(ms / 1000),
+          categoryKey: key
+        });
+
+        if (key === UNCATEGORIZED_KEY) return;
+
+        // Upsert the vocabulary entry. First use fixes the label and the
+        // colour; later sessions only bump lastUsedAt, which is what orders
+        // the chip row. Because history stores the KEY and only this map
+        // stores the presentable name, a future rename tool can change a
+        // label here and every past session follows without the append-only
+        // log ever being rewritten.
+        categoriesRef.child(key).update({
+          label: label,
+          color: (catMap[key] && catMap[key].color) || pickColor(),
+          lastUsedAt: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
+
+      // Every exit from a run funnels through here, so there is exactly one
+      // place that decides whether time gets counted. Called by reset(), by
+      // a duration change, and by the zero crossing.
+      function flushUnlogged() {
+        if (timer.logged) return;
+        logSession(elapsedMs());
+        timer.logged = true;
+      }
+
+      // ---- Crash / reboot recovery (added 2026-09-10) ----
+      // A page that loads with `running: true` in localStorage did not exit
+      // cleanly — the previous page went away without pausing. Two very
+      // different situations leave identical storage:
+      //
+      //   an ordinary refresh   the page was gone for a moment, and the
+      //                         countdown surviving F5 is a Stage 1
+      //                         requirement — resume it
+      //   a crash or reboot     the page was gone for minutes or hours,
+      //                         none of which was work
+      //
+      // The heartbeat is the only thing that separates them. updateDisplay()
+      // stamps `lastTickAt` every HEARTBEAT_MS while running, so its age at
+      // load time is how long this browser was actually dead. Past
+      // STALE_MS, the run is ended at the last moment a browser is known to
+      // have been alive.
+      //
+      // Rejected: logging the full duration, which is what the old code did
+      // once its ReferenceError was fixed. A machine that died five minutes
+      // into a 45-minute timer would have recorded 45 minutes of focus. That
+      // is over-counting — the same lie as the under-counting this whole fix
+      // exists to stop, just in the flattering direction.
+      const HEARTBEAT_MS = 5000;
+      const STALE_MS = 15000;
+
+      // Declared BEFORE the function that assigns it, deliberately. Same
+      // class of hazard as the bug this section fixes.
+      let pendingRecoveryMs = null;
+
+      function recoverInterruptedRun() {
+        if (!timer.running || timer.startedAt === null) return;
+
+        // No heartbeat at all means state saved by a version of this file
+        // from before the field existed; the start time is the best floor.
+        const diedAt = timer.lastTickAt || timer.startedAt;
+        if (Date.now() - diedAt < STALE_MS) return;   // ordinary refresh
+
+        // Capped at the moment the run would have hit zero: if the laptop
+        // was off for three hours, only the part before zero was ever a
+        // session.
+        const zeroTime = timer.startedAt + timer.remainingAtStart;
+        const endedAt = Math.min(diedAt, zeroTime);
+        const worked = Math.min(Math.max(endedAt - timer.startedAt, 0), timer.duration);
+
+        // Reset to a clean, startable state rather than dropping into the
+        // count-up cue. The count-up is a "you just finished" signal; hours
+        // after a reboot it is noise, and it was the visible half of the
+        // stuck state.
+        timer.running = false;
+        timer.startedAt = null;
+        timer.lastTickAt = null;
+        timer.remainingAtStart = timer.duration;
+        timer.zeroAt = null;
+        timer.logged = false;
+        durationInput.disabled = false;
+        save();
+        publish(false, null);
+
+        if (worked >= MIN_LOGGABLE_MS) pendingRecoveryMs = worked;
+      }
+
+      // The recovered session is queued, not written on the spot. Recovery
+      // runs during startup, when catMap is still empty, and logSession()
+      // consults catMap to preserve an established category's stored label
+      // and colour — writing immediately would repaint one. Flushed by the
+      // categories subscription the moment the vocabulary lands, or by a
+      // timeout if Firebase is slow or unreachable: a session logged with a
+      // guessed colour beats a session lost, which is the failure being
+      // fixed here.
+      function flushRecovery() {
+        if (pendingRecoveryMs === null) return;
+        const ms = pendingRecoveryMs;
+        pendingRecoveryMs = null;
+        logSession(ms);
+      }
+
+      // ---- Controls ----
+      function start() {
+        if (timer.running) return;
+
+        // Starting out of the count-up cue rolls into a fresh session. That
+        // run was already logged when it crossed zero, so nothing is lost —
+        // this just avoids making Reset mandatory between sessions.
+        if (timer.zeroAt !== null || timer.remainingAtStart <= 0) {
+          timer.remainingAtStart = timer.duration;
+          timer.zeroAt = null;
+          timer.logged = false;
+        }
+
+        timer.startedAt = Date.now();
+        timer.running = true;
+        timer.lastTickAt = Date.now();
+        durationInput.disabled = true;
+        save();
+        // The server stamps the start time so both laptops measure the peer's
+        // countdown from the same origin (roadmap §4, clock skew).
+        publish(true, firebase.database.ServerValue.TIMESTAMP);
+      }
+
+      function pause() {
+        if (!timer.running) return;
+        timer.remainingAtStart = Math.max(0, getRemaining(timer));
+        timer.running = false;
+        timer.startedAt = null;
+        durationInput.disabled = false;
+        save();
+        publish(false, null);
+      }
+
+      function reset() {
+        flushUnlogged();
+        timer.startedAt = null;
+        timer.remainingAtStart = timer.duration;
+        timer.running = false;
+        timer.logged = false;
+        timer.zeroAt = null;
+        durationInput.disabled = false;
+        save();
+        publish(false, null);
+      }
+
+      // Reaching zero ends the run: it stops, it logs, and presence flips to
+      // "not working" so the other person isn't shown a session that's over.
+      // The display then counts upward (see updateDisplay) — the cue chosen
+      // in roadmap §9 because it still says something if you looked away.
+      function completeAtZero() {
+        timer.zeroAt = timer.startedAt + timer.remainingAtStart;
+        timer.remainingAtStart = 0;
+        timer.running = false;
+        timer.startedAt = null;
+        flushUnlogged();          // elapsed is the full duration by definition
+        durationInput.disabled = false;
+        save();
+        publish(false, null);
+      }
+
+      // Changing the duration also ends whatever run was in progress — and
+      // logs it first (decided 2026-09-07). Without the flush, editing this
+      // box silently threw away real elapsed time, which is exactly the
+      // thing the tracker exists to stop happening.
+      function setDurationMinutes(minutes) {
+        if (timer.running) return;          // locked while running (roadmap §5a)
+        if (!Number.isFinite(minutes) || minutes < 1) return;
+        flushUnlogged();
+        timer.duration = minutes * 60000;
+        timer.remainingAtStart = timer.duration;
+        timer.startedAt = null;
+        timer.zeroAt = null;
+        timer.logged = false;
+        save();
+        publish(false, null);
+      }
+
+      // ---- Render loop ----
+      // 250ms rather than 1000ms: a one-second tick visibly drifts against
+      // wall-clock seconds, because setInterval fires late and the drift
+      // accumulates. Sampling four times a second and re-deriving from the
+      // stored timestamp keeps the displayed second honest.
+      function updateDisplay() {
+        if (timer.running && getRemaining(timer) <= 0) completeAtZero();
+
+        // Heartbeat. Throttled to HEARTBEAT_MS rather than written on every
+        // 250ms tick: save() serialises the whole timer object, and four
+        // localStorage writes a second across a multi-hour session is real
+        // churn for resolution nobody needs. Five seconds costs at most five
+        // seconds of accuracy on a crash, well under the 5s noise floor that
+        // decides whether a session counts at all.
+        if (timer.running && Date.now() - (timer.lastTickAt || 0) >= HEARTBEAT_MS) {
+          timer.lastTickAt = Date.now();
+          save();
+        }
+
+        if (timer.zeroAt !== null) {
+          displayEl.textContent = "+" + formatClock(Date.now() - timer.zeroAt);
+          displayEl.classList.add("overrun");
+          stageLabelEl.textContent = "Done";
+        } else {
+          displayEl.textContent = formatClock(getRemaining(timer));
+          displayEl.classList.remove("overrun");
+          stageLabelEl.textContent = timer.running ? "Focusing" : "Focus";
+        }
+
+        if (theirTimer.running && theirTimer.startedAt) {
+          const remainingMs =
+            theirTimer.remainingAtStart * 1000 - (serverNow() - theirTimer.startedAt);
+          presenceDot.classList.add("live");
+          const on = theirTimer.category ? " on " + theirTimer.category : "";
+          presenceState.textContent = "focusing" + on + " · " + formatClock(remainingMs);
+        } else {
+          presenceDot.classList.remove("live");
+          presenceState.textContent = "not working";
+        }
+      }
+
+      // Listeners are attached BEFORE anything renders, and the render loop
+      // now starts at the very end of initApp. The old order was the reverse,
+      // and that is what turned a render-time exception into an unusable
+      // page: the throw escaped initApp, so these four lines never ran and
+      // Start, Pause, Reset and the duration box were all inert — while the
+      // interval, already set on the line above, carried on rendering a
+      // count-up that looked perfectly alive. Controls that outlive a
+      // rendering failure are worth the two-line reshuffle on their own.
+      document.getElementById("startBtn").addEventListener("click", start);
+      document.getElementById("pauseBtn").addEventListener("click", pause);
+      document.getElementById("resetBtn").addEventListener("click", reset);
+      durationInput.addEventListener("change", (e) => {
+        setDurationMinutes(Number(e.target.value));
+      });
+
+      // ---- Read-only subscription to their slot ----
+      theirRef.on("value", (snapshot) => {
+        theirTimer = snapshot.val() || { running: false, startedAt: null, remainingAtStart: 0 };
+      });
+
+      // ---- Disconnect handling ----
+      // Registered inside .info/connected rather than once at startup: an
+      // onDisconnect instruction is bound to one specific connection and does
+      // not survive a reconnect. Without re-arming here, the FIRST wifi drop
+      // would be handled and the second would not. This is what makes a
+      // closed tab, a sleeping laptop and lost wifi all read as "not working".
+      db.ref(".info/connected").on("value", (snap) => {
+        if (snap.val() === true) {
+          myRef.onDisconnect().update({ running: false });
+        }
+      });
+
+      // ============================================================
+      // 6. STATS
+      // ============================================================
+      // The whole log is held in memory and re-summed on demand. Considered
+      // maintaining running totals in the database instead; rejected because
+      // rollup counters have to be recomputed the moment the buckets change
+      // (a category filter, a different week start) and this app will never
+      // hold more than a few thousand tiny records.
+      const sessionLog = [];
+
+      const chipValue  = document.getElementById("chipValue");
+      const statToday  = document.getElementById("statToday");
+      const statWeek   = document.getElementById("statWeek");
+      const statAll    = document.getElementById("statAll");
+      const statCount  = document.getElementById("statCount");
+      const statsWidget = document.getElementById("statsWidget");
+
+      document.getElementById("statsChip").addEventListener("click", () => {
+        statsWidget.classList.toggle("expanded");
+      });
+
+      function formatTotal(seconds) {
+        const minutes = Math.round(seconds / 60);
+        if (minutes < 60) return minutes + "m";
+        return Math.floor(minutes / 60) + "h " + (minutes % 60) + "m";
+      }
+
+      // Boundaries built from the local calendar rather than by subtracting
+      // 86,400,000ms: a DST change makes a day something other than 24 hours
+      // and the arithmetic version quietly misfiles sessions for a week.
+      // Week starts Monday.
+      function renderStats() {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const daysSinceMonday = (now.getDay() + 6) % 7;
+        const startOfWeek = new Date(
+          now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday
+        ).getTime();
+
+        let today = 0, week = 0, all = 0;
+        for (const s of sessionLog) {
+          all += s.elapsedSeconds;
+          if (s.endedAt >= startOfWeek) week += s.elapsedSeconds;
+          if (s.endedAt >= startOfToday) today += s.elapsedSeconds;
+        }
+
+        chipValue.textContent = formatTotal(today);
+        statToday.textContent = formatTotal(today);
+        statWeek.textContent  = formatTotal(week);
+        statAll.textContent   = formatTotal(all);
+        statCount.textContent = sessionLog.length === 1
+          ? "1 session logged"
+          : sessionLog.length + " sessions logged";
+      }
+
+      // ============================================================
+      // 7. CATEGORIES
+      // ============================================================
+      // Colours are assigned automatically on a category's first use, so
+      // there is never a colour-picking step. Warm hues chosen to sit on the
+      // cream surface without any of them reading as an error state.
+      // CATEGORY_PALETTE, OTHER_COLOR, UNCATEGORIZED_KEY and catMap used to
+      // be declared here. They now live at the top of initApp because
+      // logSession() reads them and can run before this point — see the
+      // comment there. Don't move them back.
+
+      // Case and stray whitespace must not fragment the data: "Thesis",
+      // "thesis " and "THESIS" all have to land on one key, or free text
+      // quietly turns into three categories that are really one.
+      function normalizeKey(text) {
+        return text.trim().toLowerCase().replace(/\s+/g, " ");
+      }
+
+      function pickColor() {
+        const used = new Set(Object.values(catMap).map((c) => c.color));
+        const free = CATEGORY_PALETTE.find((c) => !used.has(c));
+        return free || CATEGORY_PALETTE[Object.keys(catMap).length % CATEGORY_PALETTE.length];
+      }
+
+      function colorFor(key) {
+        if (key === UNCATEGORIZED_KEY) return OTHER_COLOR;
+        return (catMap[key] && catMap[key].color) || OTHER_COLOR;
+      }
+
+      // Falls back to the raw key so a session still renders with a sensible
+      // name if its vocabulary entry is somehow missing.
+      function labelFor(key) {
+        if (key === UNCATEGORIZED_KEY) return "Uncategorized";
+        return (catMap[key] && catMap[key].label) || key;
+      }
+
+      const categoryInput = document.getElementById("categoryInput");
+      const categoryChips = document.getElementById("categoryChips");
+      categoryInput.value = timer.categoryLabel || "";
+
+      function setCategory(label) {
+        timer.categoryLabel = label;
+        categoryInput.value = label;
+        save();
+        if (timer.running) publishCategory();
+      }
+
+      categoryInput.addEventListener("input", (e) => {
+        timer.categoryLabel = e.target.value;
+        save();
+      });
+      // Published on blur/enter rather than on every keystroke — otherwise
+      // her widget would watch you type.
+      // Snap a typed variant back to the category's established spelling, so
+      // the input agrees with what the chips and breakdown show.
+      function snapToKnownLabel() {
+        const typed = (timer.categoryLabel || "").trim();
+        if (!typed) return;
+        const known = catMap[normalizeKey(typed)] && catMap[normalizeKey(typed)].label;
+        if (known && known !== typed) {
+          timer.categoryLabel = known;
+          categoryInput.value = known;
+          save();
+        }
+      }
+
+      categoryInput.addEventListener("change", () => {
+        snapToKnownLabel();
+        if (timer.running) publishCategory();
+      });
+      categoryInput.addEventListener("blur", () => {
+        snapToKnownLabel();
+        if (timer.running) publishCategory();
+      });
+
+      // Chips are the recently-used categories, most recent first. This is
+      // the whole "picker": nothing was configured, the list is just a view
+      // over what has actually been typed.
+      function renderChips() {
+        const keys = Object.keys(catMap)
+          .sort((a, b) => (catMap[b].lastUsedAt || 0) - (catMap[a].lastUsedAt || 0))
+          .slice(0, 5);
+
+        if (keys.length < 2) {
+          categoryChips.classList.remove("visible");
+          categoryChips.innerHTML = "";
+          return;
+        }
+
+        categoryChips.innerHTML = "";
+        for (const key of keys) {
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "cat-chip";
+          const swatch = document.createElement("span");
+          swatch.className = "swatch";
+          swatch.style.background = colorFor(key);
+          const text = document.createElement("span");
+          text.textContent = labelFor(key);
+          chip.appendChild(swatch);
+          chip.appendChild(text);
+          chip.addEventListener("click", () => setCategory(labelFor(key)));
+          categoryChips.appendChild(chip);
+        }
+        categoryChips.classList.add("visible");
+      }
+
+      // ---- Breakdown widget ----
+      const PERIOD_LABELS = ["Today", "This week", "All time"];
+      // Defaults to the week: today is often one category or empty, and all
+      // time stops moving after a month and stops telling you anything.
+      let periodIndex = 1;
+
+      const shareBar       = document.getElementById("shareBar");
+      const breakdownRows  = document.getElementById("breakdownRows");
+      const breakdownMore  = document.getElementById("breakdownMore");
+      const breakdownTop   = document.getElementById("breakdownTop");
+      const periodToggle   = document.getElementById("periodToggle");
+      const breakdownWidget = document.getElementById("breakdownWidget");
+
+      document.getElementById("breakdownChip").addEventListener("click", () => {
+        breakdownWidget.classList.toggle("expanded");
+      });
+      periodToggle.addEventListener("click", () => {
+        periodIndex = (periodIndex + 1) % PERIOD_LABELS.length;
+        renderBreakdown();
+      });
+
+      function periodStart() {
+        if (periodIndex === 2) return 0;
+        const now = new Date();
+        const startOfToday =
+          new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        if (periodIndex === 0) return startOfToday;
+        const daysSinceMonday = (now.getDay() + 6) % 7;
+        return new Date(
+          now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMonday
+        ).getTime();
+      }
+
+      function renderBreakdown() {
+        const from = periodStart();
+        const totals = {};
+        let grand = 0;
+
+        for (const session of sessionLog) {
+          if (session.endedAt < from) continue;
+          const key = session.categoryKey || UNCATEGORIZED_KEY;
+          totals[key] = (totals[key] || 0) + session.elapsedSeconds;
+          grand += session.elapsedSeconds;
+        }
+
+        const ranked = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+        const top = ranked.slice(0, 3);
+        const restSeconds = ranked.slice(3).reduce((n, k) => n + totals[k], 0);
+
+        periodToggle.textContent = PERIOD_LABELS[periodIndex];
+        breakdownTop.textContent = top.length ? labelFor(top[0]) : "—";
+
+        shareBar.innerHTML = "";
+        breakdownRows.innerHTML = "";
+
+        if (!grand) {
+          breakdownMore.textContent =
+            "nothing logged " + PERIOD_LABELS[periodIndex].toLowerCase();
+          return;
+        }
+
+        for (const key of top) {
+          const segment = document.createElement("div");
+          segment.style.width = (totals[key] / grand * 100) + "%";
+          segment.style.background = colorFor(key);
+          shareBar.appendChild(segment);
+
+          const row = document.createElement("div");
+          row.className = "cat-row";
+          const swatch = document.createElement("span");
+          swatch.className = "swatch";
+          swatch.style.background = colorFor(key);
+          const name = document.createElement("span");
+          name.className = "name";
+          name.textContent = labelFor(key);
+          const time = document.createElement("span");
+          time.className = "time";
+          time.textContent = formatTotal(totals[key]);
+          row.appendChild(swatch);
+          row.appendChild(name);
+          row.appendChild(time);
+          breakdownRows.appendChild(row);
+        }
+
+        // Everything past the top three becomes one neutral segment, so the
+        // bar always sums to the real total rather than to just the top few.
+        if (restSeconds > 0) {
+          const segment = document.createElement("div");
+          segment.style.width = (restSeconds / grand * 100) + "%";
+          segment.style.background = OTHER_COLOR;
+          shareBar.appendChild(segment);
+          breakdownMore.textContent =
+            "+ " + (ranked.length - 3) + " more · " + formatTotal(restSeconds);
+        } else {
+          breakdownMore.textContent = "";
+        }
+      }
+
+      // ---- Data subscriptions, attached last ----
+      // Deliberately the final thing initApp does. Both callbacks render,
+      // and rendering touches `const`/`let` bindings declared throughout
+      // this function — attaching earlier means a callback that fires before
+      // those lines have run hits a temporal dead zone. Firebase delivers
+      // these asynchronously so it would work in practice, but "works
+      // because of callback timing" is not a property worth relying on.
+
+      // child_added fires once per existing record on first attach, then
+      // once per new one — so this is both the initial load and the live
+      // update, and it never re-downloads history that hasn't changed.
+      // Note: endedAt arrives first as Firebase's local estimate of the
+      // server clock and is corrected moments later. The estimate is within
+      // the clock offset, which cannot move a session across a day boundary
+      // in any realistic case, so the correction is not listened for.
+      sessionsRef.on("child_added", (snap) => {
+        const v = snap.val();
+        if (!v || typeof v.elapsedSeconds !== "number") return;
+        sessionLog.push({
+          endedAt: v.endedAt || Date.now(),
+          elapsedSeconds: v.elapsedSeconds,
+          // Records written before categories existed carry
+          // `category: "uncategorized"` instead of `categoryKey`.
+          categoryKey: v.categoryKey || v.category || UNCATEGORIZED_KEY
+        });
+        renderStats();
+        renderBreakdown();
+      });
+
+      // Small enough to re-read whole on every change — a handful of tiny
+      // objects, and a full snapshot keeps deletions handled for free.
+      categoriesRef.on("value", (snap) => {
+        catMap = snap.val() || {};
+        // The vocabulary has landed, so a session recovered from a crash can
+        // now be written without repainting an established category.
+        flushRecovery();
+        renderChips();
+        renderBreakdown();
+      });
+
+      renderChips();
+      renderBreakdown();
+
+      // Re-sum periodically so the buckets roll over at midnight without a
+      // refresh. Cheap: a loop over a few hundred numbers, twice a minute.
+      setInterval(() => { renderStats(); renderBreakdown(); }, 30000);
+      renderStats();
+
+      // ---- Recovery, then the clock ----
+      // Recovery runs BEFORE the first render, so updateDisplay() never sees
+      // the stale running-and-past-zero state that produced the original
+      // crash. Everything it touches — catMap, publish(), the element
+      // handles — has been declared by this point, which is the property the
+      // old ordering silently lacked.
+      recoverInterruptedRun();
+
+      // Backstop: if Firebase hasn't delivered the vocabulary within five
+      // seconds, write the recovered session anyway. Losing it to an offline
+      // laptop would be the same outcome as the bug.
+      setTimeout(flushRecovery, 5000);
+
+      setInterval(updateDisplay, 250);
+      updateDisplay();
+    }
+  </script>
+</body>
+</html>
