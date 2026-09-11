@@ -29,7 +29,14 @@
     Data model lives in roadmap.md §4. Short version:
       room/<person>     : live timer state, for the presence widget
       sessions/<person> : append-only log of completed sessions, for stats
-    Nobody ever writes into the other person's subtree.
+      categories/<person>, notes/<person> : that person's own, private
+      messages/<person> : the ONE exception — see below
+
+    Nobody ever writes into the other person's subtree, with exactly one
+    exception: messages/ (6g, added 2026-09-11). It is keyed by RECIPIENT,
+    so writing a message to Kristina means writing messages/kristina, which
+    her browser owns. This is the first deliberate cross-write in the app
+    and it needs its own rules clause.
   -->
 
   <style>
@@ -770,6 +777,212 @@
       #noteInput { min-height: 7rem; }
     }
 
+    /* ---- Top-left: messages (6g, added 2026-09-11) ---- */
+    /* Deliberately the quietest widget on the page. A message arriving
+       must never pull attention out of a running session — that is the
+       whole point of the feature — so there is no sound, no title flash,
+       no auto-expand and no animation. A single dot goes from grey to
+       terracotta and the label changes. That is the entire arrival cue. */
+    #messageWidget {
+      position: fixed;
+      top: 1.25rem;
+      left: 1.25rem;
+      /* Sized to the longest label it ever shows — "message when you're
+         done" — without ellipsising. That string is the whole feature in
+         four words, so it is the one that sets the width rather than the
+         one that gets cut. */
+      width: 18rem;
+      max-width: calc(100vw - 2.5rem);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      font-size: 0.9rem;
+      z-index: 2;
+    }
+
+    #messageChip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1rem;
+      cursor: pointer;
+      user-select: none;
+      background: none;
+      border: none;
+      border-radius: 0;
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      color: var(--ink);
+    }
+    #messageChip:hover { background: var(--surface-sunk); }
+
+    /* One glyph carrying two jobs: what the widget is, and whether
+       something is waiting. A separate status dot (the language the
+       presence pill uses) was the first version, but this chip collapses to
+       icon-only on a phone, and a lone coloured dot there says "something
+       changed" without ever saying what. The envelope answers both. */
+    #messageIcon {
+      color: var(--ink-soft);
+      font-size: 1rem;
+      line-height: 1;
+      flex: none;
+    }
+    #messageIcon.live { color: var(--accent); }
+
+    /* Same min-width: 0 trick as the note chip — without it a long label
+       widens the widget instead of ellipsising inside it. */
+    #messageBadge {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    #messageBadge.empty { color: var(--ink-soft); }
+    #messageBadge.waiting { color: var(--accent); }
+
+    #messageCaret {
+      color: var(--ink-soft);
+      font-size: 0.7rem;
+      transition: transform 160ms ease;
+    }
+    #messageWidget.expanded #messageCaret { transform: rotate(180deg); }
+
+    /* Panel AFTER the chip in the DOM, the reverse of the bottom widgets:
+       this one is anchored at the top of the screen, so it has to grow
+       downward to stay on screen. */
+    #messagePanel {
+      display: none;
+      padding: 0.15rem 1rem 0.55rem;
+      border-top: 1px solid var(--line);
+    }
+    #messageWidget.expanded #messagePanel { display: block; }
+
+    /* ---- The inbox half ---- */
+    #inboxSection {
+      display: none;
+      margin: 0.7rem 0 0.9rem;
+      padding: 0.6rem 0.7rem;
+      background: var(--surface-sunk);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--accent);
+    }
+    #inboxSection.shown { display: block; }
+    #inboxFrom {
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin-bottom: 0.3rem;
+    }
+    /* pre-wrap so her line breaks survive; overflow-wrap so a pasted URL
+       can't push the widget wider than its own box. */
+    #inboxText {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    #inboxText.locked { color: var(--ink-soft); font-style: italic; }
+
+    /* ---- The compose half ---- */
+    #composeLabel {
+      display: block;
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin-bottom: 0.35rem;
+    }
+    #messageInput {
+      display: block;
+      width: 100%;
+      min-height: 4.5rem;
+      padding: 0.6rem 0.7rem;
+      font: inherit;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--surface-sunk);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      resize: vertical;
+    }
+    #messageInput::placeholder { color: var(--ink-soft); }
+    #messageInput:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    #messageSendRow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      margin-top: 0.45rem;
+    }
+    #messageSend {
+      padding: 0.35rem 0.9rem;
+      font: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      color: var(--accent-ink);
+      border-radius: 999px;
+    }
+    #messageSend:disabled {
+      background: var(--surface-sunk);
+      border-color: var(--line);
+      color: var(--ink-soft);
+      cursor: default;
+    }
+    /* Reserves its line height even when empty so the panel doesn't jump
+       a few pixels each time the status appears and clears. */
+    #messageStatus {
+      flex: 1;
+      min-width: 0;
+      min-height: 0.95rem;
+      font-size: 0.7rem;
+      color: var(--ink-soft);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Below 700px this widget and the presence pill are both pinned to the
+       top of a ~400px-wide screen, so they cannot both be full width.
+       Collapsed, this one shrinks to the envelope dot alone — still a
+       complete arrival cue — which leaves the pill its room.
+
+       Expanded, the widget itself stays chip-sized and the PANEL floats
+       beneath it as an absolute overlay. Widening the widget instead is the
+       obvious move and it is wrong: the chip row would grow with it and
+       collide with the pill, which is the one row that must never move. An
+       open panel covering the timer card for a few seconds is fine; two
+       widgets overlapping at rest is not. */
+    @media (max-width: 700px) {
+      /* max-width, not width: the chip has to be free to shrink to the
+         envelope alone when collapsed, and equally has to be stopped
+         from growing into the pill when an expanded state gives the
+         badge a long label. The badge ellipsises instead. */
+      #messageWidget { width: auto; max-width: 10.5rem; overflow: visible; }
+      #messageWidget:not(.expanded) #messageBadge,
+      #messageWidget:not(.expanded) #messageCaret { display: none; }
+      #messageChip { border-radius: var(--radius-sm); }
+      #messagePanel {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 15rem;
+        max-width: calc(100vw - 2.5rem);
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm);
+        box-shadow: var(--shadow-sm);
+      }
+    }
+
     /* ---- Debug strip ---- */
     /* Kept visible but quiet: the anonymous UID has to be copied into the
        Firebase security rules by hand (roadmap §4), and digging it out of
@@ -892,6 +1105,30 @@
     </button>
   </div>
 
+  <!-- Top-left: messages (6g, added 2026-09-11). Chip BEFORE panel, the
+       reverse of the bottom-corner widgets, because this one is anchored at
+       the top and has to grow downward. -->
+  <div id="messageWidget">
+    <button id="messageChip" type="button">
+      <span id="messageIcon">&#9993;</span>
+      <span id="messageBadge" class="empty">Message</span>
+      <span id="messageCaret">&#9660;</span>
+    </button>
+    <div id="messagePanel">
+      <div id="inboxSection">
+        <div id="inboxFrom">&nbsp;</div>
+        <div id="inboxText"></div>
+      </div>
+      <label id="composeLabel" for="messageInput">To&nbsp;<span id="composeTo"></span></label>
+      <textarea id="messageInput" maxlength="500" rows="3"
+                placeholder="waiting for you when you finish…"></textarea>
+      <div id="messageSendRow">
+        <button id="messageSend" type="button">Send</button>
+        <span id="messageStatus">&nbsp;</span>
+      </div>
+    </div>
+  </div>
+
   <div id="uidDebug"></div>
 
   <!-- ============================================================
@@ -965,6 +1202,18 @@
     // page never reads it, exactly like sessions/ and categories/.
     const notesRef = db.ref("notes/" + ME);
 
+    // Messages (6g, added 2026-09-11) — keyed by RECIPIENT, which is what
+    // makes this the app's one intentional cross-write. Sending to her means
+    // writing messages/kristina; her page reads its own slot as an inbox.
+    //
+    // Keyed by recipient rather than by sender so each person's browser
+    // subscribes to exactly one node and reads it whole. Keyed by sender,
+    // every page would have to listen to the other person's outbox and work
+    // out which entries were addressed to it — the same information, with a
+    // filter step and a second listener bolted on.
+    const inboxRef  = db.ref("messages/" + ME);      // what they sent me
+    const outboxRef = db.ref("messages/" + THEM);    // what I send them
+
     // localStorage is per-BROWSER, not per-tab, so two test windows on one
     // machine (?me=santi and ?me=kristina) would otherwise share one saved
     // timer. Namespacing by role keeps the simulated two-person test honest.
@@ -1034,6 +1283,18 @@
       // category as brand new and repaint its stored label and colour. See
       // flushRecovery() for how the one path that can do that is deferred.
       let catMap = {};
+
+      // Message state (6g), declared up here for the same reason catMap is:
+      // updateDisplay() renders the message chip, and updateDisplay() can be
+      // reached before section 9's own lines have run. A `let` in its
+      // temporal dead zone throws rather than reading undefined, and a throw
+      // inside the render loop is precisely the failure mode the 2026-09-10
+      // crash fix exists to prevent.
+      //
+      //   inbox   what THEY sent ME      { note: {text, sentAt}, read: <ms> }
+      //   outbox  what I sent THEM       same shape, read back for a receipt
+      let inbox  = null;
+      let outbox = null;
 
       // ---- Timer state ----
       // The whole design rests on storing a FACT and deriving the rest:
@@ -1399,9 +1660,13 @@
         try {
           if (!("Notification" in window)) return;
           if (Notification.permission !== "granted") return;
-          const what = timer.categoryLabel
+          let what = timer.categoryLabel
             ? "Finished: " + timer.categoryLabel
             : "Your focus session is done.";
+          // The session ending is exactly the moment a held message becomes
+          // readable, so the one notification says both things rather than
+          // firing a second one (6g is deliberately silent on its own).
+          if (hasUnread()) what += "\n\u2709 A message is waiting for you.";
           // `tag` makes a second notification replace the first instead of
           // stacking, so a long day never leaves a column of these.
           const n = new Notification("Time's up", { tag: "focus-timer-end", body: what });
@@ -1571,6 +1836,13 @@
           displayEl.classList.remove("overrun");
           stageLabelEl.textContent = timer.running ? "Focusing" : "Focus";
         }
+
+        // The message chip's wording depends on whether a session is
+        // running, and that flips in five different places (start, pause,
+        // reset, zero, a duration change). Rendering it from the loop
+        // instead of from each of them means none of them can forget; the
+        // render itself short-circuits unless something actually changed.
+        renderMessageChip();
 
         if (theirTimer.running && theirTimer.startedAt) {
           const remainingMs =
@@ -1982,6 +2254,214 @@
 
       renderNoteChip();
 
+
+      // ============================================================
+      // 9. MESSAGES  (6g, added 2026-09-11)
+      // ============================================================
+      // A small note you leave for the other person that stays sealed while
+      // they are working. They see only that something is waiting; the text
+      // itself opens when their timer ends (or right away if they aren't in
+      // a session — a message that can only be opened by starting a timer
+      // would sit unread forever on a day they never start one).
+      //
+      // THE POINT IS THE RESTRAINT. Nothing here makes a sound, flashes the
+      // title, raises a notification of its own or expands a panel. A grey
+      // dot turns terracotta and a label changes. Anything louder would be
+      // an interruption, which is the exact thing this feature exists to
+      // avoid.
+      //
+      // ---- Schema, and the cross-write ----
+      //
+      //   messages/<recipient>/note : { text, sentAt }   written by the SENDER
+      //   messages/<recipient>/read : <sentAt of the message that was read>
+      //                                                  written by the RECIPIENT
+      //
+      // Two separate children rather than one object with a `readAt` field,
+      // and that split is load-bearing: the security rules have to let the
+      // sender write the text but NOT the read receipt, and let the
+      // recipient write the receipt but NOT the text. Firebase rules apply
+      // per path, so two children can be governed separately while two
+      // fields of one object written with set() cannot — a set() carrying
+      // both would be rejected as a whole.
+      //
+      // `read` stores the message's own sentAt rather than "when it was
+      // read", so unread is an exact equality check and nothing depends on
+      // comparing two machines' clocks.
+      //
+      // ONE SLOT PER DIRECTION, newest wins (decided 2026-09-11). A second
+      // message replaces the first rather than queueing behind it. What
+      // keeps that from silently eating work: the compose box is PREFILLED
+      // with whatever is still pending, so sending again is visibly editing
+      // the thing that's waiting, not firing into a void. Once it's been
+      // read the box clears, and the next thing typed is a new message.
+
+      const messageWidget = document.getElementById("messageWidget");
+      const messageChip   = document.getElementById("messageChip");
+      const messageIcon   = document.getElementById("messageIcon");
+      const messageBadge  = document.getElementById("messageBadge");
+      const messageInput  = document.getElementById("messageInput");
+      const messageSend   = document.getElementById("messageSend");
+      const messageStatus = document.getElementById("messageStatus");
+      const inboxSection  = document.getElementById("inboxSection");
+      const inboxFrom     = document.getElementById("inboxFrom");
+      const inboxText     = document.getElementById("inboxText");
+
+      document.getElementById("composeTo").textContent = DISPLAY_NAME[THEM];
+      messageInput.placeholder =
+        "waiting for " + DISPLAY_NAME[THEM] + " when they finish\u2026";
+
+      // Mirrors the remote outgoing text. The compose box is only
+      // overwritten while it still holds exactly this — the moment he types
+      // anything, his text is newer intent and the remote value is dropped.
+      // Same hazard the note widget handles, same answer.
+      let outboxApplied = "";
+
+      function hasUnread() {
+        if (!inbox || !inbox.note || !inbox.note.text) return false;
+        return inbox.read !== inbox.note.sentAt;
+      }
+
+      // The gate is the running timer and nothing else. Not "paused", not
+      // "has a timer today" — if you are not counting down right now there
+      // is nothing to protect you from.
+      function inboxSealed() { return timer.running; }
+
+      function timeOfDay(ms) {
+        try {
+          return new Date(ms).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        } catch (e) { return ""; }
+      }
+
+      // Called four times a second from the render loop, so it exits early
+      // unless the visible state actually changed. Cheap to call, free to
+      // call often, and no caller has to know when to call it.
+      let lastChipKey = "";
+      function renderMessageChip() {
+        const unread = hasUnread();
+        const sealed = inboxSealed();
+        const key = unread + "|" + sealed;
+        if (key === lastChipKey) return;
+        lastChipKey = key;
+
+        messageIcon.classList.toggle("live", unread);
+        messageBadge.classList.toggle("waiting", unread);
+        messageBadge.classList.toggle("empty", !unread);
+        messageBadge.textContent = !unread ? "Message"
+          : sealed ? "message when you're done"
+                   : "1 message \u2014 read it";
+
+        // The panel's sealed/unsealed text has to follow the chip, or a
+        // panel left open across the zero crossing would still say "sealed".
+        renderInbox();
+      }
+
+      function renderInbox() {
+        if (!inbox || !inbox.note || !inbox.note.text) {
+          inboxSection.classList.remove("shown");
+          return;
+        }
+        inboxSection.classList.add("shown");
+        inboxFrom.textContent = "From " + DISPLAY_NAME[THEM];
+
+        if (hasUnread() && inboxSealed()) {
+          inboxText.textContent = "Sealed until this session ends.";
+          inboxText.classList.add("locked");
+          return;
+        }
+        inboxText.textContent = inbox.note.text;
+        inboxText.classList.remove("locked");
+        maybeMarkRead();
+      }
+
+      // The receipt is written when the text is actually on screen — panel
+      // open, not sealed — rather than when the message arrives. A "read"
+      // that fires while the panel is shut would make the receipt a lie, and
+      // the receipt is the only thing telling the sender whether to expect
+      // an answer.
+      function maybeMarkRead() {
+        if (!hasUnread()) return;
+        if (!messageWidget.classList.contains("expanded")) return;
+        if (inboxSealed()) return;
+        const stamp = inbox.note.sentAt;
+        inbox.read = stamp;                 // optimistic: the chip settles now
+        lastChipKey = "";                   // force the next render to redraw
+        inboxRef.child("read").set(stamp).catch(() => {});
+      }
+
+      function renderOutboxStatus() {
+        if (!outbox || !outbox.note || !outbox.note.text) {
+          messageStatus.textContent = "nothing waiting";
+          return;
+        }
+        if (outbox.read === outbox.note.sentAt) {
+          messageStatus.textContent =
+            "read " + timeOfDay(outbox.read) + " \u00b7 send another";
+        } else {
+          messageStatus.textContent = "waiting for " + DISPLAY_NAME[THEM];
+        }
+      }
+
+      function syncSendButton() {
+        messageSend.disabled = !messageInput.value.trim();
+      }
+
+      // Only ever overwrites a compose box he hasn't touched. `desired` is
+      // empty once the message has been read, so the box clears itself
+      // rather than inviting an accidental resend of something already
+      // delivered.
+      function applyRemoteOutbox() {
+        const pending = outbox && outbox.note && outbox.note.text
+          && outbox.read !== outbox.note.sentAt;
+        const desired = pending ? outbox.note.text : "";
+        if (messageInput.value !== outboxApplied) return;   // he has edited
+        if (document.activeElement === messageInput) return;
+        messageInput.value = desired;
+        outboxApplied = desired;
+        syncSendButton();
+      }
+
+      function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text) return;
+        messageStatus.textContent = "sending\u2026";
+        // set() on the `note` child alone, never on the parent: the parent
+        // also holds `read`, which the rules reserve for the recipient, and
+        // a write touching it would be rejected whole.
+        outboxRef.child("note").set({
+          text: text,
+          sentAt: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+          outboxApplied = messageInput.value;
+          messageStatus.textContent = "waiting for " + DISPLAY_NAME[THEM];
+        }).catch(() => {
+          messageStatus.textContent = "couldn't send \u2014 check your connection";
+        });
+      }
+
+      messageChip.addEventListener("click", () => {
+        messageWidget.classList.toggle("expanded");
+        if (messageWidget.classList.contains("expanded")) {
+          renderInbox();      // which marks it read, if it's readable now
+          renderOutboxStatus();
+        }
+      });
+
+      messageInput.addEventListener("input", syncSendButton);
+      messageInput.addEventListener("blur", applyRemoteOutbox);
+      messageInput.addEventListener("keydown", (e) => {
+        // Plain Enter stays a newline — a message worth waiting for is
+        // often more than one line.
+        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+      messageSend.addEventListener("click", sendMessage);
+
+      syncSendButton();
+      renderMessageChip();
+      renderOutboxStatus();
+
       // ---- Data subscriptions, attached last ----
       // Deliberately the final thing initApp does. Both callbacks render,
       // and rendering touches `const`/`let` bindings declared throughout
@@ -2028,6 +2508,21 @@
         const v = snap.val();
         noteRemote = (v && typeof v.text === "string") ? v.text : "";
         applyRemoteNote();
+      });
+
+      // Both message nodes are two small children read whole, the same
+      // shape as notesRef — which makes each of these the initial load as
+      // well as the live update.
+      inboxRef.on("value", (snap) => {
+        inbox = snap.val() || null;
+        lastChipKey = "";       // the underlying data changed, so force a redraw
+        renderMessageChip();
+      });
+
+      outboxRef.on("value", (snap) => {
+        outbox = snap.val() || null;
+        applyRemoteOutbox();
+        renderOutboxStatus();
       });
 
       renderChips();
