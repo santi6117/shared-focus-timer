@@ -1293,6 +1293,169 @@
         logSession(ms);
       }
 
+      // ---- End-of-session alert (6f, added 2026-09-11) ----
+      // The problem this solves: the run ends, the display quietly switches
+      // to counting up, and if you were looking anywhere else you lose the
+      // minutes between the real end and the moment you notice. Overrun time
+      // is deliberately never logged (roadmap §6a), so those minutes are
+      // simply gone.
+      //
+      // Three signals fire together at the zero crossing, chosen because
+      // they fail in different ways and so cover for each other:
+      //
+      //   a chime          works with the tab buried or the window behind
+      //                    something else; useless if the volume is down
+      //   an OS notification  works with the volume down; needs permission,
+      //                    and needs a real http(s) origin (see below)
+      //   a tab-title flash   works with no permission and no audio at all;
+      //                    only useful if you happen to look at the tab bar
+      //
+      // All three are one-shot by choice (decided 2026-09-11): no repeating
+      // chime, no title that keeps blinking. Nothing here needs dismissing.
+      //
+      // KNOWN LIMIT: OS notifications do not work when the page is opened as
+      // a file:// URL — browsers treat that as an opaque origin and refuse
+      // the permission outright. The chime and the title flash work
+      // everywhere. This becomes a non-issue the moment the page moves to
+      // GitHub Pages.
+
+      const BASE_TITLE = document.title;
+
+      // ---- The chime ----
+      // Synthesised with WebAudio rather than shipped as an .mp3, for one
+      // reason: this project is a single file with no build step and no
+      // asset folder, and an audio file would be the first thing to break
+      // that (it would also 404 differently under file:// than under Pages).
+      // Two sine tones, a fifth apart, second one late — reads as a soft
+      // bell rather than an alarm, which matches the rest of the app.
+      let audioCtx = null;
+
+      // Browsers refuse to start an AudioContext that wasn't created or
+      // resumed inside a real user gesture, and the chime fires 25 minutes
+      // after any gesture. So the context is opened on the first click or
+      // keypress of the page and simply left running; by the time zero
+      // arrives it is already warm. Hooked to ANY first interaction, not
+      // just Start, so that refreshing the page mid-session doesn't leave a
+      // running timer with a silent ending.
+      function primeAudio() {
+        try {
+          if (!audioCtx) {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            if (!Ctx) return;
+            audioCtx = new Ctx();
+          }
+          if (audioCtx.state === "suspended") audioCtx.resume();
+        } catch (e) { audioCtx = null; }
+      }
+
+      // One tone with an attack/decay envelope. The envelope is not polish:
+      // an oscillator switched straight on and off steps the waveform from
+      // silence to full amplitude in a single sample, and that discontinuity
+      // is audible as a click at both ends of the note.
+      function tone(freq, delaySec, durSec, peak) {
+        const t0 = audioCtx.currentTime + delaySec;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, t0);
+        // exponentialRamp can never reach or pass through zero, hence the
+        // tiny non-zero floor at both ends rather than 0.
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + durSec);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + durSec + 0.05);
+      }
+
+      function playChime() {
+        if (!audioCtx) return;          // never primed — stay silent, don't throw
+        try {
+          if (audioCtx.state === "suspended") audioCtx.resume();
+          tone(880.0, 0.00, 0.70, 0.22);   // A5
+          tone(1318.5, 0.16, 0.90, 0.18);  // E6, overlapping — they ring together
+        } catch (e) { /* audio is a nicety; never let it break the timer */ }
+      }
+
+      // ---- The OS notification ----
+      // Permission is requested on the first Start click rather than on page
+      // load: browsers increasingly ignore permission prompts that aren't
+      // tied to a gesture, and asking on load is also the pattern everyone
+      // has learned to dismiss reflexively. Asking the moment you start a
+      // session at least explains itself.
+      let notifyAsked = false;
+      function requestNotifyPermission() {
+        if (notifyAsked) return;
+        notifyAsked = true;
+        try {
+          if (!("Notification" in window)) return;
+          if (Notification.permission !== "default") return;   // already decided
+          Notification.requestPermission();
+        } catch (e) { /* file:// throws here in some browsers */ }
+      }
+
+      function showEndNotification() {
+        try {
+          if (!("Notification" in window)) return;
+          if (Notification.permission !== "granted") return;
+          const what = timer.categoryLabel
+            ? "Finished: " + timer.categoryLabel
+            : "Your focus session is done.";
+          // `tag` makes a second notification replace the first instead of
+          // stacking, so a long day never leaves a column of these.
+          const n = new Notification("Time's up", { tag: "focus-timer-end", body: what });
+          n.onclick = () => { window.focus(); n.close(); };
+        } catch (e) { /* opaque origin, or the OS refused — not fatal */ }
+      }
+
+      // ---- The tab title ----
+      // Flashes once and restores itself, on a timeout or the moment the
+      // window regains focus, whichever comes first. A title that keeps
+      // alternating forever is the thing people mute, and restoring on focus
+      // means coming back to the page is itself the dismissal.
+      let titleTimeout = null;
+      function restoreTitle() {
+        clearTimeout(titleTimeout);
+        titleTimeout = null;
+        document.title = BASE_TITLE;
+      }
+      function flashTitle() {
+        document.title = "\u23f0 Time's up!";
+        clearTimeout(titleTimeout);
+        titleTimeout = setTimeout(restoreTitle, 20000);
+        window.addEventListener("focus", restoreTitle, { once: true });
+      }
+
+      function announceSessionEnd() {
+        playChime();
+        showEndNotification();
+        flashTitle();
+      }
+
+      // ---- Waking up on time ----
+      // The 250ms render loop is what normally notices the zero crossing,
+      // but Chrome throttles timers hard in a hidden tab — which is exactly
+      // the situation the alert exists for. A single long setTimeout aimed
+      // at the zero crossing is not throttled the same way, so it fires
+      // roughly on time and wakes the render loop.
+      //
+      // It only nudges: it calls updateDisplay(), which is idempotent, and
+      // lets completeAtZero() end the run as it always has. Firing the alert
+      // directly from here would create a second path that ends a session,
+      // and the double-logging guard exists precisely because those are
+      // expensive to get right.
+      let alarmTimeout = null;
+      function clearAlarm() {
+        clearTimeout(alarmTimeout);
+        alarmTimeout = null;
+      }
+      function scheduleAlarm() {
+        clearAlarm();
+        if (!timer.running) return;
+        alarmTimeout = setTimeout(updateDisplay, Math.max(0, getRemaining(timer)) + 50);
+      }
+
       // ---- Controls ----
       function start() {
         if (timer.running) return;
@@ -1314,10 +1477,12 @@
         // The server stamps the start time so both laptops measure the peer's
         // countdown from the same origin (roadmap §4, clock skew).
         publish(true, firebase.database.ServerValue.TIMESTAMP);
+        scheduleAlarm();
       }
 
       function pause() {
         if (!timer.running) return;
+        clearAlarm();
         timer.remainingAtStart = Math.max(0, getRemaining(timer));
         timer.running = false;
         timer.startedAt = null;
@@ -1327,6 +1492,7 @@
       }
 
       function reset() {
+        clearAlarm();
         flushUnlogged();
         timer.startedAt = null;
         timer.remainingAtStart = timer.duration;
@@ -1351,6 +1517,12 @@
         durationInput.disabled = false;
         save();
         publish(false, null);
+        clearAlarm();
+        // Last, and only here. This is the single place a run ends at zero,
+        // so it is the single place the alert can fire, which is what makes
+        // "exactly one chime per session" true by construction rather than
+        // by a flag someone has to remember to check.
+        announceSessionEnd();
       }
 
       // Changing the duration also ends whatever run was in progress — and
@@ -1360,6 +1532,7 @@
       function setDurationMinutes(minutes) {
         if (timer.running) return;          // locked while running (roadmap §5a)
         if (!Number.isFinite(minutes) || minutes < 1) return;
+        clearAlarm();
         flushUnlogged();
         timer.duration = minutes * 60000;
         timer.remainingAtStart = timer.duration;
@@ -1419,6 +1592,14 @@
       // interval, already set on the line above, carried on rendering a
       // count-up that looked perfectly alive. Controls that outlive a
       // rendering failure are worth the two-line reshuffle on their own.
+      // Audio and notification permission both need a real user gesture.
+      // Audio is primed by the first interaction anywhere on the page (so a
+      // mid-session refresh still ends with a sound); the permission prompt
+      // is kept on Start alone, where it has an obvious reason to appear.
+      document.addEventListener("click", primeAudio, { once: true });
+      document.addEventListener("keydown", primeAudio, { once: true });
+      document.getElementById("startBtn").addEventListener("click", requestNotifyPermission);
+
       document.getElementById("startBtn").addEventListener("click", start);
       document.getElementById("pauseBtn").addEventListener("click", pause);
       document.getElementById("resetBtn").addEventListener("click", reset);
@@ -1869,6 +2050,11 @@
       // seconds, write the recovered session anyway. Losing it to an offline
       // laptop would be the same outcome as the bug.
       setTimeout(flushRecovery, 5000);
+
+      // Re-arm the zero-crossing wakeup for a timer that was already
+      // running when the page loaded — a refresh mid-session would
+      // otherwise be left relying on the throttled render loop alone.
+      scheduleAlarm();
 
       setInterval(updateDisplay, 250);
       updateDisplay();
