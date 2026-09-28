@@ -1,0 +1,482 @@
+// Behaviour tests for the whole app, run in headless Chromium against the
+// real page with Firebase replaced by an in-memory fake (helpers/).
+//
+// These are written against what a person sees and what gets written to the
+// database — element text, classes, database paths — never against internal
+// function names, so they survive any reorganisation of the code.
+//
+// Every scenario that earlier sessions verified by hand-built throwaway
+// harnesses lives here now, so it is re-checked on every change.
+
+import { describe, it, before, after, afterEach } from "node:test";
+import assert from "node:assert/strict";
+import { setup, teardown, openApp, T0, MIN } from "./helpers/harness.js";
+
+before(setup);
+after(teardown);
+
+let app;
+afterEach(async () => {
+  if (app) {
+    const errors = app.errors.map(String);
+    await app.close();
+    app = null;
+    assert.deepEqual(errors, [], "page threw an uncaught error");
+  }
+});
+
+const timerState = (overrides) =>
+  JSON.stringify({
+    duration: 45 * MIN, remainingAtStart: 45 * MIN, startedAt: null, running: false,
+    logged: false, zeroAt: null, categoryLabel: "", lastTickAt: null, ...overrides,
+  });
+
+// ---------------------------------------------------------------- boot
+
+describe("boot and identity", () => {
+  it("asks for a role when none is set", async () => {
+    app = await openApp({ role: null });
+    const body = await app.page.locator("body").textContent();
+    assert.match(body, /\?me=santi/);
+    app.errors.length = 0; // the thrown "No role set" is the intended stop
+  });
+
+  it("renders for santi, facing kristina", async () => {
+    app = await openApp();
+    assert.equal(await app.text("timerDisplay"), "25:00");
+    assert.equal(await app.text("stageLabel"), "Focus");
+    assert.equal(await app.text("presenceName"), "Kristina");
+    assert.equal(await app.text("presenceState"), "not working");
+    assert.equal(await app.text("composeTo"), "Kristina");
+    assert.match(await app.text("uidDebug"), /santi · uid /);
+  });
+
+  it("remembers the role without the query string", async () => {
+    app = await openApp({ role: "kristina" });
+    await app.page.goto(app.page.url().split("?")[0]);
+    await app.run(50);
+    assert.equal(await app.text("presenceName"), "Santi");
+  });
+
+  it("registers the disconnect handler for its own slot", async () => {
+    app = await openApp();
+    const w = (await app.writes()).find((x) => x.op === "onDisconnect.update");
+    assert.deepEqual(w, { op: "onDisconnect.update", path: "room/santi", value: { running: false } });
+  });
+});
+
+// ---------------------------------------------------------------- timer
+
+describe("timer", () => {
+  it("counts down, pauses and resumes, publishing what is left", async () => {
+    app = await openApp();
+    await app.click("startBtn");
+    await app.run(250); // the display re-renders on a 250ms loop
+    assert.equal(await app.text("stageLabel"), "Focusing");
+    assert.equal(await app.page.locator("#durationInput").isDisabled(), true);
+    let room = await app.db("room/santi");
+    assert.equal(room.running, true);
+    assert.equal(room.remainingAtStart, 1500);
+    assert.equal(typeof room.startedAt, "number");
+
+    await app.run(MIN - 250);
+    assert.equal(await app.text("timerDisplay"), "24:00");
+
+    await app.click("pauseBtn");
+    await app.run(3 * MIN);
+    assert.equal(await app.text("timerDisplay"), "24:00");
+    assert.equal(await app.text("stageLabel"), "Focus");
+    assert.equal((await app.db("room/santi")).running, false);
+
+    await app.click("startBtn");
+    room = await app.db("room/santi");
+    assert.equal(room.remainingAtStart, 1440, "resume publishes time left, not the full duration");
+    assert.deepEqual(await app.sessions(), [], "pausing logs nothing");
+  });
+
+  it("ends at zero: stops, logs once, counts up, restarts cleanly", async () => {
+    app = await openApp();
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await app.run(MIN + 2000);
+
+    assert.match(await app.text("timerDisplay"), /^\+0:0[12]$/);
+    assert.equal(await app.has("timerDisplay", "overrun"), true);
+    assert.equal(await app.text("stageLabel"), "Done");
+    assert.equal((await app.db("room/santi")).running, false);
+    let s = await app.sessions();
+    assert.equal(s.length, 1);
+    assert.equal(s[0].elapsedSeconds, 60);
+    assert.equal(s[0].categoryKey, "uncategorized");
+
+    await app.run(10_000);
+    await app.click("resetBtn");
+    await app.run(250);
+    assert.equal((await app.sessions()).length, 1, "reset after zero must not double-log");
+    assert.equal(await app.text("timerDisplay"), "1:00");
+
+    await app.click("startBtn");
+    await app.run(MIN + 1000);
+    await app.click("startBtn"); // straight out of the count-up
+    await app.run(1000);
+    assert.equal((await app.sessions()).length, 2);
+    assert.equal(await app.text("stageLabel"), "Focusing");
+    assert.equal(await app.text("timerDisplay"), "0:59");
+  });
+
+  it("logs real elapsed time on reset, and ignores a misclick", async () => {
+    app = await openApp();
+    await app.click("startBtn");
+    await app.run(90_000);
+    await app.click("resetBtn");
+    assert.deepEqual((await app.sessions()).map((s) => s.elapsedSeconds), [90]);
+    await app.run(250);
+    assert.equal(await app.text("timerDisplay"), "25:00");
+
+    await app.click("startBtn");
+    await app.run(3000);
+    await app.click("resetBtn");
+    assert.equal((await app.sessions()).length, 1, "a 3s run is below the noise floor");
+  });
+
+  it("changing the duration while paused logs the pending time first", async () => {
+    app = await openApp();
+    await app.click("startBtn");
+    await app.run(2 * MIN);
+    await app.click("pauseBtn");
+    await app.setDuration(10);
+    assert.deepEqual((await app.sessions()).map((s) => s.elapsedSeconds), [120]);
+    await app.run(300);
+    assert.equal(await app.text("timerDisplay"), "10:00");
+  });
+
+  it("survives a refresh mid-session without logging", async () => {
+    app = await openApp();
+    await app.click("startBtn");
+    await app.run(2 * MIN);
+    await app.page.reload();
+    await app.run(300);
+    assert.equal(await app.text("stageLabel"), "Focusing");
+    assert.match(await app.text("timerDisplay"), /^2[23]:5\d$|^23:00$/);
+    assert.deepEqual(await app.sessions(), []);
+  });
+});
+
+// ---------------------------------------------------------------- recovery
+
+describe("recovery from a crash or reboot", () => {
+  const seedTimer = (t) => ({ "timerData:santi": timerState(t), myRole: "santi" });
+
+  it("died 10 min into a 45-min run, reopened 3h later: logs 600s", async () => {
+    const startedAt = T0 - 3 * 60 * MIN - 10 * MIN;
+    app = await openApp({ seedStorage: seedTimer({ running: true, startedAt, lastTickAt: startedAt + 10 * MIN }) });
+    await app.run(300);
+    assert.deepEqual((await app.sessions()).map((s) => s.elapsedSeconds), [600]);
+    assert.equal(await app.text("timerDisplay"), "45:00");
+    assert.equal(await app.text("stageLabel"), "Focus");
+    assert.equal(await app.page.locator("#durationInput").isDisabled(), false);
+    await app.click("startBtn");
+    await app.run(250);
+    assert.equal(await app.text("stageLabel"), "Focusing", "controls still work");
+  });
+
+  it("died past zero: capped at the full duration", async () => {
+    const startedAt = T0 - 5 * 60 * MIN;
+    app = await openApp({ seedStorage: seedTimer({ running: true, startedAt, lastTickAt: startedAt + 3 * 60 * MIN }) });
+    await app.run(300);
+    assert.deepEqual((await app.sessions()).map((s) => s.elapsedSeconds), [2700]);
+  });
+
+  it("ordinary refresh (fresh heartbeat): resumes, logs nothing", async () => {
+    app = await openApp({ seedStorage: seedTimer({ running: true, startedAt: T0 - 2 * MIN, lastTickAt: T0 - 3000 }) });
+    await app.run(300);
+    assert.equal(await app.text("stageLabel"), "Focusing");
+    assert.equal(await app.text("timerDisplay"), "42:59");
+    assert.deepEqual(await app.sessions(), []);
+  });
+
+  it("legacy state with no heartbeat: resets cleanly, logs nothing", async () => {
+    app = await openApp({ seedStorage: seedTimer({ running: true, startedAt: T0 - 3 * 60 * MIN }) });
+    await app.run(6000);
+    assert.equal(await app.text("stageLabel"), "Focus");
+    assert.deepEqual(await app.sessions(), []);
+  });
+
+  it("crashed 3s in: below the noise floor", async () => {
+    const startedAt = T0 - 60 * MIN;
+    app = await openApp({ seedStorage: seedTimer({ running: true, startedAt, lastTickAt: startedAt + 3000 }) });
+    await app.run(6000);
+    assert.deepEqual(await app.sessions(), []);
+  });
+
+  it("clean idle state is untouched", async () => {
+    app = await openApp({ seedStorage: seedTimer({ remainingAtStart: 30 * MIN }) });
+    await app.run(6000);
+    assert.equal(await app.text("timerDisplay"), "30:00");
+    assert.deepEqual(await app.sessions(), []);
+  });
+
+  it("a recovered session keeps the established category's label and colour", async () => {
+    const startedAt = T0 - 60 * MIN;
+    app = await openApp({
+      seedStorage: seedTimer({ running: true, startedAt, lastTickAt: startedAt + 20 * MIN, categoryLabel: "thesis" }),
+      seedDb: { categories: { santi: { thesis: { label: "Thesis", color: "#6b8ca8", lastUsedAt: 1 } } } },
+    });
+    await app.run(300);
+    const s = await app.sessions();
+    assert.equal(s.length, 1);
+    assert.equal(s[0].categoryKey, "thesis");
+    const cat = await app.db("categories/santi/thesis");
+    assert.equal(cat.label, "Thesis");
+    assert.equal(cat.color, "#6b8ca8");
+  });
+});
+
+// ---------------------------------------------------------------- categories
+
+describe("categories", () => {
+  async function typeCategory(text) {
+    await app.page.locator("#categoryInput").fill(text);
+    await app.page.locator("#categoryInput").blur();
+  }
+
+  it("a session logs under its category and creates the vocabulary entry", async () => {
+    app = await openApp();
+    await typeCategory("Thesis");
+    await app.click("startBtn");
+    await app.run(MIN);
+    await app.click("resetBtn");
+    const s = await app.sessions();
+    assert.equal(s[0].categoryKey, "thesis");
+    const cat = await app.db("categories/santi/thesis");
+    assert.equal(cat.label, "Thesis");
+    assert.equal(cat.color, "#c1714a");
+  });
+
+  it("a typed variant snaps to the established spelling", async () => {
+    app = await openApp({ seedDb: { categories: { santi: { thesis: { label: "Thesis", color: "#c1714a", lastUsedAt: 1 } } } } });
+    await typeCategory("THESIS  ");
+    assert.equal(await app.page.locator("#categoryInput").inputValue(), "Thesis");
+  });
+
+  it("chips appear from the second category, most recent first, and set the input", async () => {
+    app = await openApp({ seedDb: { categories: { santi: {
+      thesis: { label: "Thesis", color: "#c1714a", lastUsedAt: 1 },
+    } } } });
+    assert.equal(await app.has("categoryChips", "visible"), false);
+    await app.remote("categories/santi/tutoring", { label: "Tutoring", color: "#7a9a6e", lastUsedAt: 2 });
+    assert.equal(await app.has("categoryChips", "visible"), true);
+    const chips = await app.page.locator("#categoryChips .cat-chip").allTextContents();
+    assert.deepEqual(chips, ["Tutoring", "Thesis"]);
+    await app.page.locator("#categoryChips .cat-chip", { hasText: "Thesis" }).click();
+    assert.equal(await app.page.locator("#categoryInput").inputValue(), "Thesis");
+  });
+
+  it("changing category mid-session updates presence without restarting it", async () => {
+    app = await openApp();
+    await app.click("startBtn");
+    const before = await app.db("room/santi");
+    await app.run(MIN);
+    await typeCategory("Reading");
+    const room = await app.db("room/santi");
+    assert.equal(room.category, "Reading");
+    assert.equal(room.startedAt, before.startedAt);
+  });
+});
+
+// ---------------------------------------------------------------- presence
+
+describe("presence", () => {
+  it("shows the other person's live timer and category, else 'not working'", async () => {
+    app = await openApp();
+    const now = await app.now();
+    await app.remote("room/kristina", { running: true, startedAt: now - MIN, remainingAtStart: 1500, category: "Essay" });
+    await app.run(300);
+    assert.equal(await app.text("presenceState"), "focusing on Essay · 23:59");
+    assert.equal(await app.has("presenceDot", "live"), true);
+
+    await app.remote("room/kristina", { running: false, startedAt: null, remainingAtStart: 1440, category: "Essay" });
+    await app.run(300);
+    assert.equal(await app.text("presenceState"), "not working");
+    assert.equal(await app.has("presenceDot", "live"), false);
+  });
+});
+
+// ---------------------------------------------------------------- stats
+
+describe("stats and breakdown", () => {
+  const monday = T0 - 2 * 24 * 60 * MIN;
+  const lastWeek = T0 - 7 * 24 * 60 * MIN;
+  const seedDb = {
+    sessions: { santi: {
+      a: { endedAt: lastWeek, elapsedSeconds: 600, categoryKey: "thesis" },
+      b: { endedAt: monday, elapsedSeconds: 3600, categoryKey: "thesis" },
+      c: { endedAt: monday + 1000, elapsedSeconds: 900, categoryKey: "reading" },
+      d: { endedAt: T0 - 60 * MIN, elapsedSeconds: 1800, categoryKey: "tutoring" },
+      e: { endedAt: T0 - 30 * MIN, elapsedSeconds: 300, categoryKey: "email" },
+    } },
+    categories: { santi: {
+      thesis: { label: "Thesis", color: "#c1714a", lastUsedAt: 1 },
+      reading: { label: "Reading", color: "#7a9a6e", lastUsedAt: 2 },
+      tutoring: { label: "Tutoring", color: "#6b8ca8", lastUsedAt: 3 },
+      email: { label: "Email", color: "#b08968", lastUsedAt: 4 },
+    } },
+  };
+
+  it("totals today, this week (from Monday) and all time", async () => {
+    app = await openApp({ seedDb });
+    await app.run(300);
+    assert.equal(await app.text("chipValue"), "35m");
+    assert.equal(await app.text("statToday"), "35m");
+    assert.equal(await app.text("statWeek"), "1h 50m");
+    assert.equal(await app.text("statAll"), "2h 0m");
+    assert.equal(await app.text("statCount"), "5 sessions logged");
+  });
+
+  it("breakdown shows the top three, a remainder, and cycles periods", async () => {
+    app = await openApp({ seedDb });
+    await app.run(300);
+    assert.equal(await app.text("periodToggle"), "This week");
+    assert.equal(await app.text("breakdownTop"), "Thesis");
+    const rows = await app.page.locator("#breakdownRows .cat-row .name").allTextContents();
+    assert.deepEqual(rows, ["Thesis", "Tutoring", "Reading"]);
+    assert.equal(await app.text("breakdownMore"), "+ 1 more · 5m");
+    assert.equal(await app.page.locator("#shareBar div").count(), 4);
+
+    await app.click("breakdownChip");
+    await app.click("periodToggle");
+    assert.equal(await app.text("periodToggle"), "All time");
+    await app.click("periodToggle");
+    assert.equal(await app.text("periodToggle"), "Today");
+    assert.deepEqual(await app.page.locator("#breakdownRows .cat-row .name").allTextContents(), ["Tutoring", "Email"]);
+  });
+
+  it("a finished session updates the totals live", async () => {
+    app = await openApp();
+    await app.click("startBtn");
+    await app.run(10 * MIN);
+    await app.click("resetBtn");
+    assert.equal(await app.text("chipValue"), "10m");
+    assert.equal(await app.text("statCount"), "1 session logged");
+  });
+});
+
+// ---------------------------------------------------------------- note
+
+describe("note", () => {
+  it("saves after a pause in typing, and the chip shows the first line", async () => {
+    app = await openApp();
+    await app.click("noteChip");
+    await app.page.locator("#noteInput").fill("\ncall the bank about the transfer tomorrow\nsecond line");
+    assert.equal(await app.db("notes/santi"), null, "not written on every keystroke");
+    await app.run(900);
+    assert.equal((await app.db("notes/santi")).text, "\ncall the bank about the transfer tomorrow\nsecond line");
+    assert.equal(await app.text("noteBadge"), "call the bank about t…");
+  });
+
+  it("a remote edit waits until the box loses focus", async () => {
+    app = await openApp({ seedDb: { notes: { santi: { text: "old", updatedAt: 1 } } } });
+    await app.run(100);
+    assert.equal(await app.page.locator("#noteInput").inputValue(), "old");
+    await app.click("noteChip"); // focuses the box
+    await app.remote("notes/santi", { text: "from the other laptop", updatedAt: 2 });
+    assert.equal(await app.page.locator("#noteInput").inputValue(), "old");
+    await app.page.locator("#noteInput").blur();
+    assert.equal(await app.page.locator("#noteInput").inputValue(), "from the other laptop");
+  });
+});
+
+// ---------------------------------------------------------------- messages
+
+describe("messages", () => {
+  const note = (text, sentAt = 111) => ({ note: { text, sentAt } });
+
+  it("an idle recipient can read straight away; opening writes the receipt", async () => {
+    app = await openApp({ seedDb: { messages: { santi: note("hi from K") } } });
+    await app.run(100);
+    assert.equal(await app.text("messageBadge"), "1 message — read it");
+    assert.equal(await app.has("messageIcon", "live"), true);
+    assert.equal(await app.db("messages/santi/read"), null, "no receipt before opening");
+    await app.click("messageChip");
+    assert.equal(await app.text("inboxText"), "hi from K");
+    assert.equal(await app.db("messages/santi/read"), 111);
+    await app.run(300);
+    assert.equal(await app.text("messageBadge"), "Message");
+  });
+
+  it("stays sealed while running, unseals at zero", async () => {
+    app = await openApp();
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await app.remote("messages/santi", note("for later"));
+    await app.run(300);
+    assert.equal(await app.text("messageBadge"), "message when you're done");
+    await app.click("messageChip");
+    assert.equal(await app.text("inboxText"), "Sealed until this session ends.");
+    assert.equal(await app.db("messages/santi/read"), null, "no receipt while sealed");
+    await app.click("messageChip"); // close it again
+
+    await app.run(MIN);
+    assert.equal(await app.text("messageBadge"), "1 message — read it");
+    const n = await app.page.evaluate(() => window.__notifications);
+    assert.equal(n.length, 1);
+    assert.match(n[0].body, /A message is waiting for you/);
+  });
+
+  it("sending writes only the note child of the recipient's slot", async () => {
+    app = await openApp();
+    await app.click("messageChip");
+    assert.equal(await app.page.locator("#messageSend").isDisabled(), true);
+    await app.page.locator("#messageInput").fill("dinner at 7?");
+    await app.click("messageSend");
+    const msgWrites = (await app.writes()).filter((w) => w.path.startsWith("messages"));
+    assert.deepEqual(msgWrites.map((w) => w.path), ["messages/kristina/note"]);
+    assert.equal(msgWrites[0].value.text, "dinner at 7?");
+    assert.equal(typeof msgWrites[0].value.sentAt, "number");
+    assert.equal(await app.text("messageStatus"), "waiting for Kristina");
+  });
+
+  it("a read receipt clears the compose box and says when", async () => {
+    app = await openApp({ seedDb: { messages: { kristina: note("dinner at 7?", T0 - 5 * MIN) } } });
+    await app.run(100);
+    assert.equal(await app.page.locator("#messageInput").inputValue(), "dinner at 7?", "pending text is prefilled");
+    await app.remote("messages/kristina/read", T0 - 5 * MIN);
+    await app.click("messageChip");
+    assert.equal(await app.page.locator("#messageInput").inputValue(), "");
+    assert.match(await app.text("messageStatus"), /^read \d{1,2}:\d{2}\s?[AP]M · send another$/);
+  });
+});
+
+// ---------------------------------------------------------------- alert
+
+describe("end-of-session alert", () => {
+  it("chimes and notifies once, naming the category", async () => {
+    app = await openApp();
+    await app.page.locator("#categoryInput").fill("Thesis");
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await app.run(MIN + 500);
+    const n = await app.page.evaluate(() => window.__notifications);
+    assert.equal(n.length, 1);
+    assert.equal(n[0].title, "Time's up");
+    assert.equal(n[0].tag, "focus-timer-end");
+    assert.equal(n[0].body, "Finished: Thesis");
+    assert.deepEqual(await app.page.evaluate(() => window.__tones), [880, 1318.5]);
+    assert.equal(await app.page.title(), "⏰ Time's up!");
+
+    await app.run(2 * MIN);
+    assert.equal((await app.page.evaluate(() => window.__notifications)).length, 1);
+    assert.equal((await app.page.evaluate(() => window.__tones)).length, 2);
+  });
+
+  it("a paused run never alerts", async () => {
+    app = await openApp();
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await app.run(20_000);
+    await app.click("pauseBtn");
+    await app.run(2 * MIN);
+    assert.equal((await app.page.evaluate(() => window.__notifications)).length, 0);
+    assert.equal(await app.page.title(), "Shared Focus Timer");
+  });
+});
