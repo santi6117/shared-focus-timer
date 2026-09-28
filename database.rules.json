@@ -1,0 +1,38 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "room": {
+      "$person": {
+        ".read": "auth != null && ($person === 'santi' || $person === 'kristina')",
+        ".write": "auth != null && ($person === 'santi' || $person === 'kristina')"
+      }
+    },
+    "sessions": {
+      "$person": {
+        ".read": "auth != null && ($person === 'santi' || $person === 'kristina')",
+        ".write": "auth != null && ($person === 'santi' || $person === 'kristina')"
+      }
+    },
+    "categories": {
+      "$person": {
+        ".read": "auth != null && ($person === 'santi' || $person === 'kristina')",
+        ".write": "auth != null && ($person === 'santi' || $person === 'kristina')"
+      }
+    },
+    "notes": {
+      "$person": {
+        ".read": "auth != null && ($person === 'santi' || $person === 'kristina')",
+        ".write": "auth != null && ($person === 'santi' || $person === 'kristina')"
+      }
+    },
+    "messages": {
+      "$person": {
+        ".read": "auth != null && ($person === 'santi' || $person === 'kristina')",
+        "note": { ".write": "auth != null && ($person === 'santi' || $person === 'kristina')" },
+        "read": { ".write": "auth != null && ($person === 'santi' || $person === 'kristina')" }
+      }
+    }
+  }
+}

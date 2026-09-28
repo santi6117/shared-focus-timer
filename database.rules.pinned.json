@@ -1,0 +1,34 @@
+{
+  "rules": {
+    "room": {
+      "santi":    { ".read": "auth.uid === 'SANTI_UID' || auth.uid === 'KRISTINA_UID'",
+                    ".write": "auth.uid === 'SANTI_UID'" },
+      "kristina": { ".read": "auth.uid === 'SANTI_UID' || auth.uid === 'KRISTINA_UID'",
+                    ".write": "auth.uid === 'KRISTINA_UID'" }
+    },
+    "sessions": {
+      "santi":    { ".read": "auth.uid === 'SANTI_UID'",    ".write": "auth.uid === 'SANTI_UID'" },
+      "kristina": { ".read": "auth.uid === 'KRISTINA_UID'", ".write": "auth.uid === 'KRISTINA_UID'" }
+    },
+    "categories": {
+      "santi":    { ".read": "auth.uid === 'SANTI_UID'",    ".write": "auth.uid === 'SANTI_UID'" },
+      "kristina": { ".read": "auth.uid === 'KRISTINA_UID'", ".write": "auth.uid === 'KRISTINA_UID'" }
+    },
+    "notes": {
+      "santi":    { ".read": "auth.uid === 'SANTI_UID'",    ".write": "auth.uid === 'SANTI_UID'" },
+      "kristina": { ".read": "auth.uid === 'KRISTINA_UID'", ".write": "auth.uid === 'KRISTINA_UID'" }
+    },
+    "messages": {
+      "santi": {
+        ".read": "auth.uid === 'SANTI_UID' || auth.uid === 'KRISTINA_UID'",
+        "note": { ".write": "auth.uid === 'KRISTINA_UID'" },
+        "read": { ".write": "auth.uid === 'SANTI_UID'" }
+      },
+      "kristina": {
+        ".read": "auth.uid === 'SANTI_UID' || auth.uid === 'KRISTINA_UID'",
+        "note": { ".write": "auth.uid === 'SANTI_UID'" },
+        "read": { ".write": "auth.uid === 'KRISTINA_UID'" }
+      }
+    }
+  }
+}
