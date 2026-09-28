@@ -1,0 +1,176 @@
+/* The animated background: a smeared rainbow that swirls continuously.
+   Pure CSS. It is its own element rather than a background on <body>, so it
+   can be swapped or faded independently of everything drawn over it.
+
+   Three stacked layers inside #backgroundLayer:
+     1. eight soft-edged colour blobs, each circling the screen
+     2. ::before, a pale wash over the middle so the timer card sits on calm
+        ground while the edges keep full colour
+     3. ::after, film grain, which stops a gradient this large from banding
+        into visible stripes on a laptop panel
+
+   THE ONE REAL DECISION: no blur filter anywhere. filter: blur() is the
+   obvious way to melt blobs together, but a fullscreen blur is recomputed
+   every frame while anything moves, and this page sits open for hours. Long
+   radial-gradient falloffs (solid colour to fully transparent across 68% of
+   each blob) give the same melted look for free. The only animated property
+   is `transform`, which the GPU compositor handles without waking the main
+   thread. */
+
+#backgroundLayer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;          /* blobs are larger than the viewport on purpose */
+  background: var(--bg-base);
+}
+
+/* Each colour is TWO nested elements, and the nesting is the whole trick.
+   The outer .orbit is a zero-size point pinned to screen centre that does
+   nothing but rotate. The .blob inside it is offset sideways by --r, so
+   rotating the parent carries the blob around a circle. Nested transforms
+   compose, so the blob can wobble at the same time without the two fighting
+   over the single `transform` property.
+
+   Rotation rather than a back-and-forth swing: animation-direction:
+   alternate makes a pendulum, which moves but never goes anywhere. 360° is
+   0°, so a rotation tours the screen without retracing.
+
+   WHY THIS DOESN'T TURN TO MUD: complementary colours overlapping at equal
+   strength average to grey. All eight orbits share one path and differ only
+   in start angle, so the blobs are beads on a track and neighbours stay
+   neighbours. They're threaded on in spectral order, so hue neighbours sit
+   together and complements stay half a lap apart.
+
+   The cool half laps 18% slower, so the two halves slide past each other
+   over several minutes instead of rotating as one rigid body. That's the one
+   source of warm-on-cool overlap, and because it's always sliding, any
+   muddiness is transient. */
+.orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  animation: tour var(--bg-tour) linear infinite;
+  /* linear: easing would make the whole wheel visibly speed up and slow
+     down once a lap, which reads as a machine cycling rather than drift. */
+}
+
+@keyframes tour {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Start angles, an eighth of a lap apart. A negative animation-delay starts
+   an animation already partway through rather than postponing it. */
+.o1 { animation-delay: calc(var(--bg-tour) * -0.000); }
+.o2 { animation-delay: calc(var(--bg-tour) * -0.125); }
+.o3 { animation-delay: calc(var(--bg-tour) * -0.250); }
+.o4 { animation-delay: calc(var(--bg-tour) * -0.375); }
+
+/* The cool half: slower lap, delays scaled to match. */
+.o5, .o6, .o7, .o8 { animation-duration: calc(var(--bg-tour) * 1.18); }
+.o5 { animation-delay: calc(var(--bg-tour) * -0.590); }
+.o6 { animation-delay: calc(var(--bg-tour) * -0.738); }
+.o7 { animation-delay: calc(var(--bg-tour) * -0.885); }
+.o8 { animation-delay: calc(var(--bg-tour) * -1.033); }
+
+/* --r is the blob's distance from centre, --s its diameter. Negative
+   margins re-centre it on its orbit point; margins rather than a translate
+   keep `transform` free for the wobble.
+
+   Radii vary from 24 to 46vmax: eight blobs at one radius read as a clean
+   spinning ring, which looks mechanical.
+
+   Gradients end at the same hex with alpha 00, never at `transparent`,
+   which is rgba(0,0,0,0) and would drag the ramp through black into a grey
+   halo. */
+.orbit > .blob {
+  position: absolute;
+  left: var(--r);
+  top: 0;
+  width: var(--s);
+  height: var(--s);
+  margin-left: calc(var(--s) / -2);
+  margin-top: calc(var(--s) / -2);
+  border-radius: 50%;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;  /* right HERE: the wobble is meant to be
+                                      a pendulum; travel is the orbit's job */
+  will-change: transform;
+}
+
+/* Spectral order around the ring. Load-bearing: reshuffling these colours
+   is the one edit that turns the whole thing muddy. */
+.b1 { --r: 38vmax; --s: 100vmax; animation-name: wob-a; animation-duration: calc(var(--bg-cycle) * 1.00);
+      background: radial-gradient(circle, #f0424f 0%, #f0424fcc 30%, #f0424f00 68%); }
+.b2 { --r: 30vmax; --s: 92vmax;  animation-name: wob-b; animation-duration: calc(var(--bg-cycle) * 1.22);
+      background: radial-gradient(circle, #fb8a2b 0%, #fb8a2bcc 30%, #fb8a2b00 68%); }
+.b3 { --r: 44vmax; --s: 84vmax;  animation-name: wob-c; animation-duration: calc(var(--bg-cycle) * 0.90);
+      background: radial-gradient(circle, #f9cd35 0%, #f9cd35cc 30%, #f9cd3500 68%); }
+.b4 { --r: 26vmax; --s: 88vmax;  animation-name: wob-d; animation-duration: calc(var(--bg-cycle) * 1.35);
+      background: radial-gradient(circle, #7ec95a 0%, #7ec95acc 30%, #7ec95a00 68%); }
+.b5 { --r: 40vmax; --s: 92vmax;  animation-name: wob-b; animation-duration: calc(var(--bg-cycle) * 1.10);
+      background: radial-gradient(circle, #2eb9a6 0%, #2eb9a6cc 30%, #2eb9a600 68%); }
+.b6 { --r: 32vmax; --s: 96vmax;  animation-name: wob-a; animation-duration: calc(var(--bg-cycle) * 1.45);
+      background: radial-gradient(circle, #4a9ae4 0%, #4a9ae4cc 30%, #4a9ae400 68%); }
+.b7 { --r: 46vmax; --s: 88vmax;  animation-name: wob-c; animation-duration: calc(var(--bg-cycle) * 1.15);
+      background: radial-gradient(circle, #8a7ce2 0%, #8a7ce2cc 30%, #8a7ce200 68%); }
+.b8 { --r: 24vmax; --s: 78vmax;  animation-name: wob-d; animation-duration: calc(var(--bg-cycle) * 0.95);
+      background: radial-gradient(circle, #e767b2 0%, #e767b2cc 30%, #e767b200 68%); }
+
+/* The wobble: small local churn on top of the lap. The slight scaling is
+   what makes colours bleed INTO each other rather than slide past. Periods
+   don't divide evenly into each other or into the lap, so the composition
+   never repeats a frame you'd recognise. */
+@keyframes wob-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(8vmax, 6vmax, 0) scale(1.14); }
+}
+@keyframes wob-b {
+  from { transform: translate3d(0, 0, 0) scale(1.10); }
+  to   { transform: translate3d(-9vmax, 7vmax, 0) scale(1); }
+}
+@keyframes wob-c {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(7vmax, -8vmax, 0) scale(1.12); }
+}
+@keyframes wob-d {
+  from { transform: translate3d(0, 0, 0) scale(1.08); }
+  to   { transform: translate3d(-6vmax, -6vmax, 0) scale(1); }
+}
+
+/* The centre wash: above the blobs, below everything else. */
+#backgroundLayer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 44% 40% at 50% 48%,
+                rgba(255, 250, 243, var(--bg-veil)) 0%,
+                rgba(255, 250, 243, calc(var(--bg-veil) * 0.45)) 52%,
+                rgba(255, 250, 243, 0) 82%);
+}
+
+/* Film grain. Functional: a gradient covering a whole screen has so few
+   distinct colours per inch that 8-bit panels render the blends as stripes,
+   and a speckle at this scale breaks them up. An inline SVG turbulence
+   filter, rasterised once and tiled: one small paint, no extra file. */
+#backgroundLayer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.42;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>");
+  background-size: 220px 220px;
+}
+
+/* Drifting backgrounds trigger motion sickness or migraines for some
+   people, and the OS already knows who they are. Freezing the blobs leaves
+   a still gradient. */
+@media (prefers-reduced-motion: reduce) {
+  #backgroundLayer .orbit,
+  #backgroundLayer .blob { animation: none; }
+}

@@ -1,0 +1,479 @@
+/* The corner widgets: presence (top right), messages (top left), stats and
+   category split (bottom left), note (bottom right), and the UID strip.
+
+   The chip-and-panel widgets share one shape: a button that's always
+   visible, and a panel that opens on click. Bottom-anchored widgets put the
+   panel BEFORE the chip in the DOM, so the box grows upward and the chip
+   stays under the cursor; the top-anchored messages widget does the
+   reverse. */
+
+/* ---- Presence, top right ---- */
+#presenceWidget {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  padding: 0.7rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+}
+
+/* Two states only: a paused timer, a closed tab and an offline laptop are
+   all "not working" and look identical. */
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+  flex: none;
+}
+.dot.live { background: var(--accent); }
+
+#presenceName { color: var(--ink-soft); }
+#presenceState { font-variant-numeric: tabular-nums; }
+
+/* ---- Bottom-left dock: stats + category split ---- */
+/* Side by side; stacked below 700px, where two chips plus the timer card
+   start crowding a narrow window. */
+#cornerDock {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 1.25rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+@media (max-width: 700px) {
+  #cornerDock { flex-direction: column; align-items: flex-start; }
+}
+
+#statsWidget {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  font-size: 0.9rem;
+}
+
+#statsChip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  background: none;
+  border: none;
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
+}
+#statsChip:hover { background: var(--surface-sunk); }
+
+.chip-label { color: var(--ink-soft); }
+#chipValue { font-variant-numeric: tabular-nums; }
+#chipCaret { color: var(--ink-soft); font-size: 0.7rem; transition: transform 160ms ease; }
+#statsWidget.expanded #chipCaret { transform: rotate(180deg); }
+
+#statsPanel {
+  display: none;
+  padding: 0.9rem 1rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+#statsWidget.expanded #statsPanel { display: block; }
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 0.35rem 0;
+}
+.stat-row span:first-child { color: var(--ink-soft); }
+.stat-row span:last-child { font-variant-numeric: tabular-nums; }
+
+.stat-note {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+  margin-bottom: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
+#breakdownWidget {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  font-size: 0.9rem;
+  min-width: 11.5rem;
+}
+
+#breakdownChip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  background: none;
+  border: none;
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
+}
+#breakdownChip:hover { background: var(--surface-sunk); }
+#breakdownCaret { color: var(--ink-soft); font-size: 0.7rem; transition: transform 160ms ease; }
+#breakdownWidget.expanded #breakdownCaret { transform: rotate(180deg); }
+
+#breakdownPanel {
+  display: none;
+  padding: 0.9rem 1rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+#breakdownWidget.expanded #breakdownPanel { display: block; }
+
+/* The proportion bar keeps the top three honest: everything outside them
+   is one neutral segment, so the shares always sum to the real total. */
+#shareBar {
+  display: flex;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-sunk);
+  margin-bottom: 0.7rem;
+}
+#shareBar div { height: 100%; }
+
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.28rem 0;
+}
+.cat-row .swatch { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.cat-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-row .time { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+
+#breakdownMore {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  padding-top: 0.15rem;
+}
+
+/* Cycles Today -> This week -> All time. Separate from the chip so one
+   click never means two things. */
+#periodToggle {
+  font: inherit;
+  font-size: 0.75rem;
+  margin-top: 0.55rem;
+  margin-bottom: 0.15rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-sunk);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+#periodToggle:hover { color: var(--ink); }
+
+/* ---- Note, bottom right ---- */
+#noteWidget {
+  position: fixed;
+  bottom: 2rem;
+  right: 1.25rem;
+  width: 17rem;
+  max-width: calc(100vw - 2.5rem);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  font-size: 0.9rem;
+}
+
+#noteChip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  background: none;
+  border: none;
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
+}
+#noteChip:hover { background: var(--surface-sunk); }
+
+/* min-width: 0 is what lets the ellipsis happen: a flex item won't shrink
+   below its content's width without it, so a long first line would widen
+   the whole widget instead of truncating. */
+#noteBadge {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#noteBadge.empty { color: var(--ink-soft); }
+
+#noteCaret {
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  transition: transform 160ms ease;
+}
+#noteWidget.expanded #noteCaret { transform: rotate(180deg); }
+
+#notePanel {
+  display: none;
+  padding: 0.9rem 1rem 0.45rem;
+  border-bottom: 1px solid var(--line);
+}
+#noteWidget.expanded #notePanel { display: block; }
+
+#noteInput {
+  display: block;
+  width: 100%;
+  min-height: 8.5rem;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--surface-sunk);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
+#noteInput::placeholder { color: var(--ink-soft); }
+#noteInput:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Reserves its line even when empty, so the panel doesn't jump when the
+   save status appears and clears. */
+#noteStatus {
+  min-height: 0.95rem;
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+}
+
+/* Below 700px the left dock stacks upward; a full-width note would meet it
+   mid-screen. */
+@media (max-width: 700px) {
+  #noteWidget { width: 12.5rem; }
+  #noteInput { min-height: 7rem; }
+}
+
+/* ---- Messages, top left ---- */
+/* The quietest widget on the page. A message arriving must never pull
+   attention out of a running session, so there is no sound, no animation
+   and no auto-expand: the envelope turns terracotta and the label changes. */
+#messageWidget {
+  position: fixed;
+  top: 1.25rem;
+  left: 1.25rem;
+  /* Sized to the longest label it shows, "message when you're done", so
+     that one never ellipsises. */
+  width: 18rem;
+  max-width: calc(100vw - 2.5rem);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  font-size: 0.9rem;
+  z-index: 2;
+}
+
+#messageChip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  background: none;
+  border: none;
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+}
+#messageChip:hover { background: var(--surface-sunk); }
+
+/* One glyph does two jobs: what the widget is, and whether something is
+   waiting. A separate status dot fails on a phone, where the chip collapses
+   to icon-only and a lone coloured dot says "something changed" without
+   saying what. */
+#messageIcon {
+  color: var(--ink-soft);
+  font-size: 1rem;
+  line-height: 1;
+  flex: none;
+}
+#messageIcon.live { color: var(--accent); }
+
+/* Same min-width: 0 trick as the note chip. */
+#messageBadge {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#messageBadge.empty { color: var(--ink-soft); }
+#messageBadge.waiting { color: var(--accent); }
+
+#messageCaret {
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  transition: transform 160ms ease;
+}
+#messageWidget.expanded #messageCaret { transform: rotate(180deg); }
+
+#messagePanel {
+  display: none;
+  padding: 0.15rem 1rem 0.55rem;
+  border-top: 1px solid var(--line);
+}
+#messageWidget.expanded #messagePanel { display: block; }
+
+#inboxSection {
+  display: none;
+  margin: 0.7rem 0 0.9rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--surface-sunk);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent);
+}
+#inboxSection.shown { display: block; }
+#inboxFrom {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 0.3rem;
+}
+/* pre-wrap keeps the sender's line breaks; overflow-wrap stops a pasted URL
+   pushing the widget wider than its box. */
+#inboxText {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#inboxText.locked { color: var(--ink-soft); font-style: italic; }
+
+#composeLabel {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 0.35rem;
+}
+#messageInput {
+  display: block;
+  width: 100%;
+  min-height: 4.5rem;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--surface-sunk);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
+#messageInput::placeholder { color: var(--ink-soft); }
+#messageInput:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+#messageSendRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: 0.45rem;
+}
+#messageSend {
+  padding: 0.35rem 0.9rem;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--accent-ink);
+  border-radius: 999px;
+}
+#messageSend:disabled {
+  background: var(--surface-sunk);
+  border-color: var(--line);
+  color: var(--ink-soft);
+  cursor: default;
+}
+/* Reserves its line even when empty, like #noteStatus. */
+#messageStatus {
+  flex: 1;
+  min-width: 0;
+  min-height: 0.95rem;
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Below 700px this widget and the presence pill share the top of a ~400px
+   screen. Collapsed, this one shrinks to the envelope alone, which is still
+   a complete arrival cue.
+
+   Expanded, the widget stays chip-sized and the PANEL floats beneath it as
+   an overlay. Widening the widget instead would grow the chip row into the
+   presence pill, the one row that must never move. A panel covering the
+   timer for a few seconds is fine; two widgets overlapping at rest is not. */
+@media (max-width: 700px) {
+  /* max-width, not width: free to shrink to the envelope when collapsed,
+     stopped from growing into the pill when expanded. */
+  #messageWidget { width: auto; max-width: 10.5rem; overflow: visible; }
+  #messageWidget:not(.expanded) #messageBadge,
+  #messageWidget:not(.expanded) #messageCaret { display: none; }
+  #messageChip { border-radius: var(--radius-sm); }
+  #messagePanel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 15rem;
+    max-width: calc(100vw - 2.5rem);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+/* ---- UID strip ---- */
+/* Visible but quiet: the anonymous UID has to be copied into the security
+   rules by hand, and this beats digging it out of devtools. */
+#uidDebug {
+  position: fixed;
+  bottom: 0.5rem;
+  right: 1.25rem;
+  line-height: 1;
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+  opacity: 0.7;
+  font-family: ui-monospace, Consolas, monospace;
+}

@@ -1,0 +1,43 @@
+/* Design tokens: every colour, radius, shadow and the background's timing
+   knobs, so the whole look retunes from this one block.
+
+   Direction: "warm & cozy". Soft paper tones, rounded surfaces, gentle
+   shadows, one terracotta accent. It's a shared space between two people,
+   not a productivity dashboard, and the palette does that work. */
+
+:root {
+  /* ---- The animated background (background.css) ----
+     These four are its whole control surface.
+
+     --bg-base   shows through wherever the colour blobs don't reach. A warm
+                 amber rather than a pale cream on purpose: a pale base reads
+                 as a bald spot if a blob drifts off it, while a saturated one
+                 just reads as more background.
+     --bg-cycle  how fast the colours churn IN PLACE. Each blob's wobble is a
+                 multiple of this.
+     --bg-tour   how long one lap AROUND the screen takes. Independent of
+                 --bg-cycle because churning fast while travelling slowly
+                 feels completely different from the reverse.
+     --bg-veil   how much pale wash sits over the middle, behind the timer
+                 card. 0 = full colour edge to edge, 1 = a nearly white
+                 centre. */
+  --bg-base: #f0c9a2;
+  --bg-cycle: 30s;
+  --bg-tour: 150s;
+  --bg-veil: 0.5;
+
+  --surface: #fffaf3;          /* cards and widgets */
+  --surface-sunk: #f7efe4;     /* inputs, insets */
+  --ink: #3d332b;              /* primary text */
+  --ink-soft: #97877a;         /* labels, secondary text */
+  --accent: #d6713e;           /* terracotta: the one "loud" colour */
+  --accent-ink: #fffaf3;       /* text sitting on the accent */
+  --line: #e8dac8;             /* hairline borders */
+
+  --radius: 20px;
+  --radius-sm: 12px;
+  --shadow: 0 10px 30px rgba(90, 62, 40, 0.10);
+  --shadow-sm: 0 4px 14px rgba(90, 62, 40, 0.08);
+
+  --font: "Segoe UI", ui-rounded, system-ui, -apple-system, sans-serif;
+}
