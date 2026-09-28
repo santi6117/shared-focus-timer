@@ -5,8 +5,9 @@
 //   chime            works with the tab buried; useless with the volume down
 //   OS notification  works with the volume down; needs permission and a
 //                    real http(s) address (browsers refuse it on file://)
-//   tab title        needs no permission and no audio; only helps if you
-//                    look at the tab bar
+//   tab title        needs no permission and no audio; blinks until you
+//                    come back, so it's there whenever you glance at the
+//                    tab bar
 //
 // Overrun time is never logged, so without this the minutes between the
 // real end and the moment you notice are simply lost.
@@ -32,8 +33,11 @@ export function init() {
   timer.on("end", () => {
     playChime();
     showNotification();
-    flashTitle();
+    startTitleFlash();
   });
+  // Starting or resetting is a response to the alert, however it happened.
+  timer.on("start", stopTitleFlash);
+  timer.on("reset", stopTitleFlash);
 }
 
 // ---- The chime ----
@@ -110,20 +114,67 @@ function showNotification() {
 }
 
 // ---- The tab title ----
-// Flashes once and restores itself after 20 seconds, or the moment the
-// window regains focus, whichever is first.
+// Alternates between "⏰ Time's up!" and the normal title every second, with
+// no time limit, until the person shows any sign of being back:
+//
+//   returning to the tab or window   visibilitychange / focus
+//   any click or keypress on the page, which covers the case where the page
+//   was already in front when the session ended, so focus never changes
+//   Start or Reset                   via the timer's events
 const BASE_TITLE = document.title;
-let titleTimeout = null;
+const FLASH_TITLE = "\u23f0 Time's up!";
+const FLASH_MS = 1000;
+let stopTicker = null;
 
-function restoreTitle() {
-  clearTimeout(titleTimeout);
-  titleTimeout = null;
-  document.title = BASE_TITLE;
+function startTitleFlash() {
+  stopTitleFlash();
+  let showingAlert = true;
+  document.title = FLASH_TITLE;
+  stopTicker = startTicker(() => {
+    showingAlert = !showingAlert;
+    document.title = showingAlert ? FLASH_TITLE : BASE_TITLE;
+  }, FLASH_MS);
+
+  window.addEventListener("focus", stopTitleFlash);
+  document.addEventListener("visibilitychange", stopIfVisible);
+  // Capture phase, so a click that some widget stops from bubbling still
+  // counts.
+  document.addEventListener("pointerdown", stopTitleFlash, true);
+  document.addEventListener("keydown", stopTitleFlash, true);
 }
 
-function flashTitle() {
-  document.title = "⏰ Time's up!";
-  clearTimeout(titleTimeout);
-  titleTimeout = setTimeout(restoreTitle, 20000);
-  window.addEventListener("focus", restoreTitle, { once: true });
+function stopIfVisible() {
+  if (document.visibilityState === "visible") stopTitleFlash();
+}
+
+function stopTitleFlash() {
+  if (!stopTicker) return;
+  stopTicker();
+  stopTicker = null;
+  document.title = BASE_TITLE;
+  window.removeEventListener("focus", stopTitleFlash);
+  document.removeEventListener("visibilitychange", stopIfVisible);
+  document.removeEventListener("pointerdown", stopTitleFlash, true);
+  document.removeEventListener("keydown", stopTitleFlash, true);
+}
+
+// A steady beat that survives a hidden tab. After five minutes in the
+// background, Chrome runs a page's repeating timers at most once a minute,
+// which would turn a one-second blink into a once-a-minute flip, and a
+// hidden tab is exactly when the blink matters. Timers inside a Web Worker
+// aren't under that rule, so a two-line worker keeps the beat and the page
+// just flips the title on each message. Falls back to a plain interval if
+// a worker can't be created. Returns a function that stops it.
+function startTicker(fn, ms) {
+  try {
+    const url = URL.createObjectURL(
+      new Blob(["setInterval(() => postMessage(0), " + ms + ");"], { type: "text/javascript" })
+    );
+    const worker = new Worker(url);
+    worker.onmessage = fn;
+    return () => { worker.terminate(); URL.revokeObjectURL(url); };
+  } catch (e) {
+    const id = setInterval(fn, ms);
+    return () => clearInterval(id);
+  }
 }

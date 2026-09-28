@@ -462,7 +462,6 @@ describe("end-of-session alert", () => {
     assert.equal(n[0].tag, "focus-timer-end");
     assert.equal(n[0].body, "Finished: Thesis");
     assert.deepEqual(await app.page.evaluate(() => window.__tones), [880, 1318.5]);
-    assert.equal(await app.page.title(), "⏰ Time's up!");
 
     await app.run(2 * MIN);
     assert.equal((await app.page.evaluate(() => window.__notifications)).length, 1);
@@ -478,5 +477,75 @@ describe("end-of-session alert", () => {
     await app.run(2 * MIN);
     assert.equal((await app.page.evaluate(() => window.__notifications)).length, 0);
     assert.equal(await app.page.title(), "Shared Focus Timer");
+  });
+});
+
+// ---------------------------------------------------------------- title flash
+
+describe("title flash", () => {
+  const ALERT = "⏰ Time's up!";
+  const BASE = "Shared Focus Timer";
+
+  // The blink is driven by a Web Worker, which runs on real time rather than
+  // the test's paused clock, so it is sampled over real seconds.
+  async function titlesOver(ms) {
+    const seen = new Set();
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+      seen.add(await app.page.title());
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return seen;
+  }
+
+  async function finishSession() {
+    app = await openApp();
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await app.run(MIN + 500);
+  }
+
+  it("blinks, and is still blinking long after the session ended", async () => {
+    await finishSession();
+    assert.deepEqual(await titlesOver(2500), new Set([ALERT, BASE]));
+    await app.run(30 * MIN);
+    assert.deepEqual(await titlesOver(2500), new Set([ALERT, BASE]), "no time limit");
+  });
+
+  it("stops on a click anywhere", async () => {
+    await finishSession();
+    await app.page.mouse.click(640, 5);
+    assert.deepEqual(await titlesOver(1500), new Set([BASE]));
+  });
+
+  it("stops on a keypress", async () => {
+    await finishSession();
+    await app.page.keyboard.press("Shift");
+    assert.deepEqual(await titlesOver(1500), new Set([BASE]));
+  });
+
+  it("stops when the window regains focus", async () => {
+    await finishSession();
+    await app.page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    assert.deepEqual(await titlesOver(1500), new Set([BASE]));
+  });
+
+  it("stops when the tab becomes visible again", async () => {
+    await finishSession();
+    await app.page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    assert.deepEqual(await titlesOver(1500), new Set([BASE]));
+  });
+
+  it("stops on Start and on Reset, however they are triggered", async () => {
+    await finishSession();
+    // Called directly, with no click or key event, so only the timer's own
+    // "start" event can stop it.
+    await app.page.evaluate(() => import("./js/timer.js").then((t) => t.start()));
+    assert.deepEqual(await titlesOver(1500), new Set([BASE]));
+
+    await app.run(MIN + 500);
+    assert.ok((await titlesOver(1500)).has(ALERT), "a second session flashes again");
+    await app.page.evaluate(() => import("./js/timer.js").then((t) => t.reset()));
+    assert.deepEqual(await titlesOver(1500), new Set([BASE]));
   });
 });
