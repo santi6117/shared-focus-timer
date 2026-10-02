@@ -487,8 +487,8 @@ focus session). A phone is a remote.
 - **The phone has no picker** and shows the swirl unless previewed.
 - **Rainy window:** dusk sky; two bokeh layers of city lights (one
   element each, a dozen gradients) that crossfade, drift and swell; a few
-  lights flickering on their own beat; cars' lights gliding along the
-  street; three depths of rain, gradient streaks, blended with `overlay`
+  lights flickering on their own beat; cars on one wet road near the
+  bottom, with soft reflections, passing rarely and irregularly; three depths of rain, gradient streaks, blended with `overlay`
   so they show against lights and vanish against the sky, leaning with a
   slow wind; static beads and an edge vignette; seven runner drops.
 - Known: §6c's centre wash (`--bg-veil`) paints *under* the swirl's blobs
