@@ -12,7 +12,7 @@
 export const WALLPAPERS = [
   { id: "swirl", name: "Swirl",          hours: 0,   built: true },
   { id: "rain",  name: "Rainy window",   hours: 100, built: true },
-  { id: "hills", name: "Paper hills",    hours: 200, built: false },
+  { id: "hills", name: "Paper hills",    hours: 200, built: true },
   { id: "koi",   name: "Koi pond",       hours: 300, built: false },
 ];
 export const DEFAULT_WALLPAPER = "swirl";

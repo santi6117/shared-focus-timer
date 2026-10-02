@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/tokens.css" />
   <link rel="stylesheet" href="css/background.css" />
   <link rel="stylesheet" href="css/wallpapers/rain.css" />
+  <link rel="stylesheet" href="css/wallpapers/hills.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/widgets.css" />
 </head>
@@ -62,6 +63,33 @@
       <span class="runner r5"></span>
       <span class="runner r6"></span>
       <span class="runner r7"></span>
+    </div>
+
+    <!-- Paper hills: cut-paper layers under a sky that follows the local
+         time (js/sky.js sets the colours once a minute). -->
+    <div class="wp wp-hills">
+      <div class="hills-sky"></div>
+      <div class="hills-stars"></div>
+      <div class="hills-stars hills-stars-twinkle"></div>
+      <div class="hills-sun"></div>
+      <div class="hills-moon"></div>
+      <svg class="paper-cloud cloud-1" viewBox="0 0 189 82"><g><circle cx="30" cy="60" r="19"/><circle cx="51" cy="56" r="25"/><circle cx="80" cy="51" r="34"/><circle cx="119" cy="57" r="23"/><circle cx="145" cy="59" r="20"/><rect x="14" y="56" width="161" height="22" rx="11"/></g></svg>
+      <svg class="paper-cloud cloud-2" viewBox="0 0 203 82"><g><circle cx="30" cy="60" r="18"/><circle cx="50" cy="48" r="39"/><circle cx="96" cy="57" r="24"/><circle cx="124" cy="51" r="35"/><circle cx="164" cy="61" r="17"/><rect x="14" y="56" width="175" height="22" rx="11"/></g></svg>
+      <svg class="paper-cloud cloud-3" viewBox="0 0 196 82"><g><circle cx="30" cy="59" r="20"/><circle cx="53" cy="54" r="29"/><circle cx="86" cy="57" r="24"/><circle cx="114" cy="49" r="38"/><circle cx="157" cy="61" r="16"/><rect x="14" y="56" width="168" height="22" rx="11"/></g></svg>
+      <svg class="hills-land" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+        <defs>
+          <!-- Each layer throws a soft shadow up onto the one behind it,
+               which is what makes flat shapes read as cut paper. Static,
+               so it is drawn once per colour change, not per frame. -->
+          <filter id="paperShadow" x="-5%" y="-20%" width="110%" height="140%">
+            <feDropShadow dx="0" dy="-5" stdDeviation="7" flood-color="#000" flood-opacity="0.22"/>
+          </filter>
+        </defs>
+        <path class="hill hill-1" d="M-100,910 L-100,533 C-41,521 150,465 252,458 C355,451 423,488 515,490 C608,492 702,463 808,471 C914,479 1056,541 1151,538 C1247,534 1294,463 1380,450 C1467,436 1614,451 1670,458 C1727,466 1712,490 1720,496 L1720,910 Z"/>
+        <path class="hill hill-2" d="M-100,910 L-100,529 C-49,544 122,615 206,617 C290,619 324,551 404,541 C484,531 599,554 684,557 C768,561 828,562 910,564 C991,565 1095,563 1173,566 C1251,569 1306,583 1380,581 C1454,578 1560,561 1617,552 C1674,544 1703,534 1720,530 L1720,910 Z"/>
+        <path class="hill hill-3" d="M-100,910 L-100,682 C-63,680 49,676 125,671 C201,666 289,645 356,650 C424,655 457,695 529,700 C600,705 711,693 786,680 C860,667 908,628 976,620 C1044,613 1121,628 1193,633 C1265,638 1344,646 1411,649 C1477,652 1541,648 1592,649 C1644,651 1699,657 1720,659 L1720,910 Z"/>
+        <path class="hill hill-4" d="M-100,910 L-100,770 C-65,769 38,759 108,761 C179,763 246,786 324,781 C401,775 480,737 571,730 C662,723 783,735 870,739 C957,743 1018,747 1094,753 C1169,758 1251,771 1325,774 C1398,777 1468,778 1533,772 C1599,765 1689,741 1720,735 L1720,910 Z"/>
+      </svg>
     </div>
   </div>
 

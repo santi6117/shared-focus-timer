@@ -30,6 +30,7 @@ import * as note from "./note.js";
 import * as messages from "./messages.js";
 import * as alert from "./alert.js";
 import * as wallpapers from "./wallpapers.js";
+import * as sky from "./sky.js";
 
 async function boot() {
   let user;
@@ -66,6 +67,7 @@ async function boot() {
   // After stats: its chip toggles the panel first, so the picker sees the
   // panel's new state when deciding whether it was just opened.
   wallpapers.init();
+  sky.init();
 
   if (!REMOTE) {
     timer.recoverInterruptedRun();

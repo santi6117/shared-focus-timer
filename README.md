@@ -18,7 +18,8 @@ JavaScript from a file opened that way, so it has to be the link above.
 index.html                 the page's markup, nothing else
 css/
   tokens.css               every colour, radius and background knob
-  background.css           the animated rainbow background
+  background.css           the background layer and the swirl wallpaper
+  wallpapers/              one file per unlockable wallpaper
   layout.css               the centre timer card
   widgets.css              the corner widgets
 js/
@@ -39,6 +40,8 @@ js/
   note.js                  the bottom-right note
   messages.js              held messages, top left
   alert.js                 chime, notification, blinking tab title
+  wallpapers.js            which wallpaper shows; the picker
+  sky.js                   Paper hills' time-of-day sky
   lib/                     pure logic with no page or database in it,
                            which is what the unit tests check directly
 tests/                     automated tests (see below)

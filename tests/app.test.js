@@ -716,6 +716,17 @@ describe("wallpapers", () => {
     assert.equal(await app.has("statsChip", "has-new"), false);
   });
 
+  it("paints the hills' sky for the pinned hour", async () => {
+    app = await openApp();
+    await app.page.goto(app.page.url().split("?")[0] + "?bg=hills&sky=13");
+    await app.run(250);
+    assert.equal(await bg(app), "hills");
+    const v = (name) => app.page.locator(".wp-hills").evaluate((el, n) => el.style.getPropertyValue(n), name);
+    assert.equal(await v("--sky-top"), "#86bde8");
+    assert.equal(await v("--sun-on"), "1");
+    assert.equal(await v("--moon-on"), "0");
+  });
+
   it("previews with ?bg= without unlocking or saving", async () => {
     app = await openApp({ seedDb: hours(1) });
     await app.page.goto(app.page.url().split("?")[0] + "?bg=rain");

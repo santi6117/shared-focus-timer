@@ -15,6 +15,7 @@ import { isUnread, chipLabel, outboxStatus } from "../js/lib/messages.js";
 import {
   WALLPAPERS, unlockedIds, progressLabel, resolveWallpaper, newlyUnlocked,
 } from "../js/lib/wallpapers.js";
+import { skyAt, mix } from "../js/lib/sky.js";
 import { normalizeStatus, formatAgo, idleText, STATUS_MAX } from "../js/lib/status.js";
 
 const MIN = 60_000;
@@ -200,6 +201,38 @@ describe("wallpapers", () => {
   it("counts only built, unseen unlocks as new", () => {
     assert.deepEqual(newlyUnlocked(120 * H, []), ["rain"]);
     assert.deepEqual(newlyUnlocked(120 * H, ["rain"]), []);
-    assert.deepEqual(newlyUnlocked(250 * H, ["rain"]), [], "hills isn't built yet");
+    assert.deepEqual(newlyUnlocked(250 * H, ["rain"]), ["hills"]);
+    assert.deepEqual(newlyUnlocked(350 * H, ["rain", "hills"]), [], "koi isn't built yet");
+  });
+});
+
+describe("sky", () => {
+  it("blends colours linearly", () => {
+    assert.equal(mix("#000000", "#ffffff", 0.5), "#808080");
+    assert.equal(mix("#123456", "#abcdef", 0), "#123456");
+  });
+
+  it("hits its keyframes exactly and wraps around midnight", () => {
+    assert.equal(skyAt(13).skyTop, "#86bde8");
+    assert.deepEqual(skyAt(24), skyAt(0));
+    assert.deepEqual(skyAt(-1), skyAt(23));
+  });
+
+  it("shows the sun by day and stars and moon by night", () => {
+    const noon = skyAt(12.5), midnight = skyAt(0);
+    assert.equal(noon.sun.visible, true);
+    assert.equal(noon.moon.visible, false);
+    assert.equal(noon.stars, 0);
+    assert.ok(noon.sun.y < 25, "high at midday");
+    assert.equal(midnight.sun.visible, false);
+    assert.equal(midnight.moon.visible, true);
+    assert.equal(midnight.stars, 1);
+  });
+
+  it("puts the sun low and orange near sunset", () => {
+    const late = skyAt(18.5);
+    assert.ok(late.sun.y > 60);
+    assert.ok(late.sun.x > 85);
+    assert.notEqual(late.sun.color, skyAt(12.5).sun.color);
   });
 });

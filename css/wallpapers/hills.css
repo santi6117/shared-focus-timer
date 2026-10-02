@@ -1,0 +1,123 @@
+/* Paper hills (unlocks at 200 hours): layered cut-paper hills under a sky
+   that follows the local time of day. Pink dawn, gold afternoon, violet
+   dusk, indigo night with stars and a moon.
+
+   All the time-of-day colour arrives as custom properties set by
+   js/sky.js once a minute (--sky-top, --hill-1, --sun-x …); this file only
+   says where they go. Between updates the sun and moon glide on a
+   one-minute transition, so they never visibly step.
+
+   What moves continuously is deliberately little: three paper clouds
+   drifting across over several minutes, and a few stars twinkling at
+   night. It is a calm wallpaper; the sky itself is the slow animation.
+
+   Back to front: sky (with a glow around the sun), stars, sun, moon,
+   clouds, then the hills as one inline SVG. The hills are SVG rather than
+   CSS shapes because a ridge line is a curve, and four curves are four
+   short paths. */
+
+.wp-hills {
+  /* Fallbacks until js/sky.js runs: a soft afternoon. */
+  --sky-top: #86bde8; --sky-bottom: #e6efe4; --cloud: #f5f8f2;
+  --hill-1: #bcd39c; --hill-2: #9cbf84; --hill-3: #7fa76d; --hill-4: #638c58;
+  --stars: 0; --sun-color: #fff3cf; --sun-x: 60vw; --sun-y: 25vh; --sun-on: 1;
+  --moon-x: 30vw; --moon-y: 30vh; --moon-on: 0;
+}
+.wp-hills > * { position: absolute; }
+
+.hills-sky {
+  inset: 0;
+  background:
+    radial-gradient(circle 38vmax at var(--sun-x) var(--sun-y),
+      color-mix(in srgb, var(--sun-color) calc(var(--sun-on) * 45%), transparent) 0,
+      color-mix(in srgb, var(--sun-color) 0%, transparent) 100%),
+    linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bottom) 72%);
+}
+
+/* ---- Stars ---- */
+.hills-stars {
+  inset: 0 0 30% 0;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><g fill='%23fffbe8'><circle cx='44' cy='270' r='0.6' fill-opacity='0.55'/><circle cx='159' cy='144' r='1.3' fill-opacity='0.87'/><circle cx='32' cy='11' r='1.3' fill-opacity='0.66'/><circle cx='243' cy='3' r='1.3' fill-opacity='0.56'/><circle cx='255' cy='189' r='0.6' fill-opacity='0.94'/><circle cx='12' cy='10' r='1.6' fill-opacity='0.41'/><circle cx='280' cy='219' r='1.3' fill-opacity='0.84'/><circle cx='169' cy='243' r='1.3' fill-opacity='0.73'/><circle cx='111' cy='216' r='1.3' fill-opacity='0.97'/><circle cx='295' cy='134' r='1.6' fill-opacity='0.95'/><circle cx='34' cy='201' r='1' fill-opacity='0.47'/><circle cx='107' cy='230' r='1.6' fill-opacity='0.96'/><circle cx='135' cy='264' r='0.8' fill-opacity='0.58'/><circle cx='188' cy='281' r='1.6' fill-opacity='0.64'/><circle cx='272' cy='154' r='1.3' fill-opacity='0.65'/><circle cx='57' cy='175' r='1' fill-opacity='0.45'/><circle cx='212' cy='36' r='0.8' fill-opacity='0.71'/><circle cx='126' cy='157' r='0.6' fill-opacity='0.68'/><circle cx='99' cy='270' r='1.6' fill-opacity='0.76'/><circle cx='126' cy='56' r='1.6' fill-opacity='0.54'/><circle cx='6' cy='65' r='1.6' fill-opacity='0.54'/><circle cx='164' cy='303' r='1.6' fill-opacity='0.61'/><circle cx='289' cy='210' r='1.6' fill-opacity='0.97'/><circle cx='4' cy='250' r='1.6' fill-opacity='0.89'/><circle cx='166' cy='179' r='1.3' fill-opacity='0.97'/><circle cx='154' cy='117' r='1.6' fill-opacity='0.52'/></g></svg>");
+  background-size: 320px 320px;
+  opacity: var(--stars);
+  transition: opacity 60s linear;
+}
+.hills-stars-twinkle {
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='410' height='410'><g fill='%23fffbe8'><circle cx='390' cy='387' r='0.6' fill-opacity='0.45'/><circle cx='149' cy='71' r='1' fill-opacity='0.55'/><circle cx='88' cy='17' r='0.8' fill-opacity='1.00'/><circle cx='261' cy='328' r='1.6' fill-opacity='0.97'/><circle cx='223' cy='183' r='1' fill-opacity='0.94'/><circle cx='356' cy='150' r='1' fill-opacity='0.94'/><circle cx='174' cy='361' r='0.8' fill-opacity='0.74'/><circle cx='98' cy='12' r='1' fill-opacity='0.50'/></g></svg>");
+  background-size: 410px 410px;
+  animation: twinkle 5.3s ease-in-out infinite alternate;
+}
+@keyframes twinkle { from { filter: none; opacity: calc(var(--stars) * 0.2); } to { opacity: var(--stars); } }
+
+/* ---- Sun and moon ----
+   Positioned by transform so the minute-long glide between updates stays
+   on the compositor. Paper discs: flat colour, a soft halo, no gradient. */
+.hills-sun, .hills-moon {
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  transition: transform 60s linear, opacity 60s linear, background-color 60s linear;
+}
+.hills-sun {
+  width: 8vmax;
+  height: 8vmax;
+  margin: -4vmax 0 0 -4vmax;
+  background: var(--sun-color);
+  box-shadow: 0 0 3vmax 0.6vmax color-mix(in srgb, var(--sun-color) 55%, transparent);
+  transform: translate(var(--sun-x), var(--sun-y));
+  opacity: var(--sun-on);
+}
+/* A crescent: a pale disc with a second disc in the sky's colour laid
+   over most of it. */
+.hills-moon {
+  width: 5vmax;
+  height: 5vmax;
+  margin: -2.5vmax 0 0 -2.5vmax;
+  background: #f1ecd8;
+  box-shadow: 0 0 2.4vmax #f1ecd83a;
+  transform: translate(var(--moon-x), var(--moon-y));
+  opacity: var(--moon-on);
+  overflow: hidden;
+}
+.hills-moon::after {
+  content: "";
+  position: absolute;
+  inset: -8% -8% 8% 28%;
+  border-radius: 50%;
+  background: var(--sky-top);
+}
+
+/* ---- Clouds ---- */
+.paper-cloud {
+  left: 0;
+  fill: var(--cloud);
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.12));
+  animation: drift var(--d) linear infinite;
+  animation-delay: var(--delay);
+  will-change: transform;
+}
+.cloud-1 { top: 12vh; width: 21vw; --d: 330s; --delay: -120s; }
+.cloud-2 { top: 24vh; width: 14vw; --d: 460s; --delay: -300s; }
+.cloud-3 { top: 7vh;  width: 10vw; --d: 590s; --delay: -40s; }
+@keyframes drift {
+  from { transform: translateX(-25vw); }
+  to   { transform: translateX(105vw); }
+}
+
+/* ---- Hills ---- */
+.hills-land { left: 0; bottom: 0; width: 100%; height: 100%; }
+.hill {
+  filter: url(#paperShadow);
+  /* A thin light edge along each ridge, like the cut edge of paper. */
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 2;
+  transition: fill 60s linear;
+}
+.hill-1 { fill: var(--hill-1); }
+.hill-2 { fill: var(--hill-2); }
+.hill-3 { fill: var(--hill-3); }
+.hill-4 { fill: var(--hill-4); }
+
+@media (prefers-reduced-motion: reduce) {
+  .paper-cloud, .hills-stars-twinkle { animation: none; }
+}
