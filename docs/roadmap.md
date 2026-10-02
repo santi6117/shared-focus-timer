@@ -5,7 +5,7 @@ assistant starting with zero context about this project. Then read the newest
 file in `docs/sessions/` to find out where things actually left off, and
 `CLAUDE.md` for the rules of working in this repo.
 
-> **Status as of 2026-09-28.** v1 feature work was completed 2026-09-07.
+> **Status as of 2026-10-02.** v1 feature work was completed 2026-09-07.
 > Post-v1 changes since, each with its own session log:
 >
 > - 2026-09-10: crash/reboot recovery fix
@@ -14,9 +14,11 @@ file in `docs/sessions/` to find out where things actually left off, and
 > - 2026-09-11 (c): held messages (§6g)
 > - 2026-09-28: moved into git with an automated test suite, split into
 >   modules, and the title flash made continuous (§6f)
+> - 2026-10-02: status (§6h) and phone remote mode (§6i)
 >
-> What remains is in §9. §7's deferred list is still binding: new ideas get
-> parked there, not built on the spot.
+> On 2026-10-02 Santi opened a second round of features: status, a good
+> phone experience, and unlockable wallpapers (moved out of §7). Order and
+> remaining work are in §9.
 
 ---
 
@@ -30,9 +32,13 @@ running, and if so their live remaining time and what they're working on.
 This is the presence indicator and the headline feature: she can tell he's
 working without him telling her, and vice versa.
 
-Presence is deliberately **two-state**: *their timer is running*, or *not
-working*. A paused timer, a closed tab, and an offline laptop all render
-identically as "not working." This is a decision, not a limitation (§5a).
+When their timer isn't running, the widget shows their **status** if they've
+set one ("eating · 40m ago"), otherwise "not working". A paused timer, a
+closed tab and an offline laptop all look the same; the status is what says
+more (§5a, §6h).
+
+**Timers run on laptops only.** A phone is a remote: it shows your laptop's
+timer read-only, sets your status, and shows the other person (§6i).
 
 A **synced mode** is a possible later opt-in: when toggled on, starting your
 timer also starts theirs, same duration, in lockstep. Not designed, not
@@ -116,6 +122,10 @@ things.
   his "it feels like X" reports as diagnostic, not vague.
 - When a request is ambiguous, ask before starting. When his approach has a
   real flaw, answer first, then flag it.
+- **The limits in this file are guidance, not a cage** (his words,
+  2026-10-02: the project is "entirely vibecoded"). Where best practice or
+  your own judgment says otherwise, do the better thing, keeping it
+  accessible to him, and record the decision here.
 
 ---
 
@@ -159,7 +169,10 @@ Static files served by **GitHub Pages** from `main` of
 ### Module shape
 
 - `js/main.js` owns startup order: sign in → load timer state → every
-  feature subscribes → crash recovery → render loop.
+  feature subscribes → crash recovery → render loop. A phone (`js/device.js`)
+  skips everything that runs or publishes a timer.
+- `js/own-room.js` answers "is my timer running?" for both: the local timer
+  on a laptop, the published `room/<me>` on a phone.
 - `js/timer.js` owns the timer and publishes it to `room/<me>`. It announces
   transitions as events (`change`, `start`, `reset`, `end`, `session`), and
   features listen. The timer never calls into features by name. A listener
@@ -195,13 +208,15 @@ concepts.
   making the no-cross-writes rule server-enforced.
 
 Cost: clearing site data or a new laptop mints a new UID and the pinned rules
-need a one-line edit. Moving origin (file:// → Pages) also mints new UIDs and
+need a one-line edit. Each person has **two** UIDs in the pinned rules,
+laptop and phone. Moving origin (file:// → Pages) also mints new UIDs and
 wipes localStorage, which is why UIDs are collected only from the Pages URL.
 
 ### Shared state — the entire data model
 
 ```
-room/<person>        { running, startedAt, remainingAtStart, category }
+room/<person>        { running, startedAt, remainingAtStart, category,
+                       status: { text, setAt } }
 sessions/<person>/<pushId>  { endedAt, elapsedSeconds, categoryKey }
 categories/<person>/<key>   { label, color, lastUsedAt }
 notes/<person>       { text, updatedAt }
@@ -215,6 +230,10 @@ messages/<recipient> { note: { text, sentAt }, read: <sentAt> }
   render it without reading that person's vocabulary.
 - **A mid-session category change uses `update()`, not `set()`.** `set()`
   would re-stamp `startedAt` and restart the peer's view of the countdown.
+- **The timer publishes with `update()`, not `set()`**, so it never wipes
+  the `status` a phone set. It writes every timer field each time.
+- **`status` lives in `room/`**, not its own subtree: the presence listener
+  already reads `room/`, and the live rules already allow it.
 - **No heartbeat field in `room/`.** Presence is derived from `running`, and
   `onDisconnect()` clears it (below).
 - **`sessions/` is append-only**, and a sibling of `room/` so the presence
@@ -282,9 +301,10 @@ Don't re-ask them.
 **Closing the tab mid-session**
 - The other person's view clears immediately to "not working."
 
-**Presence — two states only**
+**Presence**
 - Running: "Kristina — focusing on Thesis · 24:00".
-- Everything else: "not working." No "paused on Thesis" state.
+- Not running, status set: "Kristina — eating · 40m ago".
+- Otherwise: "not working." No "paused on Thesis" state.
 
 ---
 
@@ -405,6 +425,37 @@ Top-left envelope widget.
   The end-of-session notification mentions a waiting message.
 - Sealing is a client-side courtesy, not a security boundary.
 
+### 6h. Status (2026-10-02)
+
+What you're up to when you're not focusing, shown in the other person's
+pill in place of "not working".
+
+- Stored at `room/<me>/status` as `{ text, setAt }` (server timestamp).
+- **Free text plus presets** (eating, sleeping, out with friends, errands,
+  in lectures). Presets show while the box has focus on a laptop, always on
+  a phone. Normalised: trimmed, whitespace collapsed, 40 characters.
+- **Shown with its age**, coarse ("just now", "40m ago", "14h ago").
+  No expiry: the age makes a stale status obvious.
+- **Cleared by Start** on the laptop. Hidden while the timer runs.
+- **Not cleared on disconnect**, so a status set from the phone stays up
+  after the phone locks.
+
+### 6i. Phone remote mode (2026-10-02)
+
+Timers run on laptops only (Santi's call: it keeps the phone out of a
+focus session). A phone is a remote.
+
+- **Detected from the hardware** (touch, no hover), not screen width, so a
+  narrow laptop window is still a laptop. `?device=phone|laptop` overrides
+  and is remembered.
+- **Shows your laptop's timer read-only**, from `room/<me>` with the
+  server-clock maths the presence pill uses, plus "on your laptop · Thesis".
+- **Never writes `running` and never registers `onDisconnect`.** An iPhone
+  drops its connection each time the screen locks, which would otherwise
+  flip you to "not working" mid-session.
+- **Messages stay sealed while the laptop's timer runs.**
+- No alert, no crash recovery, no controls, no category box on the phone.
+
 ### Synced timer mode (unchanged, still later)
 
 An opt-in toggle binding the two timers. Not designed, not requested, not
@@ -461,10 +512,23 @@ history, don't reproduce their shape.
 
 ## 9. What's left
 
-1. **Turn on GitHub Pages and publish the interim security rules.** Pages:
-   repo Settings → Pages → deploy from `main`, root. Rules: paste
-   `database.rules.json` into the Firebase console. The repo is public, so the
-   rules should not stay open.
+**Second round (opened 2026-10-02), in order:**
+
+a. ~~Status + phone remote mode~~ (done 2026-10-02).
+b. **Phone polish.** Home-screen install (manifest + icons; iOS only allows
+   web notifications for sites added to the home screen), safe areas for
+   the notch and home bar, the bottom corner widgets crowding each other at
+   phone width, 44px tap targets everywhere, the keyboard covering inputs,
+   fewer background blobs on small screens. Test on Santi's iPhone.
+c. **Unlockable wallpapers.** Santi's own all-time hours: Rainy window at
+   100h, Paper hills with a live sky at 200h, Koi pond at 300h. Later, a
+   couples wallpaper at 1,000 combined hours (the repo is public, so no
+   real photo in it). One wallpaper per session, iterated with Santi.
+
+**From v1:**
+
+1. **GitHub Pages** is live (confirmed 2026-10-02). The interim security
+   rules (`database.rules.json`) should be published if they aren't yet.
 2. **The end-to-end real-browser pass on the Pages URL**, in two windows
    (`?me=santi` / `?me=kristina`): categories, chips, presence with category,
    stats and breakdown, the note round trip, a message unsealing at zero, the
@@ -473,7 +537,7 @@ history, don't reproduce their shape.
    is for the real database and real browser permissions.
 3. **The two-device test with Kristina** (§5 item 1).
 4. **The pinned security rules** (§5 item 2), with UIDs taken from the Pages
-   URL.
+   URL: four of them now, a laptop and a phone each.
 
 Items 3 and 4 need Kristina. If everything passes, v1 is finished. Do not
 extend the project to fill the time; §7 exists so new ideas get parked.
