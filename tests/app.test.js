@@ -657,19 +657,18 @@ describe("phone (remote) mode", () => {
     assert.equal(await app.page.locator("#statusRow").isVisible(), true);
   });
 
-  it("keeps messages sealed while the laptop's timer runs", async () => {
+  it("shows only the timer, the status and the other person", async () => {
     app = await openApp({
       device: "phone",
-      seedDb: {
-        room: { santi: laptopRunning },
-        messages: { santi: { note: { text: "proud of you", sentAt: T0 - MIN } } },
-      },
+      seedDb: { room: { santi: { running: false, remainingAtStart: 1500 } } },
     });
     await app.run(250);
-    assert.equal(await app.text("messageBadge"), "message when you're done");
-
-    await app.remote("room/santi/running", false);
-    await app.run(250);
-    assert.equal(await app.text("messageBadge"), "1 message — read it");
+    for (const id of ["cornerDock", "noteWidget", "messageWidget"]) {
+      assert.equal(await app.page.locator("#" + id).isVisible(), false, id + " should be hidden");
+    }
+    for (const id of ["timerDisplay", "statusInput", "statusLabel", "presenceWidget"]) {
+      assert.equal(await app.page.locator("#" + id).isVisible(), true, id + " should show");
+    }
+    assert.equal(await app.page.locator(".status-preset").count(), 5);
   });
 });

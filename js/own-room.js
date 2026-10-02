@@ -3,8 +3,8 @@
 //
 // Exists for the phone. On a laptop the timer module already knows whether
 // the timer is running; on a phone the only source is the database, since
-// the timer isn't running there. Modules that need "am I focusing right
-// now?" ask here, so the same question gets the right answer on both.
+// the timer isn't running there. The status box asks here, so the same
+// question gets the right answer on both.
 
 import { refs } from "./firebase.js";
 import { REMOTE } from "./device.js";

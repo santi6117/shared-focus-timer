@@ -7,9 +7,12 @@
 //      runs, because recovery can announce a session that needs logging.
 //   3. The render loop starts last, after all state is loaded and recovered.
 //
-// A laptop and a phone boot differently (see device.js). The phone skips
-// everything that runs or publishes a timer: the controls, the alert,
-// crash recovery and the disconnect instruction.
+// A laptop and a phone boot differently (see device.js). The phone is the
+// timer (read-only), the status and the other person's pill, nothing else:
+// no controls, alert, crash recovery or disconnect instruction, and none of
+// the stats, note or message widgets. Those aren't just hidden, they're
+// never started, so the phone doesn't download the whole session history
+// to draw widgets nobody sees.
 
 import { signIn, startClockSync } from "./firebase.js";
 import { ME } from "./identity.js";
@@ -48,15 +51,17 @@ async function boot() {
   timer.init();
   if (!REMOTE) timer.armDisconnect();
   ownRoom.init();
-  sessions.init();
-  categories.init();
   (REMOTE ? remoteView : timerView).init();
   presence.init();
   status.init();
-  stats.init();
-  note.init();
-  messages.init();
-  if (!REMOTE) alert.init();
+  if (!REMOTE) {
+    sessions.init();
+    categories.init();
+    stats.init();
+    note.init();
+    messages.init();
+    alert.init();
+  }
 
   if (!REMOTE) {
     timer.recoverInterruptedRun();

@@ -204,12 +204,15 @@ button:active { transform: translateY(1px); }
 }
 #statusInput::placeholder { color: var(--ink-soft); }
 
+/* Centred with top/bottom rather than a transform: every button gets a
+   pressed-in transform from `button:active`, which would replace a
+   centring transform and jump the × out from under the finger mid-tap. */
 #statusClear {
   display: none;
   position: absolute;
   right: 0.3rem;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0;
+  bottom: 0;
   padding: 0 0.5rem;
   border: none;
   background: none;
@@ -217,7 +220,7 @@ button:active { transform: translateY(1px); }
   font-size: 1.1rem;
   line-height: 1.6;
 }
-#statusClear.shown { display: block; }
+#statusClear.shown { display: flex; align-items: center; }
 
 #statusAge { font-size: 0.72rem; color: var(--ink-soft); min-height: 0; }
 #statusAge:empty { display: none; }
@@ -243,19 +246,61 @@ button:active { transform: translateY(1px); }
 }
 
 /* ---- Phone (remote) mode ----
-   The timer runs on the laptop; the phone shows it and nothing that would
-   change it. */
+   The phone is a remote for two things: glancing at the laptop's timer and
+   setting a status. Everything else is hidden, and the status gets the
+   weight: the timer shrinks, the status box grows, the presets become a
+   grid of real buttons. */
 #remoteNote { display: none; margin: -0.4rem 0 0; font-size: 0.8rem; color: var(--ink-soft); }
-.remote #remoteNote { display: block; }
+#statusLabel { display: none; margin: 0; }
+.remote #remoteNote,
+.remote #statusLabel { display: block; }
 .remote .duration-row,
 .remote .controls,
-.remote .category-row { display: none; }
+.remote .category-row,
+.remote #cornerDock,
+.remote #noteWidget,
+.remote #messageWidget { display: none; }
+
+.remote .stage { padding: 5rem 1rem 3rem; }
+.remote .timer-card {
+  min-width: 0;
+  width: 100%;
+  max-width: 24rem;
+  padding: 1.75rem 1.25rem 1.5rem;
+  gap: 1rem;
+}
+.remote #timerDisplay { font-size: 3.75rem; }
+
+.remote #statusRow { gap: 0.75rem; padding-top: 1.25rem; }
+.remote .status-field { max-width: none; }
 
 /* iOS zooms the page into any focused input under 16px and doesn't zoom
-   back out. On a phone every text box is at least 16px. */
-.remote input,
-.remote textarea { font-size: 16px; }
+   back out, so the box is comfortably above that. */
+.remote #statusInput {
+  font-size: 1.15rem;
+  padding: 0.8rem 2.6rem;
+}
+.remote #statusClear { font-size: 1.5rem; right: 0.5rem; }
+.remote #statusAge { font-size: 0.8rem; }
 
-/* Presets are tap targets on a phone; 44px is Apple's minimum. */
-.remote .status-preset { font-size: 0.85rem; padding: 0.55rem 0.9rem; min-height: 44px; }
-.remote #statusClear { font-size: 1.4rem; }
+/* Two columns of full-width buttons, 44px tall: Apple's minimum target.
+   The :focus-within selector is listed so this beats the laptop's
+   show-on-focus rule above; otherwise tapping into the box switches the
+   grid to a row of chips and the whole card jumps under the finger. */
+.remote #statusRow #statusPresets,
+.remote #statusRow:focus-within #statusPresets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: none;
+}
+.remote .status-preset {
+  font-size: 0.95rem;
+  min-height: 44px;
+  padding: 0.5rem;
+  color: var(--ink);
+}
+
+/* Centred on the phone, where nothing else sits on the bottom edge. */
+.remote #uidDebug { left: 0; right: 0; text-align: center; }

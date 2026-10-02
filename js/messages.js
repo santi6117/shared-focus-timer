@@ -30,7 +30,6 @@ import { refs, TIMESTAMP } from "./firebase.js";
 import { THEM } from "./identity.js";
 import { DISPLAY_NAME } from "./config.js";
 import * as timer from "./timer.js";
-import * as ownRoom from "./own-room.js";
 import { hasMessage, isUnread, chipLabel, outboxStatus } from "./lib/messages.js";
 import { timeOfDay } from "./lib/time.js";
 
@@ -47,9 +46,8 @@ let widget, input, sendBtn, statusEl;
 export function hasUnread() { return isUnread(inbox); }
 
 // The gate is the running timer and nothing else. Paused or idle, there's
-// nothing to protect you from. Asked of ownRoom so a phone stays sealed
-// while the laptop's timer runs.
-function sealed() { return ownRoom.running(); }
+// nothing to protect you from.
+function sealed() { return timer.state().running; }
 
 export function init() {
   widget = $("messageWidget");
@@ -76,10 +74,8 @@ export function init() {
   });
   sendBtn.addEventListener("click", send);
 
-  // Sealed-ness follows the timer, so any transition may change the chip:
-  // the local timer on a laptop, the published one on a phone.
+  // Sealed-ness follows the timer, so any transition may change the chip.
   timer.on("change", render);
-  ownRoom.onChange(render);
 
   refs.inbox.on("value", (snap) => {
     inbox = snap.val() || null;
