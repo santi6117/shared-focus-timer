@@ -93,32 +93,83 @@
 }
 
 /* ---- Traffic ----
-   Pairs of out-of-focus lights gliding along the street: headlights one
-   way, tail lights the other, smaller and slower the further away. One
-   element per car, its two lamps drawn as two gradients. */
+   Cars on one wet road near the bottom of the frame. What makes a pair of
+   lights read as a car is mostly the road under it: each lamp drags a long
+   smear of its own colour down the wet asphalt (::after). Distance shows as
+   size and speed, never as height, so nothing floats over the city.
+
+   Headlights travel right, brighter and wider apart, with a faint glow
+   thrown ahead of them (::before). Tail lights travel left, smaller, dimmer
+   red, closer together.
+
+   Each car crosses in the first part of its cycle and then waits off-screen
+   for the rest, and the three cycles (47s, 71s, 89s) share no common
+   factor, so the street goes quiet for a while and then a car passes at
+   no rhythm you could pick out. */
 .wp-rain > .rain-traffic { overflow: hidden; }
 .car {
   position: absolute;
   left: 0;
+  bottom: var(--lane);
   width: var(--w);
-  height: calc(var(--w) * 0.44);
+  height: calc(var(--w) * 0.3);
   margin-left: calc(var(--w) * -1);
-  /* An explicit radius that fits inside the box: the default size is "to
-     the farthest corner", which the box would clip into a soft rectangle. */
+  /* Explicit lamp radii that fit inside the box: the default gradient size
+     reaches to the box's corner and would be clipped into a rectangle. */
   background:
-    radial-gradient(circle calc(var(--w) * 0.2) at 22% 50%, var(--c) 0, var(--c-mid) 30%, var(--c-off) 100%),
-    radial-gradient(circle calc(var(--w) * 0.2) at 78% 50%, var(--c) 0, var(--c-mid) 30%, var(--c-off) 100%);
-  animation: drive var(--d) linear infinite;
+    radial-gradient(circle calc(var(--w) * var(--lamp)) at var(--gap) 50%,
+      var(--c) 0, var(--c-mid) 30%, var(--c-off) 100%),
+    radial-gradient(circle calc(var(--w) * var(--lamp)) at calc(100% - var(--gap)) 50%,
+      var(--c) 0, var(--c-mid) 30%, var(--c-off) 100%);
+  animation: var(--drive) var(--d) linear infinite;
   animation-delay: var(--delay);
   will-change: transform;
 }
-.car-1 { --w: 14vmax; bottom: 5%;  --c: #ffe6b5; --c-mid: #ffe6b588; --c-off: #ffe6b500; --d: 19s; --delay: -6s; }
-.car-2 { --w: 10vmax; bottom: 11%; --c: #ff4a3d; --c-mid: #ff4a3d70; --c-off: #ff4a3d00; --d: 31s; --delay: -20s;
-          animation-direction: reverse; }
-.car-3 { --w: 7vmax; bottom: 15%; --c: #ffd9a0; --c-mid: #ffd9a070; --c-off: #ffd9a000; --d: 43s; --delay: -11s; }
-@keyframes drive {
-  from { transform: translateX(0); }
-  to   { transform: translateX(calc(100vw + var(--w) * 2)); }
+/* Reflections: two tall, narrow smears straight down from the lamps. */
+.car::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 55%;
+  width: 100%;
+  height: calc(var(--w) * 1.6);
+  /* Wide and soft: a narrow, crisp smear reads as a lamp post. */
+  background:
+    radial-gradient(ellipse calc(var(--w) * 0.14) 100% at var(--gap) 0%,
+      var(--c-ref) 0, var(--c-ref-mid) 30%, var(--c-off) 100%),
+    radial-gradient(ellipse calc(var(--w) * 0.14) 100% at calc(100% - var(--gap)) 0%,
+      var(--c-ref) 0, var(--c-ref-mid) 30%, var(--c-off) 100%);
+}
+.car.head::before {
+  content: "";
+  position: absolute;
+  left: 70%;
+  top: -40%;
+  width: calc(var(--w) * 1.1);
+  height: 180%;
+  background: radial-gradient(ellipse 100% 50% at 0% 50%, var(--c-glow) 0, var(--c-off) 100%);
+}
+.car.head {
+  --c: #fff0cf; --c-mid: #ffe6b580; --c-ref: #ffe6b540; --c-ref-mid: #ffe6b51c; --c-glow: #ffe6b522; --c-off: #ffe6b500;
+  --lamp: 0.17; --gap: 20%;
+}
+.car.tail {
+  --c: #ff5a45; --c-mid: #ff4a3d66; --c-ref: #ff4a3d38; --c-ref-mid: #ff4a3d18; --c-off: #ff4a3d00;
+  --lamp: 0.12; --gap: 30%;
+}
+.car-1 { --w: 13vmax;  --lane: 10%; --drive: drive-short; --d: 47s; --delay: -9s; }
+.car-2 { --w: 8.5vmax; --lane: 12.5%; --drive: drive-short; --d: 71s; --delay: -50s; animation-direction: reverse; }
+.car-3 { --w: 6vmax;   --lane: 14%; --drive: drive-long;  --d: 89s; --delay: -30s; }
+
+@keyframes drive-short {
+  0%   { transform: translateX(0); }
+  22%  { transform: translateX(calc(100vw + var(--w) * 2.2)); }
+  100% { transform: translateX(calc(100vw + var(--w) * 2.2)); }
+}
+@keyframes drive-long {
+  0%   { transform: translateX(0); }
+  26%  { transform: translateX(calc(100vw + var(--w) * 2.2)); }
+  100% { transform: translateX(calc(100vw + var(--w) * 2.2)); }
 }
 
 /* ---- Rain outside ----
@@ -138,13 +189,13 @@
    one tile per cycle, so the loop point is invisible. The tile sizes share
    no common factor, so the three patterns never line up into a grid. */
 
-/* The wind: the whole rain volume leans one way, then the other, over a
-   few seconds, so the angle of the rain is never fixed. A skew, on a
+/* The wind: the whole rain volume leans one way, then the other, over
+   half a minute or so, so the angle of the rain is never fixed. A skew, on a
    wrapper, because each layer's own transform is busy falling. */
 .wp-rain > .rain-wind {
   inset: -10% -15%;
   transform-origin: 50% 0;
-  animation: gust 13s ease-in-out infinite alternate;
+  animation: gust 35s ease-in-out infinite alternate;
   will-change: transform;
   /* The blend goes here, on the wrapper, not on each layer: anything with
      its own transform is blended as an isolated group, so a layer inside
