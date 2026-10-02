@@ -12,6 +12,9 @@ import {
   normalizeKey, pickColor, totals, breakdown, CATEGORY_PALETTE, UNCATEGORIZED_KEY,
 } from "../js/lib/categories.js";
 import { isUnread, chipLabel, outboxStatus } from "../js/lib/messages.js";
+import {
+  WALLPAPERS, unlockedIds, progressLabel, resolveWallpaper, newlyUnlocked,
+} from "../js/lib/wallpapers.js";
 import { normalizeStatus, formatAgo, idleText, STATUS_MAX } from "../js/lib/status.js";
 
 const MIN = 60_000;
@@ -170,5 +173,33 @@ describe("status", () => {
     assert.equal(idleText({ text: "" }, 0), "not working");
     assert.equal(idleText({ text: "eating", setAt: 0 }, 40 * MIN), "eating · 40m ago");
     assert.equal(idleText({ text: "eating" }, 40 * MIN), "eating", "a pending server timestamp shows no age");
+  });
+});
+
+describe("wallpapers", () => {
+  const H = 3600;
+  it("unlocks by whole hours, swirl always", () => {
+    assert.deepEqual(unlockedIds(0), ["swirl"]);
+    assert.deepEqual(unlockedIds(100 * H - 1), ["swirl"]);
+    assert.deepEqual(unlockedIds(100 * H), ["swirl", "rain"]);
+    assert.deepEqual(unlockedIds(350 * H), WALLPAPERS.map((w) => w.id));
+  });
+
+  it("floors progress so it never claims an hour early", () => {
+    assert.equal(progressLabel("rain", 62 * H + 3599), "62 / 100 h");
+  });
+
+  it("resolves preview, then stored choice, then the default", () => {
+    assert.equal(resolveWallpaper(null, null), "swirl");
+    assert.equal(resolveWallpaper("rain", null), "rain");
+    assert.equal(resolveWallpaper("rain", "swirl"), "swirl");
+    assert.equal(resolveWallpaper("nonsense", null), "swirl");
+    assert.equal(resolveWallpaper(null, "koi"), "swirl", "an unbuilt one can't be previewed");
+  });
+
+  it("counts only built, unseen unlocks as new", () => {
+    assert.deepEqual(newlyUnlocked(120 * H, []), ["rain"]);
+    assert.deepEqual(newlyUnlocked(120 * H, ["rain"]), []);
+    assert.deepEqual(newlyUnlocked(250 * H, ["rain"]), [], "hills isn't built yet");
   });
 });

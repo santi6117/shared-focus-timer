@@ -15,15 +15,20 @@
 
   <link rel="stylesheet" href="css/tokens.css" />
   <link rel="stylesheet" href="css/background.css" />
+  <link rel="stylesheet" href="css/wallpapers/rain.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/widgets.css" />
 </head>
 <body>
 
-  <!-- The background. Eight colour blobs; the centre wash and the film grain
-       are pseudo-elements on the layer itself. aria-hidden because there's
+  <!-- The background. One wrapper per wallpaper; data-bg (set by
+       js/wallpapers.js) picks which one shows, and the hidden ones don't
+       animate. The centre wash and the film grain are pseudo-elements on
+       the layer itself, shared by all of them. aria-hidden because there's
        nothing here for a screen reader to say. -->
-  <div id="backgroundLayer" aria-hidden="true">
+  <div id="backgroundLayer" data-bg="swirl" aria-hidden="true">
+    <!-- Swirl: eight colour blobs circling the screen. -->
+    <div class="wp wp-swirl">
     <span class="orbit o1"><span class="blob b1"></span></span>
     <span class="orbit o2"><span class="blob b2"></span></span>
     <span class="orbit o3"><span class="blob b3"></span></span>
@@ -32,6 +37,23 @@
     <span class="orbit o6"><span class="blob b6"></span></span>
     <span class="orbit o7"><span class="blob b7"></span></span>
     <span class="orbit o8"><span class="blob b8"></span></span>
+    </div>
+
+    <!-- Rainy window: city lights out of focus behind wet glass. -->
+    <div class="wp wp-rain">
+      <div class="rain-bokeh rain-bokeh-a"></div>
+      <div class="rain-bokeh rain-bokeh-b"></div>
+      <div class="rain-fall rain-fall-far"></div>
+      <div class="rain-fall rain-fall-near"></div>
+      <div class="rain-beads"></div>
+      <span class="runner r1"></span>
+      <span class="runner r2"></span>
+      <span class="runner r3"></span>
+      <span class="runner r4"></span>
+      <span class="runner r5"></span>
+      <span class="runner r6"></span>
+      <span class="runner r7"></span>
+    </div>
   </div>
 
   <!-- Presence: whether the OTHER person is working right now. -->
@@ -95,6 +117,11 @@
         <div class="stat-row"><span>This week</span><span id="statWeek">—</span></div>
         <div class="stat-row"><span>All time</span><span id="statAll">—</span></div>
         <div class="stat-note" id="statCount">no sessions logged yet</div>
+        <!-- Filled in by js/wallpapers.js. -->
+        <div id="wallpaperPicker">
+          <div class="picker-label">Wallpaper</div>
+          <div id="wallpaperList"></div>
+        </div>
       </div>
       <button id="statsChip" type="button">
         <span class="chip-label">Today</span>

@@ -672,3 +672,55 @@ describe("phone (remote) mode", () => {
     assert.equal(await app.page.locator(".status-preset").count(), 5);
   });
 });
+
+// ---------------------------------------------------------------- wallpapers
+
+describe("wallpapers", () => {
+  const hours = (h) => ({
+    sessions: { santi: { a: { endedAt: T0 - 3600_000, elapsedSeconds: h * 3600, categoryKey: "thesis" } } },
+  });
+  const bg = (app) => app.page.locator("#backgroundLayer").getAttribute("data-bg");
+  const option = (app, id) => app.page.locator('.wp-option[data-id="' + id + '"]');
+
+  it("starts on the swirl with everything else locked", async () => {
+    app = await openApp({ seedDb: hours(62) });
+    await app.run(250);
+    assert.equal(await bg(app), "swirl");
+    await app.click("statsChip");
+    assert.equal(await option(app, "rain").isDisabled(), true);
+    assert.equal((await option(app, "rain").textContent()).trim(), "Rainy window62 / 100 h");
+    assert.equal(await app.has("statsChip", "has-new"), false);
+  });
+
+  it("chooses an unlocked one and keeps it across a reload", async () => {
+    app = await openApp({ seedDb: hours(120) });
+    await app.run(250);
+    await app.click("statsChip");
+    await option(app, "rain").click();
+    assert.equal(await bg(app), "rain");
+    assert.equal(await app.page.evaluate(() => localStorage.getItem("wallpaper:santi")), '"rain"');
+
+    await app.page.reload();
+    await app.run(50);
+    assert.equal(await bg(app), "rain", "the stored choice paints before the log loads");
+  });
+
+  it("marks a new unlock on the chip until the panel is opened", async () => {
+    app = await openApp({ seedDb: hours(120) });
+    await app.run(250);
+    assert.equal(await app.has("statsChip", "has-new"), true);
+    await app.click("statsChip");
+    assert.equal(await app.has("statsChip", "has-new"), false);
+    await app.page.reload();
+    await app.run(250);
+    assert.equal(await app.has("statsChip", "has-new"), false);
+  });
+
+  it("previews with ?bg= without unlocking or saving", async () => {
+    app = await openApp({ seedDb: hours(1) });
+    await app.page.goto(app.page.url().split("?")[0] + "?bg=rain");
+    await app.run(250);
+    assert.equal(await bg(app), "rain");
+    assert.equal(await app.page.evaluate(() => localStorage.getItem("wallpaper:santi")), null);
+  });
+});

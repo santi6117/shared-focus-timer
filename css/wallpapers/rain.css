@@ -1,0 +1,138 @@
+/* Rainy window (unlocks at 100 hours): an evening city, out of focus,
+   seen through a wet pane. Pure CSS, like the swirl, and under the same
+   rule: only `transform` and `opacity` animate, so the compositor does the
+   work and the main thread sleeps.
+
+   Back to front, all inside .wp-rain:
+     1. the sky and the street glow: the wrapper's own background
+     2. two layers of bokeh, the city lights. Each is ONE element holding a
+        dozen radial gradients rather than a dozen elements, so the whole
+        city is two painted layers. They crossfade slowly against each
+        other, which reads as lights flickering behind the rain.
+     3. falling rain, outside the glass: two tiled streak patterns sliding
+        down at different speeds and sizes for depth
+     4. beads sitting on the glass, plus a dark vignette at the edges,
+        static
+     5. seven runners: single drops that hold still, then give way and
+        slide down the pane, each on its own timing
+
+   The streak and bead patterns are small inline SVGs, rasterised once and
+   tiled: no image files, and the tiling is invisible at rain scale. */
+
+.wp-rain {
+  background:
+    radial-gradient(ellipse 90% 45% at 50% 105%, #d0844e66 0%, #d0844e00 100%),
+    linear-gradient(to bottom, #171b31 0%, #232744 32%, #382d48 62%, #553841 86%, #694231 100%);
+}
+
+.wp-rain > div { position: absolute; inset: 0; }
+
+/* ---- City lights ---- */
+.rain-bokeh-a {
+  background:
+        radial-gradient(circle at 82.7% 18.9%, #ffb45ae6 0, #ffb45ab3 2.04vmax, #ffb45a00 3.7vmax),
+    radial-gradient(circle at 77.1% 49.4%, #ff8a5ce6 0, #ff8a5cb3 2.81vmax, #ff8a5c00 5.1vmax),
+    radial-gradient(circle at 3.2% 83.4%, #f58fb680 0, #f58fb6a6 2.03vmax, #f58fb600 2.6vmax),
+    radial-gradient(circle at 5.9% 74.5%, #ffc46be6 0, #ffc46bb3 3.03vmax, #ffc46b00 5.5vmax),
+    radial-gradient(circle at 42.7% 58.9%, #ffb45ae6 0, #ffb45ab3 1.87vmax, #ffb45a00 3.4vmax),
+    radial-gradient(circle at 24.7% 70.5%, #ffd38ae6 0, #ffd38ab3 1.54vmax, #ffd38a00 2.8vmax),
+    radial-gradient(circle at 55.3% 57.1%, #ffc46b80 0, #ffc46ba6 4.52vmax, #ffc46b00 5.8vmax),
+    radial-gradient(circle at 34.3% 82.8%, #ffb45ae6 0, #ffb45ab3 3.03vmax, #ffb45a00 5.5vmax),
+    radial-gradient(circle at 66.0% 76.8%, #ffc46b80 0, #ffc46ba6 4.13vmax, #ffc46b00 5.3vmax),
+    radial-gradient(circle at 58.4% 59.9%, #ffe8c2e6 0, #ffe8c2b3 2.7vmax, #ffe8c200 4.9vmax),
+    radial-gradient(circle at 54.6% 81.0%, #ffb45ae6 0, #ffb45ab3 1.76vmax, #ffb45a00 3.2vmax),
+    radial-gradient(circle at 76.2% 67.3%, #ffe8c2e6 0, #ffe8c2b3 2.04vmax, #ffe8c200 3.7vmax);
+  animation: bokeh-a 7s ease-in-out infinite alternate;
+}
+.rain-bokeh-b {
+  background:
+        radial-gradient(circle at 92.1% 52.2%, #8fb2ff80 0, #8fb2ffa6 3.98vmax, #8fb2ff00 5.1vmax),
+    radial-gradient(circle at 32.0% 77.7%, #ffc46be6 0, #ffc46bb3 2.2vmax, #ffc46b00 4.0vmax),
+    radial-gradient(circle at 40.0% 96.7%, #ffe8c280 0, #ffe8c2a6 4.37vmax, #ffe8c200 5.6vmax),
+    radial-gradient(circle at 28.2% 49.3%, #ff8a5ce6 0, #ff8a5cb3 1.98vmax, #ff8a5c00 3.6vmax),
+    radial-gradient(circle at 86.8% 75.5%, #ffe8c2e6 0, #ffe8c2b3 1.43vmax, #ffe8c200 2.6vmax),
+    radial-gradient(circle at 15.8% 96.9%, #ffd38ae6 0, #ffd38ab3 2.42vmax, #ffd38a00 4.4vmax),
+    radial-gradient(circle at 77.9% 92.4%, #8fb2ff80 0, #8fb2ffa6 3.74vmax, #8fb2ff00 4.8vmax),
+    radial-gradient(circle at 95.2% 15.6%, #ffe8c280 0, #ffe8c2a6 3.74vmax, #ffe8c200 4.8vmax),
+    radial-gradient(circle at 52.9% 93.3%, #ff8a5c80 0, #ff8a5ca6 2.89vmax, #ff8a5c00 3.7vmax),
+    radial-gradient(circle at 86.0% 26.1%, #ffe8c280 0, #ffe8c2a6 3.12vmax, #ffe8c200 4.0vmax),
+    radial-gradient(circle at 48.7% 63.9%, #ffc46be6 0, #ffc46bb3 2.48vmax, #ffc46b00 4.5vmax);
+  animation: bokeh-b 9.5s ease-in-out infinite alternate;
+}
+@keyframes bokeh-a { from { opacity: 1; }    to { opacity: 0.6; } }
+@keyframes bokeh-b { from { opacity: 0.45; } to { opacity: 1; } }
+
+/* ---- Rain outside ----
+   Each layer is taller than the screen by exactly one tile and slides down
+   one tile per cycle, so the loop point is invisible. */
+.wp-rain > .rain-fall { inset: auto 0 0 0; top: calc(var(--tile) * -1); will-change: transform; }
+.rain-fall-far {
+  --tile: 200px;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='200'><g stroke='%23c8d4ff' stroke-opacity='0.2' stroke-width='1' stroke-linecap='round'><line x1='35' y1='93' x2='33' y2='112'/><line x1='84' y1='106' x2='82' y2='121'/><line x1='6' y1='142' x2='4' y2='161'/><line x1='35' y1='169' x2='32' y2='191'/><line x1='114' y1='81' x2='112' y2='105'/><line x1='24' y1='108' x2='21' y2='136'/><line x1='73' y1='126' x2='70' y2='151'/><line x1='12' y1='129' x2='10' y2='152'/><line x1='44' y1='5' x2='40' y2='33'/></g></svg>");
+  background-size: 140px 200px;
+  animation: fall-far 0.75s linear infinite;
+}
+.rain-fall-near {
+  --tile: 320px;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='230' height='320'><g stroke='%23dfe6ff' stroke-opacity='0.26' stroke-width='1.3' stroke-linecap='round'><line x1='56' y1='27' x2='52' y2='68'/><line x1='38' y1='18' x2='34' y2='58'/><line x1='208' y1='211' x2='202' y2='261'/><line x1='53' y1='142' x2='49' y2='179'/><line x1='42' y1='28' x2='38' y2='64'/><line x1='210' y1='219' x2='204' y2='270'/></g></svg>");
+  background-size: 230px 320px;
+  animation: fall-near 0.5s linear infinite;
+}
+@keyframes fall-far  { to { transform: translateY(200px); } }
+@keyframes fall-near { to { transform: translateY(320px); } }
+
+/* ---- On the glass ---- */
+.rain-beads {
+  background:
+    radial-gradient(ellipse 75% 70% at 50% 50%, #0b0d1a00 55%, #0b0d1a8c 100%),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><g fill='%23ffffff' stroke='%23ffffff'><circle cx='173' cy='206' r='4.2' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='172.2' cy='204.3' r='1.2' fill-opacity='0.5' stroke='none'/><circle cx='192' cy='233' r='3.4' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='190.8' cy='231.7' r='1.0' fill-opacity='0.5' stroke='none'/><circle cx='255' cy='12' r='2.2' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='254.2' cy='11.1' r='0.6' fill-opacity='0.5' stroke='none'/><circle cx='215' cy='72' r='1.1' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='214.7' cy='71.4' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='249' cy='35' r='2.2' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='248.4' cy='34.0' r='0.6' fill-opacity='0.5' stroke='none'/><circle cx='240' cy='108' r='1.1' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='239.9' cy='107.2' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='160' cy='8' r='1.4' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='159.7' cy='7.1' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='115' cy='54' r='4.2' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='113.8' cy='52.1' r='1.2' fill-opacity='0.5' stroke='none'/><circle cx='212' cy='47' r='4.2' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='211.0' cy='45.9' r='1.2' fill-opacity='0.5' stroke='none'/><circle cx='24' cy='172' r='2.2' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='22.9' cy='171.3' r='0.6' fill-opacity='0.5' stroke='none'/><circle cx='38' cy='4' r='4.2' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='37.2' cy='3.0' r='1.2' fill-opacity='0.5' stroke='none'/><circle cx='5' cy='214' r='1.4' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='5.0' cy='213.9' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='241' cy='83' r='1.4' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='240.9' cy='82.2' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='151' cy='188' r='1.4' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='150.2' cy='187.9' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='53' cy='267' r='1.4' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='53.0' cy='267.0' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='267' cy='247' r='1.8' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='266.4' cy='246.5' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='10' cy='117' r='1.4' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='9.4' cy='116.4' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='76' cy='94' r='4.2' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='74.5' cy='92.8' r='1.2' fill-opacity='0.5' stroke='none'/><circle cx='168' cy='5' r='3.4' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='167.0' cy='3.7' r='1.0' fill-opacity='0.5' stroke='none'/><circle cx='196' cy='22' r='1.8' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='195.9' cy='21.3' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='227' cy='135' r='1.8' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='226.1' cy='134.1' r='0.5' fill-opacity='0.5' stroke='none'/><circle cx='54' cy='133' r='1.4' fill-opacity='0.07' stroke-opacity='0.2' stroke-width='0.6'/><circle cx='53.8' cy='132.0' r='0.5' fill-opacity='0.5' stroke='none'/></g></svg>");
+  background-size: auto, 280px 280px;
+}
+
+/* A runner is a faint trail with a lens-shaped bead at its foot. It holds
+   for the first 45% of its cycle (the drop gathering), then accelerates
+   off the bottom. Fading in at the start makes the restart look like a new
+   drop forming rather than one teleporting back up. */
+.runner {
+  position: absolute;
+  top: 0;
+  left: var(--x);
+  width: 3px;
+  height: 11vh;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, #ffffff00, #ffffff12 65%, #ffffff2e);
+  animation: run var(--d) cubic-bezier(0.55, 0, 0.9, 0.55) infinite;
+  animation-delay: var(--delay);
+  will-change: transform, opacity;
+}
+.runner::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 7px;
+  height: 9px;
+  margin-left: -3.5px;
+  border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%;
+  background: radial-gradient(circle at 38% 32%, #ffffffbb 0, #ffffff40 34%, #ffffff12 72%);
+  box-shadow: 0 0 0 0.5px #ffffff2b;
+}
+@keyframes run {
+  0%   { transform: translateY(var(--y0)); opacity: 0; }
+  8%   { opacity: 1; }
+  45%  { transform: translateY(calc(var(--y0) + 1.5vh)); }
+  100% { transform: translateY(115vh); opacity: 1; }
+}
+.r1 { --x: 7%;  --y0: 4vh;  --d: 9s;   --delay: -2s; }
+.r2 { --x: 19%; --y0: 30vh; --d: 12s;  --delay: -7s; }
+.r3 { --x: 34%; --y0: 12vh; --d: 10.5s; --delay: -4.5s; }
+.r4 { --x: 58%; --y0: 38vh; --d: 13s;  --delay: -10s; }
+.r5 { --x: 71%; --y0: 8vh;  --d: 8.5s; --delay: -1s; }
+.r6 { --x: 84%; --y0: 24vh; --d: 11.5s; --delay: -6s; }
+.r7 { --x: 95%; --y0: 15vh; --d: 9.8s; --delay: -8.5s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wp-rain *, .wp-rain *::after { animation: none; }
+  .runner { opacity: 0; }
+}

@@ -25,6 +25,13 @@
   background: var(--bg-base);
 }
 
+/* One wrapper per wallpaper; only the one named by data-bg is drawn.
+   display: none rather than opacity 0, because a hidden element's
+   animations stop entirely, and an invisible one's keep costing frames. */
+.wp { position: absolute; inset: 0; display: none; }
+#backgroundLayer[data-bg="swirl"] .wp-swirl,
+#backgroundLayer[data-bg="rain"]  .wp-rain { display: block; }
+
 /* Each colour is TWO nested elements, and the nesting is the whole trick.
    The outer .orbit is a zero-size point pinned to screen centre that does
    nothing but rotate. The .blob inside it is offset sideways by --r, so

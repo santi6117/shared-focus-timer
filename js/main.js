@@ -29,6 +29,7 @@ import * as stats from "./stats.js";
 import * as note from "./note.js";
 import * as messages from "./messages.js";
 import * as alert from "./alert.js";
+import * as wallpapers from "./wallpapers.js";
 
 async function boot() {
   let user;
@@ -62,6 +63,9 @@ async function boot() {
     messages.init();
     alert.init();
   }
+  // After stats: its chip toggles the panel first, so the picker sees the
+  // panel's new state when deciding whether it was just opened.
+  wallpapers.init();
 
   if (!REMOTE) {
     timer.recoverInterruptedRun();
