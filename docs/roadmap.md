@@ -485,10 +485,12 @@ focus session). A phone is a remote.
 - **Same rules as §6c:** only `transform` and `opacity` animate, no blur,
   gradients fade to the same hex at alpha `00`, reduced motion freezes.
 - **The phone has no picker** and shows the swirl unless previewed.
-- **Rainy window:** dusk sky; two bokeh layers of city lights, each one
-  element with a dozen gradients, crossfading; two tiled rain-streak layers
-  outside the glass; static beads and an edge vignette; seven runner drops
-  that hold, then slide.
+- **Rainy window:** dusk sky; two bokeh layers of city lights (one
+  element each, a dozen gradients) that crossfade, drift and swell; a few
+  lights flickering on their own beat; cars' lights gliding along the
+  street; three depths of rain, gradient streaks, blended with `overlay`
+  so they show against lights and vanish against the sky, leaning with a
+  slow wind; static beads and an edge vignette; seven runner drops.
 - Known: §6c's centre wash (`--bg-veil`) paints *under* the swirl's blobs
   (pseudo-element before positioned children), so that knob currently does
   nothing. Left alone, since Santi tuned the swirl as it looks now.
