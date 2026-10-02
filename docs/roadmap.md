@@ -454,6 +454,11 @@ focus session). A phone is a remote.
   drops its connection each time the screen locks, which would otherwise
   flip you to "not working" mid-session.
 - **Messages stay sealed while the laptop's timer runs.**
+- **The phone is only the timer, the status and the other person's pill**
+  (Santi's call, 2026-10-03). Stats, breakdown, note and messages are not
+  shown and not started, so the phone never downloads session history.
+  The status gets the weight: smaller clock, larger box, presets as a
+  two-column grid of 44px buttons.
 - No alert, no crash recovery, no controls, no category box on the phone.
 
 ### Synced timer mode (unchanged, still later)
@@ -515,11 +520,10 @@ history, don't reproduce their shape.
 **Second round (opened 2026-10-02), in order:**
 
 a. ~~Status + phone remote mode~~ (done 2026-10-02).
-b. **Phone polish.** Home-screen install (manifest + icons; iOS only allows
+b. **Phone polish.** Layout cleanup done 2026-10-03. Still to do: home-screen install (manifest + icons; iOS only allows
    web notifications for sites added to the home screen), safe areas for
-   the notch and home bar, the bottom corner widgets crowding each other at
-   phone width, 44px tap targets everywhere, the keyboard covering inputs,
-   fewer background blobs on small screens. Test on Santi's iPhone.
+   the notch and home bar, the keyboard covering the status box, fewer
+   background blobs on small screens. Test on Santi's iPhone.
 c. **Unlockable wallpapers.** Santi's own all-time hours: Rainy window at
    100h, Paper hills with a live sky at 200h, Koi pond at 300h. Later, a
    couples wallpaper at 1,000 combined hours (the repo is public, so no
