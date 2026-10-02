@@ -549,3 +549,127 @@ describe("title flash", () => {
     assert.deepEqual(await titlesOver(1500), new Set([BASE]));
   });
 });
+
+// ---------------------------------------------------------------- status
+
+describe("status", () => {
+  const typeStatus = async (app, text) => {
+    await app.page.locator("#statusInput").fill(text);
+    await app.page.locator("#statusInput").press("Enter");
+    await app.run(250);
+  };
+
+  it("sets a typed status in room/<me>, trimmed, with a server timestamp", async () => {
+    app = await openApp();
+    await typeStatus(app, "  out   with friends ");
+    const status = (await app.db("room/santi")).status;
+    assert.equal(status.text, "out with friends");
+    assert.equal(typeof status.setAt, "number");
+    assert.equal(await app.text("statusAge"), "set just now");
+  });
+
+  it("sets a preset in one tap, and the × clears it", async () => {
+    app = await openApp({ device: "phone" });
+    await app.page.locator(".status-preset", { hasText: "eating" }).click();
+    await app.run(250);
+    assert.equal((await app.db("room/santi")).status.text, "eating");
+    assert.equal(await app.page.locator("#statusInput").inputValue(), "eating");
+
+    await app.click("statusClear");
+    await app.run(250);
+    assert.equal(await app.db("room/santi/status"), null);
+    assert.equal(await app.page.locator("#statusInput").inputValue(), "");
+  });
+
+  it("shows in the other person's pill with its age", async () => {
+    app = await openApp({
+      role: "kristina",
+      seedDb: { room: { santi: { running: false, status: { text: "eating", setAt: T0 - 40 * MIN } } } },
+    });
+    await app.run(250);
+    assert.equal(await app.text("presenceState"), "eating · 40m ago");
+
+    await app.remote("room/santi/status", null);
+    await app.run(250);
+    assert.equal(await app.text("presenceState"), "not working");
+  });
+
+  it("is cleared by Start and hidden while the timer runs", async () => {
+    app = await openApp();
+    await typeStatus(app, "eating");
+    await app.click("startBtn");
+    await app.run(250);
+    assert.equal(await app.db("room/santi/status"), null);
+    assert.equal(await app.page.locator("#statusRow").isVisible(), false);
+
+    await app.click("pauseBtn");
+    await app.run(250);
+    assert.equal(await app.page.locator("#statusRow").isVisible(), true);
+    assert.equal(await app.page.locator("#statusInput").inputValue(), "");
+  });
+
+  it("survives the laptop publishing its timer", async () => {
+    // Set from the phone; the laptop then pauses/resets, which republishes
+    // every timer field.
+    app = await openApp({
+      seedDb: { room: { santi: { running: false, status: { text: "errands", setAt: T0 } } } },
+    });
+    await app.click("resetBtn");
+    await app.setDuration(30);
+    await app.run(250);
+    assert.equal((await app.db("room/santi")).status.text, "errands");
+    assert.equal(await app.page.locator("#statusInput").inputValue(), "errands");
+  });
+});
+
+// ---------------------------------------------------------------- phone
+
+describe("phone (remote) mode", () => {
+  const laptopRunning = {
+    running: true, startedAt: T0 - MIN + 1000, remainingAtStart: 1500, category: "Thesis",
+  };
+
+  it("hides the controls and never claims the timer", async () => {
+    app = await openApp({ device: "phone" });
+    await app.run(1000);
+    for (const id of ["startBtn", "pauseBtn", "resetBtn", "durationInput", "categoryInput"]) {
+      assert.equal(await app.page.locator("#" + id).isVisible(), false, id + " should be hidden");
+    }
+    const writes = await app.writes();
+    assert.equal(writes.some((w) => w.op.startsWith("onDisconnect")), false,
+      "a phone must not mark you not-working when its screen locks");
+    assert.equal(writes.some((w) => w.path === "room/santi" && "running" in (w.value || {})), false);
+    assert.match(await app.text("uidDebug"), /santi · phone · uid/);
+  });
+
+  it("shows the laptop's running timer read-only", async () => {
+    app = await openApp({ device: "phone", seedDb: { room: { santi: laptopRunning } } });
+    await app.run(250);
+    assert.equal(await app.text("timerDisplay"), "24:00");
+    assert.equal(await app.text("stageLabel"), "Focusing");
+    assert.equal(await app.text("remoteNote"), "on your laptop · Thesis");
+    assert.equal(await app.page.locator("#statusRow").isVisible(), false);
+
+    await app.remote("room/santi", { running: false, remainingAtStart: 1380 });
+    await app.run(250);
+    assert.equal(await app.text("timerDisplay"), "23:00");
+    assert.equal(await app.text("stageLabel"), "Focus");
+    assert.equal(await app.page.locator("#statusRow").isVisible(), true);
+  });
+
+  it("keeps messages sealed while the laptop's timer runs", async () => {
+    app = await openApp({
+      device: "phone",
+      seedDb: {
+        room: { santi: laptopRunning },
+        messages: { santi: { note: { text: "proud of you", sentAt: T0 - MIN } } },
+      },
+    });
+    await app.run(250);
+    assert.equal(await app.text("messageBadge"), "message when you're done");
+
+    await app.remote("room/santi/running", false);
+    await app.run(250);
+    assert.equal(await app.text("messageBadge"), "1 message — read it");
+  });
+});

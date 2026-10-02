@@ -73,8 +73,9 @@ function initScript({ seedStorage, seedDb, role }) {
  *   seedStorage  localStorage entries to exist before first load
  *   seedDb       initial database tree
  *   time         wall-clock time the page starts at
+ *   device       "phone" | "laptop" — sets ?device=, overriding detection
  */
-export async function openApp({ role = "santi", seedStorage = {}, seedDb = {}, time = T0 } = {}) {
+export async function openApp({ role = "santi", seedStorage = {}, seedDb = {}, time = T0, device = "laptop" } = {}) {
   const context = await browser.newContext({ timezoneId: "America/New_York" });
   // The app-compat script becomes the whole fake; the other two are empty.
   // (Playwright runs the most recently registered matching route first.)
@@ -91,7 +92,7 @@ export async function openApp({ role = "santi", seedStorage = {}, seedDb = {}, t
   // every countdown value a test checks is exact.
   await page.clock.install({ time: time - 1000 });
   await page.clock.pauseAt(time);
-  await page.goto(server.url + (role ? "?me=" + role : ""));
+  await page.goto(server.url + (role ? "?me=" + role + "&device=" + device : ""));
   // Timer callbacks that throw surface here; record them like page errors.
   try { await page.clock.runFor(50); } catch (e) { errors.push(e); }
 

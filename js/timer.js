@@ -41,7 +41,6 @@ function emit(type, detail) {
 
 export function init() {
   timer = parseTimer(localStorage.getItem(STORAGE_KEY));
-  armDisconnect();
 }
 
 // Read-only view for other modules. They change the timer only through the
@@ -61,8 +60,12 @@ function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(timer)); }
 //
 // The category goes out as its LABEL, not its key, so the other person's
 // page can render it without reading this person's category vocabulary.
+//
+// update(), not set(): room/<me> also holds the status, which a phone may
+// have set, and set() would wipe it. Every timer field is written each
+// time, so nothing stale survives.
 function publish(running, startedAtValue) {
-  refs.mine.set({
+  refs.mine.update({
     running: running,
     startedAt: startedAtValue,
     remainingAtStart: Math.round(Math.max(0, timer.remainingAtStart) / 1000),
@@ -81,7 +84,10 @@ function publishCategory() {
 // Without that, the first wifi drop would clear presence and the second
 // would not. This is what makes a closed tab, a sleeping laptop and lost
 // wifi all read as "not working" to the other person.
-function armDisconnect() {
+//
+// Called by main.js on laptops only. A phone never runs the timer, and it
+// disconnects every time its screen locks.
+export function armDisconnect() {
   refs.connected.on("value", (snap) => {
     if (snap.val() === true) refs.mine.onDisconnect().update({ running: false });
   });

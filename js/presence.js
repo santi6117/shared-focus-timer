@@ -1,14 +1,16 @@
 // The presence pill, top right: whether the OTHER person is working now.
 //
-// Two states only, on purpose: their timer is running (with its live
-// countdown and category), or "not working". A paused timer, a closed tab
-// and an offline laptop all look the same. Read-only — this page never
-// writes to their slot.
+// Running: their live countdown and category. Otherwise: their status
+// with its age ("eating · 40m ago"), or "not working" if they haven't set
+// one. A paused timer, a closed tab and an offline laptop all look the
+// same; the status is what says more. Read-only — this page never writes
+// to their slot.
 
 import { refs, serverNow } from "./firebase.js";
 import { THEM } from "./identity.js";
 import { DISPLAY_NAME } from "./config.js";
 import { formatClock } from "./lib/time.js";
+import { idleText } from "./lib/status.js";
 
 let theirs = { running: false, startedAt: null, remainingAtStart: 0 };
 let dot, stateEl;
@@ -34,6 +36,6 @@ export function render() {
     stateEl.textContent = "focusing" + on + " · " + formatClock(remainingMs);
   } else {
     dot.classList.remove("live");
-    stateEl.textContent = "not working";
+    stateEl.textContent = idleText(theirs.status, serverNow());
   }
 }

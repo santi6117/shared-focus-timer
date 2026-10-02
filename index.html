@@ -48,6 +48,8 @@
            is never overwritten. -->
       <p class="eyebrow"><span id="stageLabel">Focus</span><span class="heart" aria-hidden="true">&#9829;</span></p>
       <div id="timerDisplay">25:00</div>
+      <!-- Phone only: where the timer above actually runs. -->
+      <p id="remoteNote"></p>
 
       <!-- Editable only while the timer isn't running. -->
       <label class="duration-row">
@@ -66,6 +68,19 @@
         <input id="categoryInput" type="text" maxlength="40"
                placeholder="working on…" autocomplete="off" />
         <div id="categoryChips"></div>
+      </div>
+
+      <!-- Your status, for when you're not focusing. Hidden while the timer
+           runs. Presets are filled in by js/status.js. -->
+      <div id="statusRow">
+        <div class="status-field">
+          <input id="statusInput" type="text" maxlength="40"
+                 placeholder="status — eating, out…" autocomplete="off"
+                 enterkeyhint="done" />
+          <button id="statusClear" type="button" aria-label="Clear status">&times;</button>
+        </div>
+        <div id="statusAge"></div>
+        <div id="statusPresets"></div>
       </div>
     </section>
   </main>

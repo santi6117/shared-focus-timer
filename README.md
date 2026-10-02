@@ -25,10 +25,14 @@ js/
   main.js                  startup: what runs, in what order
   config.js                Firebase project settings, the two names
   identity.js              which person this browser is (?me=)
+  device.js                laptop (runs the timer) or phone (a remote)
   firebase.js              sign-in, database paths, server clock
   timer.js                 your timer: state, controls, crash recovery
-  timer-view.js            draws the timer card
+  timer-view.js            draws the timer card (laptop)
+  remote-view.js           draws the timer card read-only (phone)
+  own-room.js              your published state: running? status?
   presence.js              the other person's pill, top right
+  status.js                your status ("eating") when not focusing
   sessions.js              the log of finished sessions
   categories.js            the "working on…" box and chips
   stats.js                 the two bottom-left widgets
@@ -89,7 +93,7 @@ does nothing until it's pasted there:
   does silently) can read and write the five known paths, and nobody else can
   do anything.
 - **`database.rules.pinned.json` goes in once both anonymous UIDs are known.**
-  It locks each person's data to their own browser. Each UID is shown in the
-  bottom-right corner of the page. Replace `SANTI_UID` and `KRISTINA_UID`,
-  then paste. Collect the UIDs from the GitHub Pages address, not a local
+  It locks each person's data to their own laptop and phone. Each UID is
+  shown in the bottom-right corner of the page. Replace `SANTI_UID`,
+  `SANTI_PHONE_UID`, `KRISTINA_UID` and `KRISTINA_PHONE_UID`, then paste. Collect the UIDs from the GitHub Pages address, not a local
   file: a new address means a new UID.

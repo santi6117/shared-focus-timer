@@ -173,3 +173,89 @@ button:active { transform: translateY(1px); }
 }
 .cat-chip:hover { background: var(--surface-sunk); color: var(--ink); }
 .cat-chip .swatch { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+
+/* ---- Status, inside the timer card ----
+   Below the category, separated by a hairline: the category is about the
+   session, the status is about when there isn't one. Hidden while the
+   timer runs. */
+#statusRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+#statusRow.hidden { display: none; }
+
+.status-field { position: relative; width: 100%; max-width: 15rem; }
+
+#statusInput {
+  width: 100%;
+  padding: 0.45rem 2rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  text-align: center;
+  background: var(--surface-sunk);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+#statusInput::placeholder { color: var(--ink-soft); }
+
+#statusClear {
+  display: none;
+  position: absolute;
+  right: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0 0.5rem;
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+#statusClear.shown { display: block; }
+
+#statusAge { font-size: 0.72rem; color: var(--ink-soft); min-height: 0; }
+#statusAge:empty { display: none; }
+
+/* On a laptop the presets appear only while the box has focus, so the
+   card stays quiet at rest. On a phone they're always there: a tap is the
+   whole point. */
+#statusPresets {
+  display: none;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+  max-width: 18rem;
+}
+#statusRow:focus-within #statusPresets,
+.remote #statusPresets { display: flex; }
+
+.status-preset {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.65rem;
+  background: var(--surface);
+  color: var(--ink-soft);
+}
+
+/* ---- Phone (remote) mode ----
+   The timer runs on the laptop; the phone shows it and nothing that would
+   change it. */
+#remoteNote { display: none; margin: -0.4rem 0 0; font-size: 0.8rem; color: var(--ink-soft); }
+.remote #remoteNote { display: block; }
+.remote .duration-row,
+.remote .controls,
+.remote .category-row { display: none; }
+
+/* iOS zooms the page into any focused input under 16px and doesn't zoom
+   back out. On a phone every text box is at least 16px. */
+.remote input,
+.remote textarea { font-size: 16px; }
+
+/* Presets are tap targets on a phone; 44px is Apple's minimum. */
+.remote .status-preset { font-size: 0.85rem; padding: 0.55rem 0.9rem; min-height: 44px; }
+.remote #statusClear { font-size: 1.4rem; }

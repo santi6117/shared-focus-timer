@@ -12,6 +12,7 @@ import {
   normalizeKey, pickColor, totals, breakdown, CATEGORY_PALETTE, UNCATEGORIZED_KEY,
 } from "../js/lib/categories.js";
 import { isUnread, chipLabel, outboxStatus } from "../js/lib/messages.js";
+import { normalizeStatus, formatAgo, idleText, STATUS_MAX } from "../js/lib/status.js";
 
 const MIN = 60_000;
 const local = (s) => new Date(s).getTime();
@@ -145,5 +146,29 @@ describe("messages", () => {
     assert.equal(outboxStatus(null, "Kristina", fmt), "nothing waiting");
     assert.equal(outboxStatus(slot(undefined), "Kristina", fmt), "waiting for Kristina");
     assert.equal(outboxStatus(slot(5), "Kristina", fmt), "read 3:05 PM · send another");
+  });
+});
+
+describe("status", () => {
+  it("normalizes: trims, collapses spaces, caps length", () => {
+    assert.equal(normalizeStatus("  out   with  friends "), "out with friends");
+    assert.equal(normalizeStatus("   "), "");
+    assert.equal(normalizeStatus(null), "");
+    assert.equal(normalizeStatus("x".repeat(60)).length, STATUS_MAX);
+  });
+
+  it("formats age coarsely", () => {
+    assert.equal(formatAgo(30_000), "just now");
+    assert.equal(formatAgo(-5000), "just now", "clock skew never shows a negative age");
+    assert.equal(formatAgo(40 * MIN), "40m ago");
+    assert.equal(formatAgo(14 * 60 * MIN), "14h ago");
+    assert.equal(formatAgo(3 * 24 * 60 * MIN), "3d ago");
+  });
+
+  it("falls back to 'not working' with no status", () => {
+    assert.equal(idleText(null, 0), "not working");
+    assert.equal(idleText({ text: "" }, 0), "not working");
+    assert.equal(idleText({ text: "eating", setAt: 0 }, 40 * MIN), "eating · 40m ago");
+    assert.equal(idleText({ text: "eating" }, 40 * MIN), "eating", "a pending server timestamp shows no age");
   });
 });
