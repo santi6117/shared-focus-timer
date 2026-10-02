@@ -1,33 +1,33 @@
 {
   "rules": {
     "room": {
-      "santi":    { ".read": "auth.uid === 'SANTI_UID' || auth.uid === 'KRISTINA_UID'",
-                    ".write": "auth.uid === 'SANTI_UID'" },
-      "kristina": { ".read": "auth.uid === 'SANTI_UID' || auth.uid === 'KRISTINA_UID'",
-                    ".write": "auth.uid === 'KRISTINA_UID'" }
+      "santi":    { ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID') || (auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')",
+                    ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" },
+      "kristina": { ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID') || (auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')",
+                    ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" }
     },
     "sessions": {
-      "santi":    { ".read": "auth.uid === 'SANTI_UID'",    ".write": "auth.uid === 'SANTI_UID'" },
-      "kristina": { ".read": "auth.uid === 'KRISTINA_UID'", ".write": "auth.uid === 'KRISTINA_UID'" }
+      "santi":    { ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')",    ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" },
+      "kristina": { ".read": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')", ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" }
     },
     "categories": {
-      "santi":    { ".read": "auth.uid === 'SANTI_UID'",    ".write": "auth.uid === 'SANTI_UID'" },
-      "kristina": { ".read": "auth.uid === 'KRISTINA_UID'", ".write": "auth.uid === 'KRISTINA_UID'" }
+      "santi":    { ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')",    ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" },
+      "kristina": { ".read": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')", ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" }
     },
     "notes": {
-      "santi":    { ".read": "auth.uid === 'SANTI_UID'",    ".write": "auth.uid === 'SANTI_UID'" },
-      "kristina": { ".read": "auth.uid === 'KRISTINA_UID'", ".write": "auth.uid === 'KRISTINA_UID'" }
+      "santi":    { ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')",    ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" },
+      "kristina": { ".read": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')", ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" }
     },
     "messages": {
       "santi": {
-        ".read": "auth.uid === 'SANTI_UID' || auth.uid === 'KRISTINA_UID'",
-        "note": { ".write": "auth.uid === 'KRISTINA_UID'" },
-        "read": { ".write": "auth.uid === 'SANTI_UID'" }
+        ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID') || (auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')",
+        "note": { ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" },
+        "read": { ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" }
       },
       "kristina": {
-        ".read": "auth.uid === 'SANTI_UID' || auth.uid === 'KRISTINA_UID'",
-        "note": { ".write": "auth.uid === 'SANTI_UID'" },
-        "read": { ".write": "auth.uid === 'KRISTINA_UID'" }
+        ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID') || (auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')",
+        "note": { ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" },
+        "read": { ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" }
       }
     }
   }
