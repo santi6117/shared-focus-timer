@@ -466,8 +466,8 @@ focus session). A phone is a remote.
 | Wallpaper | Unlocks at | State |
 |---|---|---|
 | Swirl (§6c) | always | built |
-| Rainy window | 100 h | built, being iterated |
-| Paper hills, live sky | 200 h | planned |
+| Rainy window | 100 h | built (iterated twice with Santi) |
+| Paper hills, live sky | 200 h | built 2026-10-03, awaiting feedback |
 | Koi pond | 300 h | planned |
 
 - **Unlocks are derived from all-time hours** in the session log, the
@@ -491,6 +491,14 @@ focus session). A phone is a remote.
   bottom, with soft reflections, passing rarely and irregularly; three depths of rain, gradient streaks, blended with `overlay`
   so they show against lights and vanish against the sky, leaning with a
   slow wind; static beads and an edge vignette; seven runner drops.
+- **Paper hills:** four cut-paper hill silhouettes (inline SVG, each
+  throwing a soft shadow on the one behind) under a sky blended from
+  time-of-day keyframes (`js/lib/sky.js`): pink dawn, gold afternoon,
+  violet dusk, indigo night with stars and a crescent moon. `js/sky.js`
+  sets the colours as custom properties once a minute; sun and moon glide
+  between updates on a one-minute transition. Only three paper clouds and
+  a star twinkle move continuously. Fixed schedule (sunrise ~6:30, sunset
+  ~18:45), not computed from location. `?sky=<hour>` pins the time.
 - Known: §6c's centre wash (`--bg-veil`) paints *under* the swirl's blobs
   (pseudo-element before positioned children), so that knob currently does
   nothing. Left alone, since Santi tuned the swirl as it looks now.
@@ -561,9 +569,8 @@ b. **Phone polish.** Layout cleanup done 2026-10-03. Still to do: home-screen in
    web notifications for sites added to the home screen), safe areas for
    the notch and home bar, the keyboard covering the status box, fewer
    background blobs on small screens. Test on Santi's iPhone.
-c. **Unlockable wallpapers** (§6j). System and Rainy window built
-   2026-10-03, awaiting Santi's feedback. Then Paper hills (200h), then Koi
-   pond (300h), one per session, iterated with Santi.
+c. **Unlockable wallpapers** (§6j). System, Rainy window and Paper hills
+   built 2026-10-03. Paper hills awaits feedback; Koi pond (300h) next.
 
 **From v1:**
 
