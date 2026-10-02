@@ -9,11 +9,12 @@
         dozen radial gradients rather than a dozen elements, so the whole
         city is two painted layers. They crossfade slowly against each
         other, which reads as lights flickering behind the rain.
-     3. falling rain, outside the glass: two tiled streak patterns sliding
-        down at different speeds and sizes for depth
-     4. beads sitting on the glass, plus a dark vignette at the edges,
+     3. a few faster-flickering lights, and traffic gliding along the street
+     4. falling rain, outside the glass: three depths of streaks, leaning
+        with a slow wind
+     5. beads sitting on the glass, plus a dark vignette at the edges,
         static
-     5. seven runners: single drops that hold still, then give way and
+     6. seven runners: single drops that hold still, then give way and
         slide down the pane, each on its own timing
 
    The streak and bead patterns are small inline SVGs, rasterised once and
@@ -26,6 +27,7 @@
 }
 
 .wp-rain > div { position: absolute; inset: 0; }
+.rain-bokeh { will-change: transform, opacity; }
 
 /* ---- City lights ---- */
 .rain-bokeh-a {
@@ -42,7 +44,7 @@
     radial-gradient(circle at 58.4% 59.9%, #ffe8c2e6 0, #ffe8c2b3 2.7vmax, #ffe8c200 4.9vmax),
     radial-gradient(circle at 54.6% 81.0%, #ffb45ae6 0, #ffb45ab3 1.76vmax, #ffb45a00 3.2vmax),
     radial-gradient(circle at 76.2% 67.3%, #ffe8c2e6 0, #ffe8c2b3 2.04vmax, #ffe8c200 3.7vmax);
-  animation: bokeh-a 7s ease-in-out infinite alternate;
+  animation: bokeh-a 11s ease-in-out infinite alternate;
 }
 .rain-bokeh-b {
   background:
@@ -57,29 +59,138 @@
     radial-gradient(circle at 52.9% 93.3%, #ff8a5c80 0, #ff8a5ca6 2.89vmax, #ff8a5c00 3.7vmax),
     radial-gradient(circle at 86.0% 26.1%, #ffe8c280 0, #ffe8c2a6 3.12vmax, #ffe8c200 4.0vmax),
     radial-gradient(circle at 48.7% 63.9%, #ffc46be6 0, #ffc46bb3 2.48vmax, #ffc46b00 4.5vmax);
-  animation: bokeh-b 9.5s ease-in-out infinite alternate;
+  animation: bokeh-b 14s ease-in-out infinite alternate;
 }
-@keyframes bokeh-a { from { opacity: 1; }    to { opacity: 0.6; } }
-@keyframes bokeh-b { from { opacity: 0.45; } to { opacity: 1; } }
+/* A few lights that flicker faster and on their own beat: signs, a
+   window, something passing in front. Without them the city pulses in two
+   slow groups, which reads as a loop. */
+.rain-bokeh-c {
+  background:
+    radial-gradient(circle at 67.5% 69.4%, #ff8fb899 0, #ff8fb880 1.65vmax, #ff8fb800 3.0vmax),
+    radial-gradient(circle at 76.9% 80.1%, #ff8fb899 0, #ff8fb880 1.65vmax, #ff8fb800 3.0vmax),
+    radial-gradient(circle at 25.7% 30.2%, #ffb45a99 0, #ffb45a80 1.54vmax, #ffb45a00 2.8vmax),
+    radial-gradient(circle at 10.4% 79.2%, #ffb45a99 0, #ffb45a80 1.43vmax, #ffb45a00 2.6vmax);
+  animation: bokeh-c 3.7s steps(1, end) infinite;
+}
+
+/* Each layer also drifts and swells very slightly, like a lens breathing
+   or the head of someone looking out of the window. Still lights were the
+   part that read as a picture rather than a place. */
+@keyframes bokeh-a {
+  from { opacity: 1;    transform: translate3d(0, 0, 0) scale(1); }
+  to   { opacity: 0.6;  transform: translate3d(-0.8vmax, 0.4vmax, 0) scale(1.035); }
+}
+@keyframes bokeh-b {
+  from { opacity: 0.45; transform: translate3d(0.5vmax, 0, 0) scale(1.03); }
+  to   { opacity: 1;    transform: translate3d(-0.3vmax, -0.3vmax, 0) scale(1); }
+}
+@keyframes bokeh-c {
+  0%   { opacity: 0.9; }
+  18%  { opacity: 0.35; }
+  22%  { opacity: 0.85; }
+  61%  { opacity: 0.5; }
+  64%  { opacity: 1; }
+}
+
+/* ---- Traffic ----
+   Pairs of out-of-focus lights gliding along the street: headlights one
+   way, tail lights the other, smaller and slower the further away. One
+   element per car, its two lamps drawn as two gradients. */
+.wp-rain > .rain-traffic { overflow: hidden; }
+.car {
+  position: absolute;
+  left: 0;
+  width: var(--w);
+  height: calc(var(--w) * 0.44);
+  margin-left: calc(var(--w) * -1);
+  /* An explicit radius that fits inside the box: the default size is "to
+     the farthest corner", which the box would clip into a soft rectangle. */
+  background:
+    radial-gradient(circle calc(var(--w) * 0.2) at 22% 50%, var(--c) 0, var(--c-mid) 30%, var(--c-off) 100%),
+    radial-gradient(circle calc(var(--w) * 0.2) at 78% 50%, var(--c) 0, var(--c-mid) 30%, var(--c-off) 100%);
+  animation: drive var(--d) linear infinite;
+  animation-delay: var(--delay);
+  will-change: transform;
+}
+.car-1 { --w: 14vmax; bottom: 5%;  --c: #ffe6b5; --c-mid: #ffe6b588; --c-off: #ffe6b500; --d: 19s; --delay: -6s; }
+.car-2 { --w: 10vmax; bottom: 11%; --c: #ff4a3d; --c-mid: #ff4a3d70; --c-off: #ff4a3d00; --d: 31s; --delay: -20s;
+          animation-direction: reverse; }
+.car-3 { --w: 7vmax; bottom: 15%; --c: #ffd9a0; --c-mid: #ffd9a070; --c-off: #ffd9a000; --d: 43s; --delay: -11s; }
+@keyframes drive {
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(100vw + var(--w) * 2)); }
+}
 
 /* ---- Rain outside ----
+   Three depths. Far streaks are short, thin and many; near ones are long,
+   wide, few and softened, as if out of focus. Each streak fades in along
+   its length (a gradient stroke), the way a motion-blurred drop does,
+   rather than being a solid line with two hard ends. The soft focus on
+   the near layer is an SVG blur baked into the tile, so it costs nothing
+   per frame: the tile is rasterised once and only moved after that.
+
+   mix-blend-mode: overlay is what makes it read as rain rather than lines
+   drawn over a picture. Overlay leaves dark areas dark and brightens light
+   ones, so the streaks almost vanish against the night sky and catch the
+   light where they cross a street lamp, which is how real rain is seen.
+
    Each layer is taller than the screen by exactly one tile and slides down
-   one tile per cycle, so the loop point is invisible. */
-.wp-rain > .rain-fall { inset: auto 0 0 0; top: calc(var(--tile) * -1); will-change: transform; }
+   one tile per cycle, so the loop point is invisible. The tile sizes share
+   no common factor, so the three patterns never line up into a grid. */
+
+/* The wind: the whole rain volume leans one way, then the other, over a
+   few seconds, so the angle of the rain is never fixed. A skew, on a
+   wrapper, because each layer's own transform is busy falling. */
+.wp-rain > .rain-wind {
+  inset: -10% -15%;
+  transform-origin: 50% 0;
+  animation: gust 13s ease-in-out infinite alternate;
+  will-change: transform;
+  /* The blend goes here, on the wrapper, not on each layer: anything with
+     its own transform is blended as an isolated group, so a layer inside
+     would only ever overlay onto the empty wind wrapper, not the city. */
+  mix-blend-mode: overlay;
+}
+@keyframes gust {
+  0%   { transform: skewX(-2deg); }
+  40%  { transform: skewX(3deg); }
+  70%  { transform: skewX(1deg); }
+  100% { transform: skewX(5.5deg); }
+}
+
+.rain-fall {
+  position: absolute;
+  inset: auto 0 0 0;
+  top: calc(var(--tile) * -1);
+  will-change: transform;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
 .rain-fall-far {
-  --tile: 200px;
-  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='200'><g stroke='%23c8d4ff' stroke-opacity='0.2' stroke-width='1' stroke-linecap='round'><line x1='35' y1='93' x2='33' y2='112'/><line x1='84' y1='106' x2='82' y2='121'/><line x1='6' y1='142' x2='4' y2='161'/><line x1='35' y1='169' x2='32' y2='191'/><line x1='114' y1='81' x2='112' y2='105'/><line x1='24' y1='108' x2='21' y2='136'/><line x1='73' y1='126' x2='70' y2='151'/><line x1='12' y1='129' x2='10' y2='152'/><line x1='44' y1='5' x2='40' y2='33'/></g></svg>");
-  background-size: 140px 200px;
-  animation: fall-far 0.75s linear infinite;
+  --tile: 230px;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='170' height='230'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23e8eeff' stop-opacity='0'/><stop offset='0.75' stop-color='%23e8eeff' stop-opacity='0.8'/><stop offset='1' stop-color='%23ffffff' stop-opacity='1'/></linearGradient></defs><g stroke='url(%23g)' stroke-linecap='round'><line x1='77.5' y1='114' x2='75.9' y2='139' stroke-width='0.75' stroke-opacity='0.56'/><line x1='35.2' y1='104' x2='33.6' y2='125' stroke-width='0.63' stroke-opacity='0.46'/><line x1='20.3' y1='165' x2='19.1' y2='186' stroke-width='0.89' stroke-opacity='0.69'/><line x1='109.3' y1='126' x2='108.1' y2='138' stroke-width='0.76' stroke-opacity='0.37'/><line x1='36.1' y1='49' x2='34.9' y2='60' stroke-width='0.73' stroke-opacity='0.64'/><line x1='88.0' y1='131' x2='86.7' y2='149' stroke-width='0.74' stroke-opacity='0.45'/><line x1='163.6' y1='203' x2='161.9' y2='227' stroke-width='0.69' stroke-opacity='0.43'/><line x1='51.7' y1='14' x2='50.3' y2='37' stroke-width='0.85' stroke-opacity='0.49'/><line x1='157.4' y1='173' x2='156.2' y2='183' stroke-width='0.87' stroke-opacity='0.51'/><line x1='160.9' y1='81' x2='159.7' y2='92' stroke-width='0.83' stroke-opacity='0.44'/><line x1='19.8' y1='68' x2='17.8' y2='93' stroke-width='0.64' stroke-opacity='0.44'/><line x1='22.0' y1='12' x2='20.8' y2='35' stroke-width='0.77' stroke-opacity='0.51'/><line x1='36.1' y1='149' x2='34.9' y2='161' stroke-width='0.63' stroke-opacity='0.50'/><line x1='39.6' y1='55' x2='37.6' y2='81' stroke-width='0.69' stroke-opacity='0.66'/></g></svg>");
+  background-size: 170px 230px;
+  animation-name: fall-far;
+  animation-duration: 0.95s;
+}
+.rain-fall-mid {
+  --tile: 310px;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='310'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23e8eeff' stop-opacity='0'/><stop offset='0.75' stop-color='%23e8eeff' stop-opacity='0.8'/><stop offset='1' stop-color='%23ffffff' stop-opacity='1'/></linearGradient></defs><g stroke='url(%23g)' stroke-linecap='round'><line x1='118.9' y1='174' x2='117.1' y2='212' stroke-width='0.90' stroke-opacity='0.60'/><line x1='71.2' y1='214' x2='68.5' y2='253' stroke-width='1.12' stroke-opacity='0.71'/><line x1='40.6' y1='116' x2='38.2' y2='144' stroke-width='0.92' stroke-opacity='0.78'/><line x1='23.8' y1='181' x2='21.9' y2='213' stroke-width='1.24' stroke-opacity='0.46'/><line x1='20.5' y1='242' x2='18.9' y2='277' stroke-width='1.29' stroke-opacity='0.83'/><line x1='32.8' y1='112' x2='31.3' y2='139' stroke-width='1.15' stroke-opacity='0.52'/><line x1='171.8' y1='14' x2='169.6' y2='41' stroke-width='1.06' stroke-opacity='0.62'/><line x1='147.8' y1='126' x2='146.5' y2='158' stroke-width='1.19' stroke-opacity='0.84'/><line x1='238.4' y1='175' x2='236.5' y2='207' stroke-width='1.18' stroke-opacity='0.72'/></g></svg>");
+  background-size: 250px 310px;
+  animation-name: fall-mid;
+  animation-duration: 0.62s;
 }
 .rain-fall-near {
-  --tile: 320px;
-  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='230' height='320'><g stroke='%23dfe6ff' stroke-opacity='0.26' stroke-width='1.3' stroke-linecap='round'><line x1='56' y1='27' x2='52' y2='68'/><line x1='38' y1='18' x2='34' y2='58'/><line x1='208' y1='211' x2='202' y2='261'/><line x1='53' y1='142' x2='49' y2='179'/><line x1='42' y1='28' x2='38' y2='64'/><line x1='210' y1='219' x2='204' y2='270'/></g></svg>");
-  background-size: 230px 320px;
-  animation: fall-near 0.5s linear infinite;
+  --tile: 430px;
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='430'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='%23e8eeff' stop-opacity='0'/><stop offset='0.75' stop-color='%23e8eeff' stop-opacity='0.8'/><stop offset='1' stop-color='%23ffffff' stop-opacity='1'/></linearGradient><filter id='b'><feGaussianBlur stdDeviation='0.9'/></filter></defs><g stroke='url(%23g)' stroke-linecap='round' filter='url(%23b)'><line x1='91.0' y1='233' x2='84.6' y2='310' stroke-width='1.95' stroke-opacity='0.41'/><line x1='54.3' y1='77' x2='50.6' y2='156' stroke-width='2.23' stroke-opacity='0.40'/><line x1='102.6' y1='147' x2='96.8' y2='230' stroke-width='1.81' stroke-opacity='0.42'/><line x1='54.1' y1='296' x2='47.5' y2='379' stroke-width='2.46' stroke-opacity='0.54'/><line x1='317.4' y1='270' x2='312.4' y2='330' stroke-width='2.19' stroke-opacity='0.54'/></g></svg>");
+  background-size: 340px 430px;
+  opacity: 0.8;
+  animation-name: fall-near;
+  animation-duration: 0.42s;
 }
-@keyframes fall-far  { to { transform: translateY(200px); } }
-@keyframes fall-near { to { transform: translateY(320px); } }
+@keyframes fall-far  { to { transform: translateY(230px); } }
+@keyframes fall-mid  { to { transform: translateY(310px); } }
+@keyframes fall-near { to { transform: translateY(430px); } }
 
 /* ---- On the glass ---- */
 .rain-beads {
