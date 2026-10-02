@@ -461,6 +461,38 @@ focus session). A phone is a remote.
   two-column grid of 44px buttons.
 - No alert, no crash recovery, no controls, no category box on the phone.
 
+### 6j. Unlockable wallpapers (2026-10-03)
+
+| Wallpaper | Unlocks at | State |
+|---|---|---|
+| Swirl (§6c) | always | built |
+| Rainy window | 100 h | built, being iterated |
+| Paper hills, live sky | 200 h | planned |
+| Koi pond | 300 h | planned |
+
+- **Unlocks are derived from all-time hours** in the session log, the
+  person's own. Nothing "unlocked" is stored; hours never go down.
+- **The choice is per device, in localStorage** (`wallpaper:<me>`), not in
+  Firebase. Painted from storage on the first frame, before the log loads.
+- **The picker is inside the stats panel.** Locked ones show progress
+  ("62 / 100 h"). A new unlock puts a dot on the stats chip until the panel
+  is opened (`wallpapersSeen:<me>`). No toast, no sound.
+- **`?bg=<id>` previews any built wallpaper** without unlocking or saving.
+- **Markup:** one `.wp-<id>` wrapper per wallpaper inside
+  `#backgroundLayer`; `data-bg` picks one and the rest are `display: none`,
+  which also stops their animations. Each new wallpaper is its own file in
+  `css/wallpapers/`.
+- **Same rules as §6c:** only `transform` and `opacity` animate, no blur,
+  gradients fade to the same hex at alpha `00`, reduced motion freezes.
+- **The phone has no picker** and shows the swirl unless previewed.
+- **Rainy window:** dusk sky; two bokeh layers of city lights, each one
+  element with a dozen gradients, crossfading; two tiled rain-streak layers
+  outside the glass; static beads and an edge vignette; seven runner drops
+  that hold, then slide.
+- Known: §6c's centre wash (`--bg-veil`) paints *under* the swirl's blobs
+  (pseudo-element before positioned children), so that knob currently does
+  nothing. Left alone, since Santi tuned the swirl as it looks now.
+
 ### Synced timer mode (unchanged, still later)
 
 An opt-in toggle binding the two timers. Not designed, not requested, not
@@ -472,8 +504,11 @@ part of v1.
 
 Do not build these. Do not let them creep into scope.
 
-- Coin system / unlockable backgrounds
-- A background picker or upload flow
+- A coin system, or a background upload flow (unlockable wallpapers and
+  their picker moved into scope 2026-10-02: §6j)
+- The couples wallpaper at 1,000 combined hours (planned, not designed).
+  The repo is public, so a real photo of them can't be committed: it needs
+  an illustrated version, or to live outside the repo.
 - Category rename / merge tool (the key-vs-label split already makes it cheap)
 - Retroactive labelling of past sessions (would break the append-only log)
 - Message expiry (open question from 2026-09-11 (c): a message sits in the
@@ -524,10 +559,9 @@ b. **Phone polish.** Layout cleanup done 2026-10-03. Still to do: home-screen in
    web notifications for sites added to the home screen), safe areas for
    the notch and home bar, the keyboard covering the status box, fewer
    background blobs on small screens. Test on Santi's iPhone.
-c. **Unlockable wallpapers.** Santi's own all-time hours: Rainy window at
-   100h, Paper hills with a live sky at 200h, Koi pond at 300h. Later, a
-   couples wallpaper at 1,000 combined hours (the repo is public, so no
-   real photo in it). One wallpaper per session, iterated with Santi.
+c. **Unlockable wallpapers** (§6j). System and Rainy window built
+   2026-10-03, awaiting Santi's feedback. Then Paper hills (200h), then Koi
+   pond (300h), one per session, iterated with Santi.
 
 **From v1:**
 
