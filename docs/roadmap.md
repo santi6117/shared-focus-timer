@@ -513,8 +513,10 @@ focus session). A phone is a remote.
   transition on the light: minute steps are invisible, and a transition
   would repaint the full screen every frame.
 - **Swirl as ink on paper** (2026-10-03, Santi's pick from three mock-ups:
-  paper, risograph, marbled). A static paper texture (SVG turbulence,
-  multiplied) and an edge darkening sit over the blobs, and the centre wash
+  paper, risograph, marbled; then refined to a blend of the first two). A
+  static paper layer is multiplied over the blobs: cream tint, an even
+  fine paper tooth, a soft 7px dot screen, and an edge darkening. Mottled
+  paper was tried first and read as dark spots. Over it, and the centre wash
   (`--bg-veil`) now actually shows: it used to paint *under* the blobs.
   Both are `.wp-swirl` pseudo-elements, so they don't touch the other
   wallpapers.
