@@ -31,6 +31,7 @@ import * as messages from "./messages.js";
 import * as alert from "./alert.js";
 import * as wallpapers from "./wallpapers.js";
 import * as sky from "./sky.js";
+import * as koi from "./koi.js";
 
 async function boot() {
   let user;
@@ -68,6 +69,7 @@ async function boot() {
   // panel's new state when deciding whether it was just opened.
   wallpapers.init();
   sky.init();
+  koi.init();
 
   if (!REMOTE) {
     timer.recoverInterruptedRun();

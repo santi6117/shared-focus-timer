@@ -16,6 +16,7 @@ import {
   WALLPAPERS, unlockedIds, progressLabel, resolveWallpaper, newlyUnlocked,
 } from "../js/lib/wallpapers.js";
 import { skyAt, mix } from "../js/lib/sky.js";
+import { pondAt } from "../js/lib/pond.js";
 import { normalizeStatus, formatAgo, idleText, STATUS_MAX } from "../js/lib/status.js";
 
 const MIN = 60_000;
@@ -195,14 +196,14 @@ describe("wallpapers", () => {
     assert.equal(resolveWallpaper("rain", null), "rain");
     assert.equal(resolveWallpaper("rain", "swirl"), "swirl");
     assert.equal(resolveWallpaper("nonsense", null), "swirl");
-    assert.equal(resolveWallpaper(null, "koi"), "swirl", "an unbuilt one can't be previewed");
+    assert.equal(resolveWallpaper(null, "koi"), "koi");
   });
 
   it("counts only built, unseen unlocks as new", () => {
     assert.deepEqual(newlyUnlocked(120 * H, []), ["rain"]);
     assert.deepEqual(newlyUnlocked(120 * H, ["rain"]), []);
     assert.deepEqual(newlyUnlocked(250 * H, ["rain"]), ["hills"]);
-    assert.deepEqual(newlyUnlocked(350 * H, ["rain", "hills"]), [], "koi isn't built yet");
+    assert.deepEqual(newlyUnlocked(350 * H, ["rain", "hills"]), ["koi"]);
   });
 });
 
@@ -234,5 +235,29 @@ describe("sky", () => {
     assert.ok(late.sun.y > 60);
     assert.ok(late.sun.x > 85);
     assert.notEqual(late.sun.color, skyAt(12.5).sun.color);
+  });
+});
+
+describe("pond light", () => {
+  it("leaves the pond untouched at midday and wraps around midnight", () => {
+    assert.equal(pondAt(13).light, "#ffffff");
+    assert.deepEqual(pondAt(24), pondAt(0));
+    assert.deepEqual(pondAt(-1), pondAt(23));
+  });
+
+  it("dims at night without going black, and reflects the moon", () => {
+    const night = pondAt(23);
+    const lum = parseInt(night.light.slice(1, 3), 16) + parseInt(night.light.slice(3, 5), 16) + parseInt(night.light.slice(5, 7), 16);
+    assert.ok(lum < 3 * 140, "dark");
+    assert.ok(lum > 3 * 70, "but the koi stay visible");
+    assert.equal(night.moon.visible, true);
+    assert.equal(night.sun.visible, false);
+  });
+
+  it("reflects the sun where Paper hills draws it", () => {
+    for (const h of [7, 12.5, 18.5]) {
+      assert.equal(pondAt(h).sun.x, skyAt(h).sun.x);
+      assert.equal(pondAt(h).sun.y, skyAt(h).sun.y);
+    }
   });
 });

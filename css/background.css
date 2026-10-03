@@ -31,7 +31,8 @@
 .wp { position: absolute; inset: 0; display: none; }
 #backgroundLayer[data-bg="swirl"] .wp-swirl,
 #backgroundLayer[data-bg="rain"]  .wp-rain,
-#backgroundLayer[data-bg="hills"] .wp-hills { display: block; }
+#backgroundLayer[data-bg="hills"] .wp-hills,
+#backgroundLayer[data-bg="koi"]   .wp-koi   { display: block; }
 
 /* Each colour is TWO nested elements, and the nesting is the whole trick.
    The outer .orbit is a zero-size point pinned to screen centre that does

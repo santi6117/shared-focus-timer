@@ -727,6 +727,25 @@ describe("wallpapers", () => {
     assert.equal(await v("--moon-on"), "0");
   });
 
+  it("draws the koi pond with four fish and lights it for the pinned hour", async () => {
+    app = await openApp();
+    await app.page.goto(app.page.url().split("?")[0] + "?bg=koi&sky=13");
+    await app.run(250);
+    assert.equal(await bg(app), "koi");
+    assert.equal(await app.page.locator(".koi-school .koi-swim").count(), 4);
+    assert.equal(await app.page.locator(".koi-shadows .koi-swim").count(), 4);
+    assert.equal(await app.page.locator(".koi-school .koi-sway").first().isVisible(), true);
+    const v = (name) => app.page.locator(".wp-koi").evaluate((el, n) => el.style.getPropertyValue(n), name);
+    assert.equal(await v("--pond-light"), "#ffffff");
+    assert.equal(await v("--sun-on"), "1");
+
+    await app.page.goto(app.page.url().split("?")[0] + "?bg=koi&sky=23");
+    await app.run(250);
+    assert.equal(await v("--moon-on"), "1");
+    assert.notEqual(await v("--pond-light"), "#ffffff");
+    assert.deepEqual(app.errors, []);
+  });
+
   it("previews with ?bg= without unlocking or saving", async () => {
     app = await openApp({ seedDb: hours(1) });
     await app.page.goto(app.page.url().split("?")[0] + "?bg=rain");

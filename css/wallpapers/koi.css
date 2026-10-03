@@ -1,0 +1,203 @@
+/* Koi pond (unlocks at 300 hours): looking straight down into a cut-paper
+   pond. Four layers of water get deeper towards the middle, four koi loop
+   and wander under a scatter of lily pads, and now and then a ripple
+   spreads. The fish are built by js/koi.js; this file says how they move.
+
+   The light follows the local time of day. Rather than a palette per layer
+   (as Paper hills has), the whole scene sits under ONE colour multiplied
+   over it (.pond-light, set by js/sky.js from lib/pond.js once a minute):
+   white at midday changes nothing, and dawn, dusk and night recolour
+   water, pads and fish together. A soft reflection of the sun, or the
+   moon, crosses the water on the same arc as Paper hills' sky.
+
+   Same rules as every wallpaper: only transform and opacity animate, no
+   blur filter on anything that moves (the fish shadows are blurred inside
+   their own SVG, drawn once, then only moved), and reduced motion freezes
+   everything. */
+
+.wp-koi {
+  --bank: #93ac7c;
+  --depth-1: #8fc6b6;
+  --depth-2: #71ada4;
+  --depth-3: #589595;
+  --depth-4: #457f85;
+  /* Fallbacks until js/sky.js runs: midday. */
+  --pond-light: #ffffff;
+  --sun-x: 60vw; --sun-y: 25vh; --sun-on: 1; --sun-color: #fff3cf;
+  --moon-x: 30vw; --moon-y: 30vh; --moon-on: 0;
+}
+.wp-koi > * { position: absolute; }
+.pond-water, .pond-pads { inset: 0; width: 100%; height: 100%; }
+
+/* ---- Water ---- */
+.bank { fill: var(--bank); }
+.depth { filter: url(#pondInset); stroke: rgba(255, 255, 255, 0.16); stroke-width: 2; }
+.depth-1 { fill: var(--depth-1); }
+.depth-2 { fill: var(--depth-2); }
+.depth-3 { fill: var(--depth-3); }
+.depth-4 { fill: var(--depth-4); }
+.stones ellipse { fill: #bcb4a3; filter: url(#pondLift); }
+.stones .stone-b { fill: #a9a191; }
+
+/* ---- Koi ----
+   The nesting is explained at the top of js/koi.js. Every animation here
+   is a transform, and the per-fish numbers arrive as custom properties set
+   on .koi-swim. */
+.koi-school, .koi-shadows { inset: 0; }
+/* The shadows fall on the bottom, down and to the right of each fish:
+   one fixed offset for the whole school, so the light has one direction. */
+.koi-shadows { transform: translate(1.3vmin, 2.2vmin); opacity: 0.32; }
+
+.koi-swim {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  animation: var(--drift) var(--drift-t) ease-in-out var(--delay) infinite;
+}
+.koi-orbit {
+  position: absolute;
+  animation: koi-lap var(--lap) linear var(--delay) infinite;
+  animation-direction: var(--dir);
+}
+.koi-place {
+  position: absolute;
+  transform: translateX(var(--r)) rotate(var(--turn));
+}
+.koi-sway {
+  position: absolute;
+  width: var(--len);
+  height: calc(var(--len) * 0.4);
+  left: calc(var(--len) * -0.5);
+  top: calc(var(--len) * -0.2);
+  animation: koi-sway 3.4s ease-in-out infinite alternate;
+}
+.koi-body { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.koi-edge { fill: none; stroke: rgba(255, 255, 255, 0.28); stroke-width: 1; }
+.koi-eye { fill: #1d1c20; }
+.koi-tail {
+  position: absolute;
+  width: calc(var(--len) * 0.25);
+  height: 100%;
+  left: calc(var(--len) * -0.1167);
+  top: 0;
+  transform-origin: 100% 50%;
+  animation: koi-tail 1.5s ease-in-out infinite alternate;
+}
+.koi-tail svg { display: block; width: 100%; height: 100%; }
+.koi-shadow {
+  position: absolute;
+  width: calc(var(--len) * 1.25);
+  height: calc(var(--len) * 0.6);
+  left: calc(var(--len) * -0.75);
+  top: calc(var(--len) * -0.3);
+  fill: #0c2b31;
+}
+/* Fish don't all swim in step. */
+.koi-ogon .koi-sway, .koi-ogon .koi-tail { animation-delay: -1.1s; }
+.koi-showa .koi-sway, .koi-showa .koi-tail { animation-delay: -2.3s; }
+.koi-orenji .koi-sway, .koi-orenji .koi-tail { animation-delay: -0.6s; }
+
+@keyframes koi-lap { to { transform: rotate(360deg); } }
+@keyframes koi-sway {
+  from { transform: rotate(-5deg); }
+  to   { transform: rotate(5deg); }
+}
+@keyframes koi-tail {
+  from { transform: rotate(-20deg); }
+  to   { transform: rotate(20deg); }
+}
+/* The home point's slow wander: a closed loop, so a fish never retraces
+   its route. Fixed values rather than custom properties inside the
+   keyframes, which Chrome may not keep on the compositor. */
+@keyframes koi-drift-a {
+  0%, 100% { transform: translate(0, 0); }
+  33%      { transform: translate(8vw, 14vh); }
+  66%      { transform: translate(-3vw, -14vh); }
+}
+@keyframes koi-drift-b {
+  0%, 100% { transform: translate(0, 0); }
+  30%      { transform: translate(-8vw, -14vh); }
+  70%      { transform: translate(3vw, 12vh); }
+}
+@keyframes koi-drift-c {
+  0%, 100% { transform: translate(0, 0); }
+  40%      { transform: translate(-10vw, 10vh); }
+  75%      { transform: translate(6vw, 4vh); }
+}
+@keyframes koi-drift-d {
+  0%, 100% { transform: translate(0, 0); }
+  35%      { transform: translate(10vw, -6vh); }
+  70%      { transform: translate(4vw, -16vh); }
+}
+
+/* ---- Lily pads ---- */
+.pad { filter: url(#pondLift); stroke: rgba(255, 255, 255, 0.2); stroke-width: 2; }
+.pad-a { fill: #6f9f5c; }
+.pad-b { fill: #82b06a; }
+.pad-c { fill: #5f8f52; }
+.pad-vein { fill: none; stroke: rgba(255, 255, 255, 0.18); stroke-width: 2; stroke-linecap: round; }
+.lotus { filter: url(#pondLift); }
+.petal-outer { fill: #f2b2bd; }
+.petal-inner { fill: #f8d0d6; }
+.lotus-heart { fill: #f3cd62; }
+
+/* ---- Ripples ----
+   A ring that spreads and fades, then rests for most of its cycle, so the
+   pond only stirs now and then. */
+.pond-ripple {
+  width: 14vmin;
+  height: 14vmin;
+  margin: -7vmin 0 0 -7vmin;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  animation: ripple var(--t) ease-out var(--delay) infinite;
+}
+.rp-1 { left: 26vw; top: 58vh; --t: 19s; --delay: -3s; }
+.rp-2 { left: 74vw; top: 34vh; --t: 27s; --delay: -14s; }
+.rp-3 { left: 52vw; top: 80vh; --t: 23s; --delay: -9s; }
+@keyframes ripple {
+  0%   { transform: scale(0.15); opacity: 0.8; }
+  22%  { transform: scale(1.5);  opacity: 0; }
+  100% { transform: scale(1.5);  opacity: 0; }
+}
+
+/* ---- Light ----
+   Changes once a minute, in steps too small to see, so it has no
+   transition: a minute-long colour transition on a full-screen layer
+   would repaint it every frame, forever. */
+.pond-light {
+  inset: 0;
+  background: var(--pond-light);
+  mix-blend-mode: multiply;
+}
+/* The reflections glide between updates on a one-minute transform
+   transition, which stays on the compositor. */
+.pond-glint {
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  transition: transform 60s linear, opacity 60s linear;
+}
+.pond-glint-sun {
+  width: 46vmax;
+  height: 46vmax;
+  margin: -23vmax 0 0 -23vmax;
+  background: radial-gradient(circle, color-mix(in srgb, var(--sun-color) 70%, transparent) 0,
+    color-mix(in srgb, var(--sun-color) 0%, transparent) 70%);
+  transform: translate(var(--sun-x), var(--sun-y));
+  opacity: calc(var(--sun-on) * 0.45);
+}
+.pond-glint-moon {
+  width: 22vmax;
+  height: 22vmax;
+  margin: -11vmax 0 0 -11vmax;
+  background: radial-gradient(circle, #e9e6d6aa 0, #e9e6d600 65%);
+  transform: translate(var(--moon-x), var(--moon-y));
+  opacity: calc(var(--moon-on) * 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .koi-swim, .koi-orbit, .koi-sway, .koi-tail, .pond-ripple { animation: none; }
+}

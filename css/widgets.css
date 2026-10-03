@@ -162,9 +162,10 @@
 }
 .thumb-koi {
   background:
-    radial-gradient(ellipse 22% 12% at 38% 45%, #f08a3e 0 90%, #f08a3e00),
-    radial-gradient(circle at 70% 70%, #7fae7a 0 16%, #7fae7a00 17%),
-    #1f5e63;
+    radial-gradient(ellipse 22% 12% at 42% 48%, #ee7a2e 0 90%, #ee7a2e00),
+    radial-gradient(circle at 78% 74%, #6f9f5c 0 17%, #6f9f5c00 18%),
+    radial-gradient(ellipse 55% 45% at 50% 50%, #589595 0 70%, #58959500 72%),
+    #8fc6b6;
 }
 
 /* New-unlock dot on the stats chip, cleared once the panel is opened. */

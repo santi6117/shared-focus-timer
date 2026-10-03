@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/background.css" />
   <link rel="stylesheet" href="css/wallpapers/rain.css" />
   <link rel="stylesheet" href="css/wallpapers/hills.css" />
+  <link rel="stylesheet" href="css/wallpapers/koi.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/widgets.css" />
 </head>
@@ -90,6 +91,64 @@
         <path class="hill hill-3" d="M-100,910 L-100,682 C-63,680 49,676 125,671 C201,666 289,645 356,650 C424,655 457,695 529,700 C600,705 711,693 786,680 C860,667 908,628 976,620 C1044,613 1121,628 1193,633 C1265,638 1344,646 1411,649 C1477,652 1541,648 1592,649 C1644,651 1699,657 1720,659 L1720,910 Z"/>
         <path class="hill hill-4" d="M-100,910 L-100,770 C-65,769 38,759 108,761 C179,763 246,786 324,781 C401,775 480,737 571,730 C662,723 783,735 870,739 C957,743 1018,747 1094,753 C1169,758 1251,771 1325,774 C1398,777 1468,778 1533,772 C1599,765 1689,741 1720,735 L1720,910 Z"/>
       </svg>
+    </div>
+
+    <!-- Koi pond: looking straight down into a cut-paper pond. Back to
+         front: the bank and four depths of water, the koi's shadows on the
+         bottom, the koi (built by js/koi.js), lily pads, ripples, then the
+         time-of-day light (js/sky.js) and the sun or moon's reflection. -->
+    <div class="wp wp-koi">
+      <svg class="pond-water" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <!-- Each depth sits under the edge of the one above it, so it
+               gets a shadow just inside its rim: an inner shadow. Static,
+               so it is drawn once, not per frame. -->
+          <filter id="pondInset" x="-10%" y="-10%" width="120%" height="120%">
+            <feComponentTransfer in="SourceAlpha"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>
+            <feGaussianBlur stdDeviation="9"/>
+            <feOffset dx="0" dy="7" result="rim"/>
+            <feFlood flood-color="#0c2b31" flood-opacity="0.42"/>
+            <feComposite in2="rim" operator="in"/>
+            <feComposite in2="SourceAlpha" operator="in" result="shadow"/>
+            <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shadow"/></feMerge>
+          </filter>
+          <filter id="pondLift" x="-20%" y="-20%" width="140%" height="160%">
+            <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#0c2b31" flood-opacity="0.28"/>
+          </filter>
+        </defs>
+        <rect class="bank" x="-50" y="-50" width="1700" height="1000"/>
+        <path class="depth depth-1" d="M1667,450 C1668,525 1669,610 1616,677 C1563,744 1453,801 1351,849 C1249,897 1129,945 1003,964 C877,984 718,988 596,966 C475,944 365,883 273,832 C181,781 114,724 44,660 C-25,597 -138,521 -143,450 C-147,379 -51,297 16,232 C83,167 165,113 260,59 C355,5 463,-73 586,-92 C709,-111 866,-74 999,-55 C1133,-35 1286,-22 1388,24 C1489,71 1562,154 1608,225 C1655,296 1666,375 1667,450 Z"/>
+        <path class="depth depth-2" d="M1498,460 C1499,521 1441,585 1388,643 C1335,701 1274,777 1180,807 C1085,836 939,821 820,820 C701,819 566,828 468,800 C369,772 277,707 228,650 C180,594 178,524 176,460 C173,396 159,316 213,265 C267,213 398,182 499,150 C600,119 713,75 820,75 C927,74 1049,114 1143,148 C1236,183 1322,227 1382,279 C1441,331 1497,399 1498,460 Z"/>
+        <path class="depth depth-3" d="M1355,470 C1362,519 1330,577 1285,623 C1239,670 1166,728 1082,748 C997,769 872,756 778,745 C684,734 587,714 515,682 C444,650 371,598 351,550 C331,503 367,445 395,397 C422,348 452,293 515,258 C579,223 682,195 775,185 C869,175 998,174 1076,199 C1153,223 1194,287 1241,332 C1287,377 1347,421 1355,470 Z"/>
+        <path class="depth depth-4" d="M1211,480 C1208,522 1185,571 1139,603 C1092,635 1007,662 932,671 C856,679 751,675 686,654 C621,633 567,586 541,545 C514,505 495,445 526,412 C557,378 658,361 725,343 C792,325 856,303 927,304 C998,306 1105,322 1152,351 C1199,380 1213,438 1211,480 Z"/>
+        <g class="stones">
+          <ellipse cx="70" cy="40" rx="62" ry="40"/><ellipse class="stone-b" cx="168" cy="22" rx="40" ry="28"/>
+          <ellipse class="stone-b" cx="20" cy="118" rx="34" ry="26"/>
+          <ellipse cx="1545" cy="868" rx="70" ry="44"/><ellipse class="stone-b" cx="1440" cy="890" rx="44" ry="28"/>
+          <ellipse class="stone-b" cx="1590" cy="770" rx="30" ry="36"/>
+          <ellipse cx="1580" cy="30" rx="48" ry="34"/><ellipse class="stone-b" cx="28" cy="880" rx="52" ry="34"/>
+        </g>
+      </svg>
+      <div class="koi-shadows"></div>
+      <div class="koi-school"></div>
+      <div class="pond-ripple rp-1"></div>
+      <div class="pond-ripple rp-2"></div>
+      <div class="pond-ripple rp-3"></div>
+      <svg class="pond-pads" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+        <path class="pad pad-a" d="M205,175 L250,234 A74 74 0 1 1 271,209 Z"/><path class="pad-vein" d="M205,175 L215,233 M205,175 L162,216 M205,175 L147,163 M205,175 L183,120 M205,175 L238,126"/>
+        <path class="pad pad-b" d="M318,250 L278,224 A48 48 0 1 1 270,244 Z"/><path class="pad-vein" d="M318,250 L299,217 M318,250 L335,215 M318,250 L356,245 M318,250 L344,279 M318,250 L309,287"/>
+        <path class="pad pad-c" d="M150,300 L177,271 A40 40 0 1 1 162,262 Z"/><path class="pad-vein" d="M150,300 L180,289 M150,300 L176,319 M150,300 L149,332 M150,300 L123,317 M150,300 L121,287"/>
+        <path class="pad pad-a" d="M1395,715 L1358,642 A82 82 0 1 1 1330,666 Z"/><path class="pad-vein" d="M1395,715 L1395,649 M1395,715 L1449,678 M1395,715 L1456,740 M1395,715 L1409,779 M1395,715 L1349,762"/>
+        <path class="pad pad-b" d="M1290,800 L1338,820 A52 52 0 1 1 1342,797 Z"/><path class="pad-vein" d="M1290,800 L1317,832 M1290,800 L1279,840 M1290,800 L1250,813 M1290,800 L1257,774 M1290,800 L1293,759"/>
+        <path class="pad pad-c" d="M1500,610 L1474,638 A38 38 0 1 1 1489,646 Z"/><path class="pad-vein" d="M1500,610 L1471,620 M1500,610 L1475,592 M1500,610 L1501,580 M1500,610 L1526,594 M1500,610 L1528,622"/>
+        <path class="pad pad-b" d="M1450,160 L1409,181 A46 46 0 1 1 1422,197 Z"/><path class="pad-vein" d="M1450,160 L1413,160 M1450,160 L1429,129 M1450,160 L1464,126 M1450,160 L1486,152 M1450,160 L1476,186"/>
+        <path class="pad pad-c" d="M1520,250 L1529,279 A30 30 0 1 1 1540,272 Z"/><path class="pad-vein" d="M1520,250 L1516,274 M1520,250 L1498,260 M1520,250 L1500,237 M1520,250 L1519,226 M1520,250 L1539,236"/>
+        <path class="pad pad-c" d="M300,770 L339,750 A44 44 0 1 1 326,735 Z"/><path class="pad-vein" d="M300,770 L335,770 M300,770 L320,799 M300,770 L287,803 M300,770 L266,777 M300,770 L275,746"/>
+        <g class="lotus"><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(0 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(45 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(90 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(135 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(180 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(225 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(270 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(315 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(30 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(90 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(150 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(210 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(270 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(330 212 168)"/><circle class="lotus-heart" cx="212" cy="168" r="8"/></g>
+      </svg>
+      <div class="pond-light"></div>
+      <div class="pond-glint pond-glint-sun"></div>
+      <div class="pond-glint pond-glint-moon"></div>
     </div>
   </div>
 
