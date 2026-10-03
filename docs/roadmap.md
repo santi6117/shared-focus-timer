@@ -499,21 +499,12 @@ focus session). A phone is a remote.
   between updates on a one-minute transition. Only three paper clouds and
   a star twinkle move continuously. Fixed schedule (sunrise ~6:30, sunset
   ~18:45), not computed from location. `?sky=<hour>` pins the time.
-- Known: §6c's centre wash (`--bg-veil`) paints *under* the swirl's blobs
-  (pseudo-element before positioned children), so that knob currently does
-  nothing. Left alone, since Santi tuned the swirl as it looks now.
-
-### Synced timer mode (unchanged, still later)
-
-An opt-in toggle binding the two timers. Not designed, not requested, not
-part of v1.
-
----
-
-## 7. Deferred to v2 — design so these aren't painful to bolt on
-
-Do not build these. Do not let them creep into scope.
-
+- **Swirl as ink on paper** (2026-10-03, Santi's pick from three mock-ups:
+  paper, risograph, marbled). A static paper texture (SVG turbulence,
+  multiplied) and an edge darkening sit over the blobs, and the centre wash
+  (`--bg-veil`) now actually shows: it used to paint *under* the blobs.
+  Both are `.wp-swirl` pseudo-elements, so they don't touch the other
+  wallpapers.
 - A coin system, or a background upload flow (unlockable wallpapers and
   their picker moved into scope 2026-10-02: §6j)
 - The couples wallpaper at 1,000 combined hours (planned, not designed).
