@@ -516,7 +516,7 @@ focus session). A phone is a remote.
   paper, risograph, marbled; then refined to a blend of the first two). A
   static paper layer is multiplied over the blobs: cream tint, an even
   fine paper tooth, a soft 7px dot screen, and an edge darkening. Mottled
-  paper was tried first and read as dark spots. Over it, and the centre wash
+  paper was tried first and read as dark spots. The centre wash sits over it
   (`--bg-veil`) now actually shows: it used to paint *under* the blobs.
   Both are `.wp-swirl` pseudo-elements, so they don't touch the other
   wallpapers.
