@@ -242,13 +242,18 @@
   padding-top: 0.15rem;
 }
 
-/* Cycles Today -> This week -> All time. Separate from the chip so one
-   click never means two things. */
+/* Two pills under the split: whose day (you / them) and which period.
+   Separate from the chip so one click never means two things. */
+.breakdown-toggles {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+  margin-bottom: 0.15rem;
+}
+#whoseToggle,
 #periodToggle {
   font: inherit;
   font-size: 0.75rem;
-  margin-top: 0.55rem;
-  margin-bottom: 0.15rem;
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -256,7 +261,11 @@
   color: var(--ink-soft);
   cursor: pointer;
 }
+#whoseToggle:hover,
 #periodToggle:hover { color: var(--ink); }
+/* Showing their day, the period is fixed at Today: only today is shared. */
+#periodToggle:disabled { cursor: default; opacity: 0.6; }
+#periodToggle:disabled:hover { color: var(--ink-soft); }
 
 /* ---- Note, bottom right ---- */
 #noteWidget {

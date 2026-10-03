@@ -231,10 +231,13 @@
         <div id="shareBar"></div>
         <div id="breakdownRows"></div>
         <div id="breakdownMore"></div>
-        <button id="periodToggle" type="button">This week</button>
+        <div class="breakdown-toggles">
+          <button id="whoseToggle" type="button">You</button>
+          <button id="periodToggle" type="button">This week</button>
+        </div>
       </div>
       <button id="breakdownChip" type="button">
-        <span class="chip-label">Split</span>
+        <span class="chip-label" id="breakdownLabel">Split</span>
         <span id="breakdownTop">—</span>
         <span id="breakdownCaret">▲</span>
       </button>

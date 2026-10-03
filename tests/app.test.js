@@ -361,6 +361,96 @@ describe("stats and breakdown", () => {
   });
 });
 
+// ---------------------------------------------------------------- shared today
+
+describe("the other person's split", () => {
+  const seedDb = {
+    sessions: { santi: {
+      a: { endedAt: T0 - 24 * 60 * MIN, elapsedSeconds: 3600, categoryKey: "thesis" },
+      b: { endedAt: T0 - 60 * MIN, elapsedSeconds: 1800, categoryKey: "tutoring" },
+      c: { endedAt: T0 - 30 * MIN, elapsedSeconds: 600, categoryKey: "thesis" },
+    } },
+    categories: { santi: {
+      thesis: { label: "Thesis", color: "#c1714a", lastUsedAt: 1 },
+      tutoring: { label: "Tutoring", color: "#6b8ca8", lastUsedAt: 2 },
+    } },
+    room: { santi: { running: false, startedAt: null, remainingAtStart: 2700, status: { text: "eating", setAt: 1 } } },
+  };
+  const hers = (until) => ({
+    until, seconds: 4200, restCount: 2, restSeconds: 600,
+    top: [
+      { label: "Essay", color: "#9a7aa0", seconds: 2400 },
+      { label: "Reading", color: "#7a9a6e", seconds: 1200 },
+    ],
+  });
+
+  it("publishes my today, labelled, beside the timer and status", async () => {
+    app = await openApp({ seedDb });
+    await app.run(1500);
+    const today = await app.db("room/santi/today");
+    assert.equal(today.seconds, 2400);
+    assert.deepEqual(Object.values(today.top), [
+      { label: "Tutoring", color: "#6b8ca8", seconds: 1800 },
+      { label: "Thesis", color: "#c1714a", seconds: 600 },
+    ]);
+    assert.equal(today.until, await app.page.evaluate(() => new Date(2026, 9, 1).getTime()));
+    assert.equal((await app.db("room/santi/status")).text, "eating");
+    // One write for the whole load burst, not one per record.
+    const writes = (await app.writes()).filter((w) => w.path === "room/santi/today");
+    assert.equal(writes.length, 1);
+
+    await app.click("startBtn");
+    await app.run(5 * MIN);
+    await app.click("resetBtn");
+    await app.run(1500);
+    assert.equal((await app.db("room/santi/today")).seconds, 2700);
+  });
+
+  it("flips the split to theirs, today only, and back", async () => {
+    app = await openApp({ seedDb });
+    await app.remote("room/kristina/today", hers(T0 + 60 * MIN));
+    await app.run(300);
+    await app.click("breakdownChip");
+    assert.equal(await app.text("whoseToggle"), "You");
+
+    await app.click("whoseToggle");
+    assert.equal(await app.text("whoseToggle"), "Kristina");
+    assert.equal(await app.text("breakdownLabel"), "Kristina");
+    assert.equal(await app.text("breakdownTop"), "Essay");
+    assert.equal(await app.text("periodToggle"), "Today");
+    assert.equal(await app.page.locator("#periodToggle").isDisabled(), true);
+    assert.deepEqual(await app.page.locator("#breakdownRows .cat-row .name").allTextContents(), ["Essay", "Reading"]);
+    assert.equal(await app.text("breakdownMore"), "+ 2 more · 10m");
+    assert.equal(await app.page.locator("#shareBar div").count(), 3);
+
+    await app.click("whoseToggle");
+    assert.equal(await app.text("periodToggle"), "This week");
+    assert.equal(await app.text("breakdownTop"), "Thesis");
+    assert.equal(await app.page.locator("#periodToggle").isDisabled(), false);
+  });
+
+  it("their summary expires at their midnight, and is empty when missing", async () => {
+    app = await openApp({ seedDb });
+    await app.run(300);
+    await app.click("breakdownChip");
+    await app.click("whoseToggle");
+    assert.equal(await app.text("breakdownMore"), "Kristina hasn't logged anything today");
+
+    await app.remote("room/kristina/today", hers(T0 + 2 * MIN));
+    await app.run(300);
+    assert.equal(await app.text("breakdownTop"), "Essay");
+    await app.run(3 * MIN);
+    assert.equal(await app.text("breakdownTop"), "—");
+    assert.equal(await app.text("breakdownMore"), "Kristina hasn't logged anything today");
+  });
+
+  it("the phone publishes nothing", async () => {
+    app = await openApp({ seedDb, device: "phone" });
+    await app.run(3000);
+    assert.equal(await app.db("room/santi/today"), null);
+  });
+});
+
 // ---------------------------------------------------------------- note
 
 describe("note", () => {

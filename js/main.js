@@ -26,6 +26,7 @@ import * as remoteView from "./remote-view.js";
 import * as presence from "./presence.js";
 import * as status from "./status.js";
 import * as stats from "./stats.js";
+import * as sharedToday from "./shared-today.js";
 import * as note from "./note.js";
 import * as messages from "./messages.js";
 import * as alert from "./alert.js";
@@ -60,6 +61,7 @@ async function boot() {
   if (!REMOTE) {
     sessions.init();
     categories.init();
+    sharedToday.init();
     stats.init();
     note.init();
     messages.init();

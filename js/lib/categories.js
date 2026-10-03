@@ -55,3 +55,41 @@ export function breakdown(sessions, from, topN = 3) {
   const restSeconds = rest.reduce((n, k) => n + byKey[k], 0);
   return { grand, top, restCount: rest.length, restSeconds };
 }
+
+// ---- Today's split, shared with the other person ----
+// Each person publishes a summary of their own day into room/<me>/today, and
+// the other person's breakdown widget can flip to it. A summary rather than
+// read access to sessions/ and categories/: history stays private, the rules
+// don't change, the peer downloads a few hundred bytes instead of a whole
+// log, and "today" is the owner's own calendar day whatever their timezone.
+
+// The published shape. Labels and colours are resolved here, by the owner,
+// so the reader never needs the owner's vocabulary. `until` is the owner's
+// next local midnight: past it, the summary describes a day that is over.
+export function shareableToday(b, labelFor, colorFor, until) {
+  return {
+    until,
+    seconds: b.grand,
+    top: b.top.map(({ key, seconds }) => ({ label: labelFor(key), color: colorFor(key), seconds })),
+    restCount: b.restCount,
+    restSeconds: b.restSeconds,
+  };
+}
+
+const num = (v) => (typeof v === "number" && isFinite(v) && v > 0 ? v : 0);
+
+// The reader's side: null for "nothing logged today", which covers a
+// missing summary, yesterday's summary, and anything malformed. Shaped like
+// breakdown()'s result, but with labels and colours instead of keys.
+// Firebase may hand an array back as an object with numeric keys, hence
+// Object.values.
+export function readSharedToday(raw, now) {
+  if (!raw || typeof raw !== "object" || !(num(raw.until) > now)) return null;
+  const top = Object.values(raw.top || {})
+    .filter((r) => r && typeof r.label === "string" && num(r.seconds))
+    .slice(0, 3)
+    .map((r) => ({ label: r.label, color: typeof r.color === "string" ? r.color : OTHER_COLOR, seconds: num(r.seconds) }));
+  const grand = num(raw.seconds);
+  if (!grand) return null;
+  return { grand, top, restCount: num(raw.restCount), restSeconds: num(raw.restSeconds) };
+}

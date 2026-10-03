@@ -8,8 +8,8 @@
 //
 // The data model, one subtree per concern, each keyed by person:
 //
-//   room/<person>        live timer state, read by the other person's
-//                        presence pill
+//   room/<person>        live timer state, status and today's split
+//                        summary, read by the other person's page
 //   sessions/<person>    append-only log of finished sessions
 //   categories/<person>  that person's category vocabulary
 //   notes/<person>       that person's private note

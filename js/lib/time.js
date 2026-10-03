@@ -40,3 +40,9 @@ export function timeOfDay(ms) {
     return "";
   }
 }
+
+// The next local midnight: when today's buckets stop being today's.
+export function endOfDay(now) {
+  const d = new Date(now);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+}

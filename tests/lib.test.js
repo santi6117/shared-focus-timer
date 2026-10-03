@@ -4,12 +4,13 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { formatClock, formatTotal, startOfDay, startOfWeek } from "../js/lib/time.js";
+import { formatClock, formatTotal, startOfDay, startOfWeek, endOfDay } from "../js/lib/time.js";
 import {
   defaultTimer, parseTimer, remainingMs, elapsedMs, planRecovery, STALE_MS,
 } from "../js/lib/timer-math.js";
 import {
   normalizeKey, pickColor, totals, breakdown, CATEGORY_PALETTE, UNCATEGORIZED_KEY,
+  shareableToday, readSharedToday, OTHER_COLOR,
 } from "../js/lib/categories.js";
 import { isUnread, chipLabel, outboxStatus } from "../js/lib/messages.js";
 import {
@@ -129,6 +130,37 @@ describe("categories", () => {
     assert.deepEqual(b.top.map((x) => x.key), ["a", "b", UNCATEGORIZED_KEY]);
     assert.equal(b.restCount, 2);
     assert.equal(b.restSeconds, 50);
+  });
+});
+
+describe("shared today", () => {
+  const b = { grand: 300, top: [{ key: "a", seconds: 200 }, { key: "b", seconds: 60 }], restCount: 1, restSeconds: 40 };
+  const pub = shareableToday(b, (k) => k.toUpperCase(), (k) => "#" + k, 1000);
+
+  it("publishes labels and colours, not keys", () => {
+    assert.deepEqual(pub, {
+      until: 1000, seconds: 300, restCount: 1, restSeconds: 40,
+      top: [{ label: "A", color: "#a", seconds: 200 }, { label: "B", color: "#b", seconds: 60 }],
+    });
+  });
+  it("reads back a current summary, including Firebase's array-as-object", () => {
+    const asObject = { ...pub, top: { 0: pub.top[0], 1: pub.top[1] } };
+    const r = readSharedToday(asObject, 999);
+    assert.equal(r.grand, 300);
+    assert.deepEqual(r.top.map((x) => x.label), ["A", "B"]);
+  });
+  it("treats yesterday's, empty and malformed summaries as nothing logged", () => {
+    assert.equal(readSharedToday(pub, 1000), null);
+    assert.equal(readSharedToday(null, 0), null);
+    assert.equal(readSharedToday({ until: 9e15, seconds: 0 }, 0), null);
+    assert.equal(readSharedToday({ until: "soon", seconds: 5 }, 0), null);
+    const r = readSharedToday({ until: 9e15, seconds: 50, top: [{ label: "x", seconds: 50 }, { seconds: 3 }] }, 0);
+    assert.deepEqual(r.top, [{ label: "x", color: OTHER_COLOR, seconds: 50 }]);
+  });
+  it("ends the day at the next local midnight, across a DST change", () => {
+    const sat = new Date(2026, 10, 1, 0, 30).getTime(); // US clocks go back 1 Nov
+    assert.equal(endOfDay(sat), new Date(2026, 10, 2).getTime());
+    assert.equal(endOfDay(sat) - startOfDay(sat), 25 * 3600_000);
   });
 });
 
