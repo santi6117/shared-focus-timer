@@ -2,12 +2,12 @@
    Pure CSS. It is its own element rather than a background on <body>, so it
    can be swapped or faded independently of everything drawn over it.
 
-   Three stacked layers inside #backgroundLayer:
+   Layers, back to front:
      1. eight soft-edged colour blobs, each circling the screen
-     2. ::before, a pale wash over the middle so the timer card sits on calm
-        ground while the edges keep full colour
-     3. ::after, film grain, which stops a gradient this large from banding
-        into visible stripes on a laptop panel
+     2. a paper texture and a pale centre wash (.wp-swirl's pseudo-elements,
+        below), which make it ink on paper rather than light on glass
+     3. #backgroundLayer::after, film grain shared by every wallpaper, which
+        stops a gradient this large from banding into visible stripes
 
    THE ONE REAL DECISION: no blur filter anywhere. filter: blur() is the
    obvious way to melt blobs together, but a fullscreen blur is recomputed
@@ -150,11 +150,39 @@
   to   { transform: translate3d(-6vmax, -6vmax, 0) scale(1); }
 }
 
-/* The centre wash: above the blobs, below everything else. */
-#backgroundLayer::before {
+/* ---- The swirl as ink on paper ----
+   Without these two layers the swirl is pure light, smooth edge to edge,
+   which reads as a screen effect next to the other wallpapers' materials
+   (cut paper, wet glass). Both are scoped to .wp-swirl rather than the
+   shared #backgroundLayer, so they don't wash over the other wallpapers.
+
+   z-index puts them above the blobs: pseudo-elements without one would
+   paint in tree order, and ::before would sit underneath them.
+
+   1. ::before, the paper. Mottling and soft fibres from SVG turbulence,
+      mapped to a narrow band of warm off-whites and multiplied over the
+      colour, so the colour looks soaked into it rather than lit behind it.
+      Plus a gentle darkening toward the edges. Static: the tile is
+      rasterised once; the blending is compositor work.
+   2. ::after, the centre wash, a pale glow behind the timer card so the
+      middle is calm and the colour builds outward. Above the paper so the
+      paper doesn't grey it. */
+.wp-swirl::before,
+.wp-swirl::after {
   content: "";
   position: absolute;
   inset: 0;
+}
+.wp-swirl::before {
+  z-index: 1;
+  mix-blend-mode: multiply;
+  background-image:
+    radial-gradient(ellipse 75% 70% at 50% 50%, #5a3e2800 55%, #5a3e2833 100%),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420'><filter id='m'><feTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='4' seed='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0 0'/></filter><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='4' seed='4' stitchTiles='stitch' result='a'/><feTurbulence type='fractalNoise' baseFrequency='0.03 0.14' numOctaves='3' seed='9' stitchTiles='stitch' result='f'/><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='2' stitchTiles='stitch' result='g'/><feComposite in='a' in2='f' operator='arithmetic' k2='0.8' k3='0.2'/><feComposite in2='g' operator='arithmetic' k2='0.75' k3='0.25'/><feColorMatrix values='0.38 0 0 0 0.72  0.38 0 0 0 0.7  0.38 0 0 0 0.67  0 0 0 0 1'/></filter><rect width='420' height='420' filter='url(%23p)'/></svg>");
+  background-size: auto, 420px 420px;
+}
+.wp-swirl::after {
+  z-index: 2;
   background: radial-gradient(ellipse 44% 40% at 50% 48%,
                 rgba(255, 250, 243, var(--bg-veil)) 0%,
                 rgba(255, 250, 243, calc(var(--bg-veil) * 0.45)) 52%,
