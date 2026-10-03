@@ -15,6 +15,8 @@ file in `docs/sessions/` to find out where things actually left off, and
 > - 2026-09-28: moved into git with an automated test suite, split into
 >   modules, and the title flash made continuous (§6f)
 > - 2026-10-02: status (§6h) and phone remote mode (§6i)
+> - 2026-10-03: unlockable wallpapers (§6j); the split widget flips to the
+>   other person's day (§6d)
 >
 > On 2026-10-02 Santi opened a second round of features: status, a good
 > phone experience, and unlockable wallpapers (moved out of §7). Order and
@@ -216,7 +218,9 @@ wipes localStorage, which is why UIDs are collected only from the Pages URL.
 
 ```
 room/<person>        { running, startedAt, remainingAtStart, category,
-                       status: { text, setAt } }
+                       status: { text, setAt },
+                       today: { until, seconds, top: [{label, color, seconds}],
+                                restCount, restSeconds } }
 sessions/<person>/<pushId>  { endedAt, elapsedSeconds, categoryKey }
 categories/<person>/<key>   { label, color, lastUsedAt }
 notes/<person>       { text, updatedAt }
@@ -232,6 +236,10 @@ messages/<recipient> { note: { text, sentAt }, read: <sentAt> }
   would re-stamp `startedAt` and restart the peer's view of the countdown.
 - **The timer publishes with `update()`, not `set()`**, so it never wipes
   the `status` a phone set. It writes every timer field each time.
+- **`today` is a published summary**, not read access to the other
+  person's `sessions/`: only today's totals leave, already labelled, with
+  `until` (the owner's next local midnight) so the reader can tell it's
+  stale without either clock agreeing on a timezone (§6d).
 - **`status` lives in `room/`**, not its own subtree: the presence listener
   already reads `room/`, and the live rules already allow it.
 - **No heartbeat field in `room/`.** Presence is derived from `running`, and
@@ -379,6 +387,13 @@ timing; `prefers-reduced-motion` freezes it. Never use
   (Today / This week / All time, default This week) above a proportion bar
   that includes a neutral remainder, so shares always sum to the real total.
 - **Kristina sees the label live** in the presence pill.
+- **Flips to the other person's day** (2026-10-03, Santi's call). A
+  `You / Kristina` pill beside the period pill. Theirs is **today only**,
+  from the summary they publish (`js/shared-today.js`), so the period pill
+  locks to Today while it shows. Published by each laptop on any session or
+  category change, debounced a second so the load burst writes once, and
+  skipped when unchanged. Phones publish nothing. Opens on your own split
+  each load. Kristina agreed to her day being visible.
 
 ### 6e. Note (2026-09-11)
 
