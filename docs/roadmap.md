@@ -468,7 +468,7 @@ focus session). A phone is a remote.
 | Swirl (§6c) | always | built |
 | Rainy window | 100 h | built (iterated twice with Santi) |
 | Paper hills, live sky | 200 h | built 2026-10-03, awaiting feedback |
-| Koi pond | 300 h | planned |
+| Koi pond | 300 h | built 2026-10-03, awaiting feedback |
 
 - **Unlocks are derived from all-time hours** in the session log, the
   person's own. Nothing "unlocked" is stored; hours never go down.
@@ -499,6 +499,19 @@ focus session). A phone is a remote.
   between updates on a one-minute transition. Only three paper clouds and
   a star twinkle move continuously. Fixed schedule (sunrise ~6:30, sunset
   ~18:45), not computed from location. `?sky=<hour>` pins the time.
+- **Koi pond:** top-down cut-paper pond (Santi's picks: top-down, cut
+  paper like Hills, calm, follows the clock). Four depths of water with
+  inner shadows, a mossy bank and stones in the corners, lily pads and a
+  lotus, three occasional ripples. Four koi (kohaku, ogon, showa, orenji)
+  built by `js/koi.js`; each swims as nested transforms: a slow drift
+  loop, an orbit, a sway, a tail beat. Homes sit in the left and right
+  thirds so they cross under the card rather than live there. Shadows are
+  blurred inside their own SVG and skip the sway and tail. The light is
+  one colour multiplied over everything (`js/lib/pond.js`, applied by
+  `js/sky.js`), plus the sun's or moon's reflection on Hills' arc. Dusk
+  is lavender, not rose (rose on teal cancels to grey). No colour
+  transition on the light: minute steps are invisible, and a transition
+  would repaint the full screen every frame.
 - **Swirl as ink on paper** (2026-10-03, Santi's pick from three mock-ups:
   paper, risograph, marbled). A static paper texture (SVG turbulence,
   multiplied) and an edge darkening sit over the blobs, and the centre wash
@@ -572,8 +585,9 @@ b. **Phone polish.** Layout cleanup done 2026-10-03. Still to do: home-screen in
    web notifications for sites added to the home screen), safe areas for
    the notch and home bar, the keyboard covering the status box, fewer
    background blobs on small screens. Test on Santi's iPhone.
-c. **Unlockable wallpapers** (§6j). System, Rainy window and Paper hills
-   built 2026-10-03. Paper hills awaits feedback; Koi pond (300h) next.
+c. **Unlockable wallpapers** (§6j). System and all four wallpapers built
+   2026-10-03. Paper hills, the swirl's paper texture and Koi pond await
+   Santi's feedback; the couples wallpaper stays deferred (§7).
 
 **From v1:**
 
