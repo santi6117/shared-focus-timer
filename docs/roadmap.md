@@ -505,6 +505,18 @@ focus session). A phone is a remote.
   (`--bg-veil`) now actually shows: it used to paint *under* the blobs.
   Both are `.wp-swirl` pseudo-elements, so they don't touch the other
   wallpapers.
+
+### Synced timer mode (unchanged, still later)
+
+An opt-in toggle binding the two timers. Not designed, not requested, not
+part of v1.
+
+---
+
+## 7. Deferred to v2 — design so these aren't painful to bolt on
+
+Do not build these. Do not let them creep into scope.
+
 - A coin system, or a background upload flow (unlockable wallpapers and
   their picker moved into scope 2026-10-02: §6j)
 - The couples wallpaper at 1,000 combined hours (planned, not designed).
