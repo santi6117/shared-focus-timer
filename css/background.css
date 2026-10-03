@@ -160,11 +160,13 @@
    z-index puts them above the blobs: pseudo-elements without one would
    paint in tree order, and ::before would sit underneath them.
 
-   1. ::before, the paper. Mottling and soft fibres from SVG turbulence,
-      mapped to a narrow band of warm off-whites and multiplied over the
-      colour, so the colour looks soaked into it rather than lit behind it.
-      Plus a gentle darkening toward the edges. Static: the tile is
-      rasterised once; the blending is compositor work.
+   1. ::before, the paper, multiplied over the colour so the colour looks
+      printed on it rather than lit behind it. Four layers, front to back:
+      a gentle darkening toward the edges; a faint dot screen, like a
+      soft risograph print; a fine, even paper tooth; and a warm cream
+      tint that takes the screen-glow edge off the colours. Even rather
+      than mottled on purpose: blotchy paper read as dark spots. Static,
+      so it is rasterised once and blending is compositor work.
    2. ::after, the centre wash, a pale glow behind the timer card so the
       middle is calm and the colour builds outward. Above the paper so the
       paper doesn't grey it. */
@@ -179,8 +181,10 @@
   mix-blend-mode: multiply;
   background-image:
     radial-gradient(ellipse 75% 70% at 50% 50%, #5a3e2800 55%, #5a3e2833 100%),
-    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420'><filter id='m'><feTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='4' seed='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0 0'/></filter><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='4' seed='4' stitchTiles='stitch' result='a'/><feTurbulence type='fractalNoise' baseFrequency='0.03 0.14' numOctaves='3' seed='9' stitchTiles='stitch' result='f'/><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='2' stitchTiles='stitch' result='g'/><feComposite in='a' in2='f' operator='arithmetic' k2='0.8' k3='0.2'/><feComposite in2='g' operator='arithmetic' k2='0.75' k3='0.25'/><feColorMatrix values='0.38 0 0 0 0.72  0.38 0 0 0 0.7  0.38 0 0 0 0.67  0 0 0 0 1'/></filter><rect width='420' height='420' filter='url(%23p)'/></svg>");
-  background-size: auto, 420px 420px;
+    radial-gradient(circle, #4a35302e 0, #4a35302e 0.9px, #4a353000 1.6px),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' seed='3' stitchTiles='stitch'/><feColorMatrix values='0.12 0 0 0 0.88  0.12 0 0 0 0.86  0.12 0 0 0 0.82  0 0 0 0 1'/></filter><rect width='300' height='300' filter='url(%23g)'/></svg>"),
+    linear-gradient(#f6eddc, #f6eddc);
+  background-size: auto, 7px 7px, 300px 300px, auto;
 }
 .wp-swirl::after {
   z-index: 2;
