@@ -8,7 +8,16 @@
 
 import { serverNow } from "./firebase.js";
 import * as ownRoom from "./own-room.js";
-import { formatClock } from "./lib/time.js";
+import { formatClock, formatElapsed } from "./lib/time.js";
+import { shownMs, STOPWATCH_CAP_MS } from "./lib/timer-math.js";
+
+// Your laptop's clock as it should read: time left for a countdown, time
+// used for a stopwatch.
+function clockText(r, leftMs) {
+  return r.mode === "stopwatch"
+    ? formatElapsed(shownMs("stopwatch", leftMs, STOPWATCH_CAP_MS))
+    : formatClock(leftMs);
+}
 
 let displayEl, stageLabelEl, noteEl;
 
@@ -23,11 +32,11 @@ export function render() {
   const r = ownRoom.get();
   const leftMs = (r.remainingAtStart || 0) * 1000;
   if (r.running && r.startedAt) {
-    displayEl.textContent = formatClock(leftMs - (serverNow() - r.startedAt));
+    displayEl.textContent = clockText(r, leftMs - (serverNow() - r.startedAt));
     stageLabelEl.textContent = "Focusing";
     noteEl.textContent = "on your laptop" + (r.category ? " · " + r.category : "");
   } else {
-    displayEl.textContent = r.remainingAtStart ? formatClock(leftMs) : "—";
+    displayEl.textContent = r.remainingAtStart ? clockText(r, leftMs) : "—";
     stageLabelEl.textContent = "Focus";
     noteEl.textContent = "timers run on your laptop";
   }

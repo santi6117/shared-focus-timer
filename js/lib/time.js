@@ -10,6 +10,17 @@ export function formatClock(ms) {
   return minutes + ":" + seconds;
 }
 
+// "34:12", then "1:05:09" past the hour, for the stopwatch. formatClock
+// stays minutes-only, so a 90-minute countdown still reads "90:00" as it
+// always has.
+export function formatElapsed(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = String(total % 60).padStart(2, "0");
+  return h ? h + ":" + String(m).padStart(2, "0") + ":" + sec : m + ":" + sec;
+}
+
 // "45m" / "3h 5m" for the stats totals.
 export function formatTotal(seconds) {
   const minutes = Math.round(seconds / 60);

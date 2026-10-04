@@ -232,6 +232,117 @@ describe("recovery from a crash or reboot", () => {
   });
 });
 
+// ---------------------------------------------------------------- stopwatch
+
+describe("stopwatch", () => {
+  const HOUR = 60 * MIN;
+  const notifications = () => app.page.evaluate(() => window.__notifications);
+
+  it("counts up, pauses, resumes, and logs real elapsed time on reset", async () => {
+    app = await openApp();
+    await app.click("modeToggle");
+    await app.run(250);
+    assert.equal(await app.text("modeToggle"), "\u2191 Stopwatch");
+    assert.equal(await app.text("timerDisplay"), "0:00");
+    assert.equal(await app.page.locator("#durationInput").isVisible(), false);
+    assert.equal(await app.text("capNote"), "Stops itself at 2 hours");
+
+    await app.click("startBtn");
+    await app.run(MIN + 250); // the display re-renders on a 250ms loop
+    assert.equal(await app.text("timerDisplay"), "1:00");
+    assert.equal(await app.page.locator("#modeToggle").isDisabled(), true, "locked while running");
+    const room = await app.db("room/santi");
+    assert.equal(room.mode, "stopwatch");
+    assert.equal(room.running, true);
+
+    await app.click("pauseBtn");
+    await app.run(5 * MIN);
+    assert.equal(await app.text("timerDisplay"), "1:00");
+    await app.click("startBtn");
+    await app.run(HOUR);
+    assert.equal(await app.text("timerDisplay"), "1:01:00");
+
+    await app.click("resetBtn");
+    await app.run(250);
+    assert.deepEqual((await app.sessions()).map((s) => s.elapsedSeconds), [61 * 60]);
+    assert.equal(await app.text("timerDisplay"), "0:00");
+  });
+
+  it("stops itself at two hours, logs two hours once, and alerts", async () => {
+    app = await openApp();
+    await app.page.locator("#categoryInput").fill("Thesis");
+    await app.click("modeToggle");
+    await app.click("startBtn");
+    await app.run(2 * HOUR + 30_000);
+
+    assert.equal(await app.text("timerDisplay"), "2:00:00", "holds at the cap");
+    assert.equal(await app.has("timerDisplay", "overrun"), true);
+    assert.equal(await app.text("stageLabel"), "Done");
+    assert.equal((await app.db("room/santi")).running, false);
+    assert.deepEqual((await app.sessions()).map((s) => s.elapsedSeconds), [7200]);
+
+    const n = await notifications();
+    assert.equal(n.length, 1);
+    assert.equal(n[0].title, "2 hours up");
+    assert.match(n[0].body, /2-hour limit \(Thesis\)/);
+    assert.equal((await app.page.evaluate(() => window.__tones)).length, 2);
+
+    await app.click("resetBtn");
+    assert.equal((await app.sessions()).length, 1, "reset after the cap must not double-log");
+    await app.click("startBtn"); // a fresh run from zero
+    await app.run(10_250);
+    assert.equal(await app.text("timerDisplay"), "0:10");
+  });
+
+  it("switching mode while paused logs the pending time and restores the minutes", async () => {
+    app = await openApp({ seedStorage: { "timerData:santi": timerState({}) } });
+    await app.click("startBtn");
+    await app.run(10 * MIN);
+    await app.click("pauseBtn");
+    await app.click("modeToggle");
+    assert.deepEqual((await app.sessions()).map((s) => s.elapsedSeconds), [600]);
+    await app.run(250);
+    assert.equal(await app.text("timerDisplay"), "0:00");
+
+    await app.click("modeToggle");
+    await app.run(250);
+    assert.equal(await app.text("modeToggle"), "\u2193 Countdown");
+    assert.equal(await app.text("timerDisplay"), "45:00", "the countdown length survives");
+    assert.equal(await app.page.locator("#durationInput").inputValue(), "45");
+    assert.equal((await app.sessions()).length, 1);
+  });
+
+  it("survives a refresh mid-run", async () => {
+    app = await openApp();
+    await app.click("modeToggle");
+    await app.click("startBtn");
+    await app.run(3 * MIN);
+    await app.page.reload();
+    await app.run(250);
+    assert.equal(await app.text("modeToggle"), "\u2191 Stopwatch");
+    assert.equal(await app.text("timerDisplay"), "3:00");
+    assert.equal(await app.text("stageLabel"), "Focusing");
+  });
+
+  it("the other person's pill and your phone count up", async () => {
+    app = await openApp();
+    const now = await app.now();
+    await app.remote("room/kristina", {
+      running: true, mode: "stopwatch", startedAt: now - HOUR - 5000, remainingAtStart: 7200, category: "Essay",
+    });
+    await app.run(300);
+    assert.equal(await app.text("presenceState"), "focusing on Essay · 1:00:05 \u2191");
+    await app.close();
+
+    app = await openApp({
+      device: "phone",
+      seedDb: { room: { santi: { running: true, mode: "stopwatch", startedAt: T0 - 90_000, remainingAtStart: 7200 } } },
+    });
+    await app.run(250);
+    assert.equal(await app.text("timerDisplay"), "1:30");
+  });
+});
+
 // ---------------------------------------------------------------- categories
 
 describe("categories", () => {

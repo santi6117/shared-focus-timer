@@ -6,7 +6,7 @@
 // It announces transitions, and they listen:
 //
 //   "change"   after every state transition (start, pause, reset, zero,
-//              duration change, recovery)
+//              duration or mode change, recovery)
 //   "start"    the Start action, fired inside the click, so listeners may
 //              do things browsers only allow during a user gesture
 //   "end"      the run reached zero — fires exactly once per run
@@ -21,7 +21,8 @@
 import { refs, TIMESTAMP } from "./firebase.js";
 import { ME } from "./identity.js";
 import {
-  HEARTBEAT_MS, MIN_LOGGABLE_MS, parseTimer, remainingMs, elapsedMs, planRecovery,
+  HEARTBEAT_MS, MIN_LOGGABLE_MS, STOPWATCH_CAP_MS,
+  parseTimer, remainingMs, elapsedMs, planRecovery,
 } from "./lib/timer-math.js";
 
 // Namespaced by role: localStorage is per browser, not per tab, so two test
@@ -61,12 +62,17 @@ function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(timer)); }
 // The category goes out as its LABEL, not its key, so the other person's
 // page can render it without reading this person's category vocabulary.
 //
+// `mode` goes out so the other person's pill knows to count up rather
+// than down; for a stopwatch the run length is always the cap, so it
+// needn't travel.
+//
 // update(), not set(): room/<me> also holds the status, which a phone may
 // have set, and set() would wipe it. Every timer field is written each
 // time, so nothing stale survives.
 function publish(running, startedAtValue) {
   refs.mine.update({
     running: running,
+    mode: timer.mode,
     startedAt: startedAtValue,
     remainingAtStart: Math.round(Math.max(0, timer.remainingAtStart) / 1000),
     category: timer.categoryLabel ? timer.categoryLabel.trim() : null,
@@ -95,8 +101,8 @@ export function armDisconnect() {
 
 // ---- Logging ----
 // Every exit from a run funnels through here, so there is exactly one place
-// that decides whether time gets counted: Reset, a duration change, and the
-// zero crossing.
+// that decides whether time gets counted: Reset, a duration or mode change,
+// and the zero crossing (for a stopwatch, the cap).
 function flushUnlogged() {
   if (timer.logged) return;
   logWork(elapsedMs(timer, Date.now()));
@@ -175,11 +181,29 @@ export function reset() {
 // time first: without that, editing the minutes box silently threw away
 // real work.
 export function setDurationMinutes(minutes) {
-  if (timer.running) return;
+  if (timer.running || timer.mode === "stopwatch") return;
   if (!Number.isFinite(minutes) || minutes < 1) return;
+  timer.countdownDuration = minutes * 60000;
+  endRunWithLength(timer.countdownDuration);
+}
+
+// Countdown or stopwatch. Locked while running, like the duration, and for
+// the same reason it logs a paused run's time first. A stopwatch is a run
+// whose length is the two-hour cap (see STOPWATCH_CAP_MS); the countdown's
+// own length is kept aside and comes back on switching.
+export function setMode(mode) {
+  if (timer.running || mode === timer.mode) return;
+  if (mode !== "countdown" && mode !== "stopwatch") return;
+  timer.mode = mode;
+  endRunWithLength(mode === "stopwatch" ? STOPWATCH_CAP_MS : timer.countdownDuration);
+}
+
+// Shared by the two settings changes: close out the paused run, then set
+// up a fresh one of the new length.
+function endRunWithLength(lengthMs) {
   clearAlarm();
   flushUnlogged();
-  timer.duration = minutes * 60000;
+  timer.duration = lengthMs;
   timer.remainingAtStart = timer.duration;
   timer.startedAt = null;
   timer.zeroAt = null;
@@ -204,6 +228,8 @@ export function publishCategoryIfRunning() {
 // presence flips to "not working" so the other person isn't shown a session
 // that's over. The display then counts upward in the accent colour, which
 // still says something if you looked away: how long ago you finished.
+// For a stopwatch this is the auto-stop at the cap, and the display holds
+// at the cap instead (timer-view.js).
 function completeAtZero() {
   timer.zeroAt = timer.startedAt + timer.remainingAtStart;
   timer.remainingAtStart = 0;

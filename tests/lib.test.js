@@ -4,9 +4,10 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { formatClock, formatTotal, startOfDay, startOfWeek, endOfDay } from "../js/lib/time.js";
+import { formatClock, formatElapsed, formatTotal, startOfDay, startOfWeek, endOfDay } from "../js/lib/time.js";
 import {
   defaultTimer, parseTimer, remainingMs, elapsedMs, planRecovery, STALE_MS,
+  shownMs, STOPWATCH_CAP_MS,
 } from "../js/lib/timer-math.js";
 import {
   normalizeKey, pickColor, totals, breakdown, CATEGORY_PALETTE, UNCATEGORIZED_KEY,
@@ -30,6 +31,13 @@ describe("time formatting", () => {
     assert.equal(formatClock(999), "0:00");
     assert.equal(formatClock(-5000), "0:00");
     assert.equal(formatClock(600 * MIN), "600:00");
+  });
+  it("formats the stopwatch with hours once past the hour", () => {
+    assert.equal(formatElapsed(0), "0:00");
+    assert.equal(formatElapsed(59 * MIN + 59_999), "59:59");
+    assert.equal(formatElapsed(60 * MIN), "1:00:00");
+    assert.equal(formatElapsed(65 * MIN + 9000), "1:05:09");
+    assert.equal(formatElapsed(-1), "0:00");
   });
   it("formats totals in minutes, then hours", () => {
     assert.equal(formatTotal(0), "0m");
@@ -291,5 +299,26 @@ describe("pond light", () => {
       assert.equal(pondAt(h).sun.x, skyAt(h).sun.x);
       assert.equal(pondAt(h).sun.y, skyAt(h).sun.y);
     }
+  });
+});
+
+describe("stopwatch maths", () => {
+  it("shows time used for a stopwatch, time left for a countdown", () => {
+    assert.equal(shownMs("countdown", 20 * MIN, 25 * MIN), 20 * MIN);
+    assert.equal(shownMs("stopwatch", STOPWATCH_CAP_MS - 5 * MIN, STOPWATCH_CAP_MS), 5 * MIN);
+    assert.equal(shownMs("stopwatch", -MIN, STOPWATCH_CAP_MS), STOPWATCH_CAP_MS, "clamped at the cap");
+    assert.equal(shownMs(undefined, 7, 9), 7, "a peer without a mode field is a countdown");
+  });
+
+  it("older saved state keeps its countdown length as the minutes setting", () => {
+    const t = parseTimer(JSON.stringify({ duration: 45 * MIN, remainingAtStart: 45 * MIN }));
+    assert.equal(t.mode, "countdown");
+    assert.equal(t.countdownDuration, 45 * MIN);
+  });
+
+  it("a crashed stopwatch logs at most the cap", () => {
+    const t = { ...defaultTimer(), mode: "stopwatch", duration: STOPWATCH_CAP_MS,
+      remainingAtStart: STOPWATCH_CAP_MS, running: true, startedAt: 0, lastTickAt: 3 * 60 * MIN };
+    assert.deepEqual(planRecovery(t, 10 * 60 * MIN), { workedMs: STOPWATCH_CAP_MS });
   });
 });

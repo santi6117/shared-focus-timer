@@ -101,14 +101,20 @@ function showNotification() {
   try {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
-    const label = timer.state().categoryLabel;
-    let body = label ? "Finished: " + label : "Your focus session is done.";
+    const t = timer.state();
+    const label = t.categoryLabel;
+    // The stopwatch only "ends" by hitting its cap, so it says that: you
+    // may not have meant to stop, and two hours were logged.
+    const capped = t.mode === "stopwatch";
+    let body = capped
+      ? "Stopwatch stopped at the 2-hour limit" + (label ? " (" + label + ")" : "") + ". Logged."
+      : label ? "Finished: " + label : "Your focus session is done.";
     // The session ending is when a held message becomes readable, so the
     // one notification says both rather than raising a second.
     if (hasUnread()) body += "\n✉ A message is waiting for you.";
     // `tag` makes a later notification replace this one instead of
     // stacking a column of them over a long day.
-    const n = new Notification("Time's up", { tag: "focus-timer-end", body });
+    const n = new Notification(capped ? "2 hours up" : "Time's up", { tag: "focus-timer-end", body });
     n.onclick = () => { window.focus(); n.close(); };
   } catch (e) {}
 }

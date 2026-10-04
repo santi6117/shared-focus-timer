@@ -102,7 +102,32 @@ body {
 }
 #durationInput:disabled { opacity: 0.45; }
 
-.controls { display: flex; gap: 0.6rem; }
+.controls { display: flex; gap: 0.6rem; align-items: center; }
+
+/* The two duration-row variants share a height so switching modes doesn't
+   move the buttons below. [hidden] needs restating: .duration-row's
+   display: flex would otherwise override it. */
+.duration-row[hidden] { display: none; }
+#durationRow, #capNote { min-height: 2.2rem; margin: 0; }
+
+/* Countdown / stopwatch switch, beside Start. Quieter than the three main
+   buttons: it's a setting, not an action. */
+#modeToggle {
+  font-size: 0.8rem;
+  padding: 0.45rem 0.85rem;
+  color: var(--ink-soft);
+}
+#modeToggle:hover { color: var(--ink); }
+#modeToggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+#modeToggle:disabled { opacity: 0.45; cursor: default; }
+
+/* In a narrow window four buttons don't fit on one line. The switch drops
+   to its own line under Start / Pause / Reset rather than squeezing them,
+   since those three are what's pressed mid-session. */
+@media (max-width: 560px) {
+  .controls { flex-wrap: wrap; justify-content: center; max-width: 20rem; }
+  #modeToggle { order: 1; }
+}
 
 button {
   font: inherit;

@@ -7,7 +7,11 @@
 // the ticking is local.
 //
 // Timer state, all times in local milliseconds:
-//   duration          fixed session length
+//   mode              "countdown" or "stopwatch" (see STOPWATCH_CAP_MS)
+//   duration          length of a run: the countdown's set length, or the
+//                     stopwatch's cap
+//   countdownDuration the minutes box's value, kept while in stopwatch
+//                     mode so switching back restores it
 //   remainingAtStart  time left as of `startedAt` (NOT the fixed setting,
 //                     which is what makes pause/resume correct for the peer)
 //   startedAt         start of the current run, or null
@@ -27,8 +31,20 @@ export const STALE_MS = 15000;
 // shorter than this is written to the session log.
 export const MIN_LOGGABLE_MS = 5000;
 
+// The stopwatch is a countdown in disguise: a run of this length whose
+// display shows time used instead of time left. Pause, resume, logging,
+// crash recovery and the end at zero all work unchanged, and reaching
+// "zero" is exactly the auto-stop at the cap.
+//
+// Rejected: a separate counting-up code path. It would duplicate every
+// rule about when time gets logged, and those are the rules that took
+// longest to get right.
+export const STOPWATCH_CAP_MS = 2 * 60 * 60 * 1000;
+
 export function defaultTimer() {
   return {
+    mode: "countdown",
+    countdownDuration: 1500000,
     duration: 1500000,
     remainingAtStart: 1500000,
     startedAt: null,
@@ -43,10 +59,17 @@ export function defaultTimer() {
 // Merged over the default rather than trusted as-is: state saved by an older
 // version of the app is missing newer fields, and a missing `logged` would
 // silently re-log sessions.
+//
+// State saved before the stopwatch existed has no countdownDuration; its
+// duration IS the countdown length, so that's what the minutes box keeps.
 export function parseTimer(raw) {
   if (!raw) return defaultTimer();
-  try { return Object.assign(defaultTimer(), JSON.parse(raw)); }
-  catch (e) { return defaultTimer(); }
+  try {
+    const saved = JSON.parse(raw);
+    const t = Object.assign(defaultTimer(), saved);
+    if (saved.countdownDuration === undefined) t.countdownDuration = t.duration;
+    return t;
+  } catch (e) { return defaultTimer(); }
 }
 
 export function remainingMs(t, now) {
@@ -87,4 +110,14 @@ export function planRecovery(t, now) {
   const endedAt = Math.min(diedAt, zeroTime);
   const workedMs = Math.min(Math.max(endedAt - t.startedAt, 0), t.duration);
   return { workedMs };
+}
+
+// What the big clock shows, given time left in the run: the time left for
+// a countdown, the time used for a stopwatch. Shared by your own timer
+// card and by the pages that draw a timer from what was published (the
+// other person's pill, your phone), which know the run length only for a
+// stopwatch, where it is always the cap.
+export function shownMs(mode, leftMs, lengthMs) {
+  if (mode !== "stopwatch") return leftMs;
+  return Math.min(Math.max(lengthMs - leftMs, 0), lengthMs);
 }
