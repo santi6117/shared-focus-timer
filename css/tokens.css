@@ -21,7 +21,7 @@
      --bg-veil   how much pale wash sits over the middle, behind the timer
                  card. 0 = full colour edge to edge, 1 = a nearly white
                  centre. */
-  --bg-base: #f0c9a2;
+  --bg-base: #f6ac74;
   --bg-cycle: 30s;
   --bg-tour: 150s;
   --bg-veil: 0.5;

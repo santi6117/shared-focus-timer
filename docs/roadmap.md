@@ -381,7 +381,7 @@ and radius lives in `css/tokens.css`.
 
 A smeared, grainy rainbow that swirls continuously. Pure CSS in
 `css/background.css`; the file's comments carry the full reasoning. Knobs in
-`css/tokens.css`: `--bg-base` (#f0c9a2), `--bg-cycle` (30s, Santi's tuned
+`css/tokens.css`: `--bg-base` (#f6ac74), `--bg-cycle` (30s, Santi's tuned
 value), `--bg-tour` (150s), `--bg-veil` (0.5).
 
 **Load-bearing, don't undo:** no `filter: blur()`; gradients end at the same

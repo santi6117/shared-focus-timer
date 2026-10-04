@@ -148,7 +148,7 @@
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 .wp-option:disabled .wp-thumb { filter: grayscale(0.85); opacity: 0.55; }
-.thumb-swirl { background: conic-gradient(#f0424f, #fb8a2b, #f9cd35, #7ec95a, #2eb9a6, #4a9ae4, #8a7ce2, #e767b2, #f0424f); }
+.thumb-swirl { background: conic-gradient(#f52f3f, #ff7a12, #ffc414, #62c63c, #10b4a0, #2f8aea, #7a62ea, #ef4aa8, #f52f3f); }
 .thumb-rain {
   background:
     radial-gradient(circle at 30% 70%, #ffb45a 0, #ffb45a00 28%),

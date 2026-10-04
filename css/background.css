@@ -114,21 +114,21 @@
 /* Spectral order around the ring. Load-bearing: reshuffling these colours
    is the one edit that turns the whole thing muddy. */
 .b1 { --r: 38vmax; --s: 100vmax; animation-name: wob-a; animation-duration: calc(var(--bg-cycle) * 1.00);
-      background: radial-gradient(circle, #f0424f 0%, #f0424fcc 30%, #f0424f00 68%); }
+      background: radial-gradient(circle, #f52f3f 0%, #f52f3fcc 30%, #f52f3f00 68%); }
 .b2 { --r: 30vmax; --s: 92vmax;  animation-name: wob-b; animation-duration: calc(var(--bg-cycle) * 1.22);
-      background: radial-gradient(circle, #fb8a2b 0%, #fb8a2bcc 30%, #fb8a2b00 68%); }
+      background: radial-gradient(circle, #ff7a12 0%, #ff7a12cc 30%, #ff7a1200 68%); }
 .b3 { --r: 44vmax; --s: 84vmax;  animation-name: wob-c; animation-duration: calc(var(--bg-cycle) * 0.90);
-      background: radial-gradient(circle, #f9cd35 0%, #f9cd35cc 30%, #f9cd3500 68%); }
+      background: radial-gradient(circle, #ffc414 0%, #ffc414cc 30%, #ffc41400 68%); }
 .b4 { --r: 26vmax; --s: 88vmax;  animation-name: wob-d; animation-duration: calc(var(--bg-cycle) * 1.35);
-      background: radial-gradient(circle, #7ec95a 0%, #7ec95acc 30%, #7ec95a00 68%); }
+      background: radial-gradient(circle, #62c63c 0%, #62c63ccc 30%, #62c63c00 68%); }
 .b5 { --r: 40vmax; --s: 92vmax;  animation-name: wob-b; animation-duration: calc(var(--bg-cycle) * 1.10);
-      background: radial-gradient(circle, #2eb9a6 0%, #2eb9a6cc 30%, #2eb9a600 68%); }
+      background: radial-gradient(circle, #10b4a0 0%, #10b4a0cc 30%, #10b4a000 68%); }
 .b6 { --r: 32vmax; --s: 96vmax;  animation-name: wob-a; animation-duration: calc(var(--bg-cycle) * 1.45);
-      background: radial-gradient(circle, #4a9ae4 0%, #4a9ae4cc 30%, #4a9ae400 68%); }
+      background: radial-gradient(circle, #2f8aea 0%, #2f8aeacc 30%, #2f8aea00 68%); }
 .b7 { --r: 46vmax; --s: 88vmax;  animation-name: wob-c; animation-duration: calc(var(--bg-cycle) * 1.15);
-      background: radial-gradient(circle, #8a7ce2 0%, #8a7ce2cc 30%, #8a7ce200 68%); }
+      background: radial-gradient(circle, #7a62ea 0%, #7a62eacc 30%, #7a62ea00 68%); }
 .b8 { --r: 24vmax; --s: 78vmax;  animation-name: wob-d; animation-duration: calc(var(--bg-cycle) * 0.95);
-      background: radial-gradient(circle, #e767b2 0%, #e767b2cc 30%, #e767b200 68%); }
+      background: radial-gradient(circle, #ef4aa8 0%, #ef4aa8cc 30%, #ef4aa800 68%); }
 
 /* The wobble: small local churn on top of the lap. The slight scaling is
    what makes colours bleed INTO each other rather than slide past. Periods
@@ -164,7 +164,9 @@
       printed on it rather than lit behind it. Four layers, front to back:
       a gentle darkening toward the edges; a faint dot screen, like a
       soft risograph print; a fine, even paper tooth; and a warm cream
-      tint that takes the screen-glow edge off the colours. Even rather
+      tint that takes the screen-glow edge off the colours. Tint and tooth
+      stay light: a heavier cream, multiplied over the blobs, pulls the
+      orange toward tan. Even rather
       than mottled on purpose: blotchy paper read as dark spots. Static,
       so it is rasterised once and blending is compositor work.
    2. ::after, the centre wash, a pale glow behind the timer card so the
@@ -182,8 +184,8 @@
   background-image:
     radial-gradient(ellipse 75% 70% at 50% 50%, #5a3e2800 55%, #5a3e2833 100%),
     radial-gradient(circle, #4a35301f 0, #4a35301f 0.9px, #4a353000 1.6px),
-    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' seed='3' stitchTiles='stitch'/><feColorMatrix values='0.12 0 0 0 0.88  0.12 0 0 0 0.86  0.12 0 0 0 0.82  0 0 0 0 1'/></filter><rect width='300' height='300' filter='url(%23g)'/></svg>"),
-    linear-gradient(#f6eddc, #f6eddc);
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' seed='3' stitchTiles='stitch'/><feColorMatrix values='0.09 0 0 0 0.91  0.09 0 0 0 0.895  0.09 0 0 0 0.87  0 0 0 0 1'/></filter><rect width='300' height='300' filter='url(%23g)'/></svg>"),
+    linear-gradient(#fcf5ec, #fcf5ec);
   background-size: auto, 7px 7px, 300px 300px, auto;
 }
 .wp-swirl::after {
