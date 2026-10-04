@@ -294,7 +294,7 @@ Don't re-ask them.
 - Pause preserves remaining time and resumes from where it stopped.
 
 **Stopwatch** (§6k)
-- A switch beside Start picks countdown or stopwatch. Locked while running;
+- A switch beside the minutes box picks countdown or stopwatch. Locked while running;
   switching while paused logs the pending time first.
 - Counts up from 0:00, `h:mm:ss` past the hour. **Stops itself at 2 hours**,
   logs 2 hours, and fires the same end alert. Holds at 2:00:00 in the
@@ -562,9 +562,11 @@ A stopwatch with a two-hour cap, so one left running can't log a day.
   kept while `duration` holds the cap). Older saved state migrates in
   `parseTimer`.
 - **The switch** (`#modeToggle`) names the mode you're in ("↓ Countdown" /
-  "↑ Stopwatch"). In stopwatch mode the minutes box is swapped for "Stops
-  itself at 2 hours" in the same row so the card doesn't jump. Below 560px
-  it drops to its own line under Start / Pause / Reset.
+  "↑ Stopwatch"). It sits in a settings row with the minutes box, above
+  Start / Pause / Reset (Santi's call), so the settings sit together and
+  the controls row stays three buttons. In stopwatch mode the minutes box
+  is swapped for "Stops itself at 2 hours" in the same row so the card
+  doesn't jump.
 - **At the cap** (Santi's calls): chime, notification ("2 hours up") and
   the title blink fire, as for a countdown; the clock holds at 2:00:00.
 - **The countdown's clock stays minutes-only** (`90:00`); only the

@@ -833,7 +833,7 @@ describe("phone (remote) mode", () => {
   it("hides the controls and never claims the timer", async () => {
     app = await openApp({ device: "phone" });
     await app.run(1000);
-    for (const id of ["startBtn", "pauseBtn", "resetBtn", "durationInput", "categoryInput"]) {
+    for (const id of ["startBtn", "pauseBtn", "resetBtn", "durationInput", "modeToggle", "categoryInput"]) {
       assert.equal(await app.page.locator("#" + id).isVisible(), false, id + " should be hidden");
     }
     const writes = await app.writes();

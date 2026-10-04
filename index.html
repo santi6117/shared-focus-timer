@@ -169,17 +169,19 @@
       <!-- Phone only: where the timer above actually runs. -->
       <p id="remoteNote"></p>
 
-      <!-- Editable only while the timer isn't running. In stopwatch mode the
-           minutes box is swapped for the cap note, in the same spot. -->
-      <label class="duration-row" id="durationRow">
-        Minutes
-        <input id="durationInput" type="number" min="1" max="600" value="25" />
-      </label>
-      <p class="duration-row" id="capNote" hidden>Stops itself at 2 hours</p>
+      <!-- The run's settings: countdown / stopwatch, then its length. Both
+           are locked while the timer runs. In stopwatch mode the minutes box
+           is swapped for the cap note, in the same spot. -->
+      <div class="settings-row">
+        <button id="modeToggle" type="button" aria-pressed="false">&darr; Countdown</button>
+        <label class="duration-row" id="durationRow">
+          Minutes
+          <input id="durationInput" type="number" min="1" max="600" value="25" />
+        </label>
+        <p class="duration-row" id="capNote" hidden>Stops itself at 2 hours</p>
+      </div>
 
       <div class="controls">
-        <!-- Countdown / stopwatch. Locked while running. -->
-        <button id="modeToggle" type="button" aria-pressed="false">&darr; Countdown</button>
         <button id="startBtn" type="button">Start</button>
         <button id="pauseBtn" type="button">Pause</button>
         <button id="resetBtn" type="button">Reset</button>
