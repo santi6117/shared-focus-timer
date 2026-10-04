@@ -1,33 +1,33 @@
 {
   "rules": {
     "room": {
-      "santi":    { ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID') || (auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')",
-                    ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" },
-      "kristina": { ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID') || (auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')",
-                    ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" }
+      "santi":    { ".read": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3') || (auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')",
+                    ".write": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')" },
+      "kristina": { ".read": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3') || (auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')",
+                    ".write": "(auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')" }
     },
     "sessions": {
-      "santi":    { ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')",    ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" },
-      "kristina": { ".read": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')", ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" }
+      "santi":    { ".read": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')",    ".write": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')" },
+      "kristina": { ".read": "(auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')", ".write": "(auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')" }
     },
     "categories": {
-      "santi":    { ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')",    ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" },
-      "kristina": { ".read": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')", ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" }
+      "santi":    { ".read": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')",    ".write": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')" },
+      "kristina": { ".read": "(auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')", ".write": "(auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')" }
     },
     "notes": {
-      "santi":    { ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')",    ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" },
-      "kristina": { ".read": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')", ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" }
+      "santi":    { ".read": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')",    ".write": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')" },
+      "kristina": { ".read": "(auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')", ".write": "(auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')" }
     },
     "messages": {
       "santi": {
-        ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID') || (auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')",
-        "note": { ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" },
-        "read": { ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" }
+        ".read": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3') || (auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')",
+        "note": { ".write": "(auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')" },
+        "read": { ".write": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')" }
       },
       "kristina": {
-        ".read": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID') || (auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')",
-        "note": { ".write": "(auth.uid === 'SANTI_UID' || auth.uid === 'SANTI_PHONE_UID')" },
-        "read": { ".write": "(auth.uid === 'KRISTINA_UID' || auth.uid === 'KRISTINA_PHONE_UID')" }
+        ".read": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3') || (auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')",
+        "note": { ".write": "(auth.uid === 'gSm4OX7KA5MimXi5unz51JLssOv1' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')" },
+        "read": { ".write": "(auth.uid === 'B51xyia0rhXWYeE21Pucqo9liFH3' || auth.uid === '5V3qf9mCCEM86TNlv3cmRf2zz4Q2')" }
       }
     }
   }

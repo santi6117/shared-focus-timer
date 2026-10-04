@@ -340,10 +340,12 @@ timer, each visible to the other via the corner widget.
 
 **Still open:**
 1. **A real two-device test** with Kristina's laptop.
-2. **The pinned security rules**, which need both real anonymous UIDs, taken
-   from the Pages URL (§4). Five clauses, one asymmetric: see
-   `database.rules.pinned.json`. The interim `database.rules.json` should be
-   live before that.
+2. **The pinned security rules.** All four UIDs collected 2026-10-04 and
+   filled into `database.rules.pinned.json`; checked by
+   `tests/rules.test.js`. Waiting for Santi to publish them in the Firebase
+   console. The interim `database.rules.json` is published (2026-10-04).
+   The phone UIDs will change if the app is added to the home screen (iOS
+   gives it storage separate from Safari).
 
 Both need Kristina. No timeline, and nothing built since needs redoing
 because of the wait.
@@ -645,7 +647,7 @@ c. **Unlockable wallpapers** (§6j). System and all four wallpapers built
 **From v1:**
 
 1. **GitHub Pages** is live (confirmed 2026-10-02). The interim security
-   rules (`database.rules.json`) should be published if they aren't yet.
+   rules are published (2026-10-04).
 2. **The end-to-end real-browser pass on the Pages URL**, in two windows
    (`?me=santi` / `?me=kristina`): categories, chips, presence with category,
    stats and breakdown, the note round trip, a message unsealing at zero, the
@@ -653,8 +655,8 @@ c. **Unlockable wallpapers** (§6j). System and all four wallpapers built
    is now covered by the automated suite against a fake Firebase; this pass
    is for the real database and real browser permissions.
 3. **The two-device test with Kristina** (§5 item 1).
-4. **The pinned security rules** (§5 item 2), with UIDs taken from the Pages
-   URL: four of them now, a laptop and a phone each.
+4. **The pinned security rules** (§5 item 2): filled in and tested, to be
+   published by Santi.
 
 Items 3 and 4 need Kristina. If everything passes, v1 is finished. Do not
 extend the project to fill the time; §7 exists so new ideas get parked.
