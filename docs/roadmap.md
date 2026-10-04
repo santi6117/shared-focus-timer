@@ -5,7 +5,7 @@ assistant starting with zero context about this project. Then read the newest
 file in `docs/sessions/` to find out where things actually left off, and
 `CLAUDE.md` for the rules of working in this repo.
 
-> **Status as of 2026-10-02.** v1 feature work was completed 2026-09-07.
+> **Status as of 2026-10-04.** v1 feature work was completed 2026-09-07.
 > Post-v1 changes since, each with its own session log:
 >
 > - 2026-09-10: crash/reboot recovery fix
@@ -17,6 +17,7 @@ file in `docs/sessions/` to find out where things actually left off, and
 > - 2026-10-02: status (§6h) and phone remote mode (§6i)
 > - 2026-10-03: unlockable wallpapers (§6j); the split widget flips to the
 >   other person's day (§6d)
+> - 2026-10-04: stopwatch mode (§6k)
 >
 > On 2026-10-02 Santi opened a second round of features: status, a good
 > phone experience, and unlockable wallpapers (moved out of §7). Order and
@@ -217,7 +218,7 @@ wipes localStorage, which is why UIDs are collected only from the Pages URL.
 ### Shared state — the entire data model
 
 ```
-room/<person>        { running, startedAt, remainingAtStart, category,
+room/<person>        { running, mode, startedAt, remainingAtStart, category,
                        status: { text, setAt },
                        today: { until, seconds, top: [{label, color, seconds}],
                                 restCount, restSeconds } }
@@ -230,6 +231,9 @@ messages/<recipient> { note: { text, sentAt }, read: <sentAt> }
 - `startedAt` is a **server** timestamp in ms. `remainingAtStart` is in
   **seconds**: how much was left *as of `startedAt`*, not the fixed session
   length. Publishing the fixed length broke pause/resume for the peer.
+- **`mode` is `"countdown"` or `"stopwatch"`** (missing means countdown).
+  A stopwatch's run length is always the two-hour cap, so it isn't
+  published; the reader shows `cap - remaining` (§6k).
 - **`room/<person>.category` holds the LABEL, not the key**, so the peer can
   render it without reading that person's vocabulary.
 - **A mid-session category change uses `update()`, not `set()`.** `set()`
@@ -288,6 +292,14 @@ Don't re-ask them.
 
 **Pause**
 - Pause preserves remaining time and resumes from where it stopped.
+
+**Stopwatch** (§6k)
+- A switch beside Start picks countdown or stopwatch. Locked while running;
+  switching while paused logs the pending time first.
+- Counts up from 0:00, `h:mm:ss` past the hour. **Stops itself at 2 hours**,
+  logs 2 hours, and fires the same end alert. Holds at 2:00:00 in the
+  accent colour (no `+` count-up).
+- The other person's pill and your phone count up too, marked ↑.
 
 **Reaching zero**
 - The run **stops**: `running` goes false, so the peer sees "not working."
@@ -535,6 +547,28 @@ focus session). A phone is a remote.
   (`--bg-veil`) sits above the paper and now shows; it used to paint *under* the blobs.
   Both are `.wp-swirl` pseudo-elements, so they don't touch the other
   wallpapers.
+
+### 6k. Stopwatch mode (2026-10-04)
+
+A stopwatch with a two-hour cap, so one left running can't log a day.
+
+- **A countdown in disguise:** a run of `STOPWATCH_CAP_MS` whose clock
+  shows time used (`shownMs` in `js/lib/timer-math.js`). Pause, resume,
+  logging, the 5s noise floor, crash recovery and the end at zero are the
+  countdown's own code; reaching zero *is* the auto-stop. Rejected: a
+  separate counting-up path, which would duplicate every rule about when
+  time gets logged.
+- **Timer state:** `mode`, and `countdownDuration` (the minutes setting,
+  kept while `duration` holds the cap). Older saved state migrates in
+  `parseTimer`.
+- **The switch** (`#modeToggle`) names the mode you're in ("↓ Countdown" /
+  "↑ Stopwatch"). In stopwatch mode the minutes box is swapped for "Stops
+  itself at 2 hours" in the same row so the card doesn't jump. Below 560px
+  it drops to its own line under Start / Pause / Reset.
+- **At the cap** (Santi's calls): chime, notification ("2 hours up") and
+  the title blink fire, as for a countdown; the clock holds at 2:00:00.
+- **The countdown's clock stays minutes-only** (`90:00`); only the
+  stopwatch uses hours (`formatElapsed`).
 
 ### Synced timer mode (unchanged, still later)
 
