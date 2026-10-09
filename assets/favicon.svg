@@ -1,0 +1,12 @@
+<!-- Tab icon: a cream stopwatch and heart on the timer's terracotta accent.
+     Bold shapes keep it readable in small tabs; no letters or fine detail. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#d6713e"/>
+  <g fill="none" stroke="#fffaf3" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M27 9h10M32 9v7"/>
+    <circle cx="32" cy="36" r="18"/>
+  </g>
+  <g transform="translate(32 37) scale(1.1111111111111112)">
+    <path d="M0 8l-7-7c-6-6 2-13 7-7 5-6 13 1 7 7z" fill="#fffaf3"/>
+  </g>
+</svg>

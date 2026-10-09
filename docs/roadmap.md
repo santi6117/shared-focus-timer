@@ -379,6 +379,10 @@ Total focused time by day, week and lifetime, from the append-only log.
 terracotta accent. Timer centred, everything else in corners. Every colour
 and radius lives in `css/tokens.css`.
 
+The tab icon is a cream stopwatch with a centred heart on terracotta,
+selected by Santi in an interactive preview (2026-10-09). SVG and a 32px
+PNG in `assets/` keep it legible in Zen's Essential tabs and small browser tabs.
+
 ### 6c. Animated background
 
 A smeared, grainy rainbow that swirls continuously. `js/swirl.js` draws
