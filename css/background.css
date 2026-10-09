@@ -1,5 +1,7 @@
 /* The animated background: a smeared rainbow that swirls continuously.
-   Pure CSS. It is its own element rather than a background on <body>, so it
+   A bounded canvas draws the moving colours; CSS keeps the palette, motion
+   settings and full-resolution textures, plus a fallback without canvas.
+   It is its own element rather than a background on <body>, so it
    can be swapped or faded independently of everything drawn over it.
 
    Layers, back to front:
@@ -13,9 +15,9 @@
    obvious way to melt blobs together, but a fullscreen blur is recomputed
    every frame while anything moves, and this page sits open for hours. Long
    radial-gradient falloffs (solid colour to fully transparent across 68% of
-   each blob) give the same melted look for free. The only animated property
-   is `transform`, which the GPU compositor handles without waking the main
-   thread. */
+   each blob) give the same melted look without a blur pass. js/swirl.js
+   caches small gradients and draws them at up to 30fps on a surface capped
+   at 960px along its longest edge, avoiding eight huge moving layers. */
 
 #backgroundLayer {
   position: fixed;
@@ -29,6 +31,10 @@
    display: none rather than opacity 0, because a hidden element's
    animations stop entirely, and an invisible one's keep costing frames. */
 .wp { position: absolute; inset: 0; display: none; }
+.swirl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* The canvas replaces the moving color layers only after its first paint;
+   the paper and grain above it retain their full display resolution. */
+.wp-swirl.swirl-ready > .orbit { display: none; }
 #backgroundLayer[data-bg="swirl"] .wp-swirl,
 #backgroundLayer[data-bg="rain"]  .wp-rain,
 #backgroundLayer[data-bg="hills"] .wp-hills,
@@ -113,21 +119,21 @@
 
 /* Spectral order around the ring. Load-bearing: reshuffling these colours
    is the one edit that turns the whole thing muddy. */
-.b1 { --r: 38vmax; --s: 100vmax; animation-name: wob-a; animation-duration: calc(var(--bg-cycle) * 1.00);
+.b1 { --swirl-color: #f52f3f; --r: 38vmax; --s: 100vmax; animation-name: wob-a; animation-duration: calc(var(--bg-cycle) * 1.00);
       background: radial-gradient(circle, #f52f3f 0%, #f52f3fcc 30%, #f52f3f00 68%); }
-.b2 { --r: 30vmax; --s: 92vmax;  animation-name: wob-b; animation-duration: calc(var(--bg-cycle) * 1.22);
+.b2 { --swirl-color: #ff7a12; --r: 30vmax; --s: 92vmax;  animation-name: wob-b; animation-duration: calc(var(--bg-cycle) * 1.22);
       background: radial-gradient(circle, #ff7a12 0%, #ff7a12cc 30%, #ff7a1200 68%); }
-.b3 { --r: 44vmax; --s: 84vmax;  animation-name: wob-c; animation-duration: calc(var(--bg-cycle) * 0.90);
+.b3 { --swirl-color: #ffc414; --r: 44vmax; --s: 84vmax;  animation-name: wob-c; animation-duration: calc(var(--bg-cycle) * 0.90);
       background: radial-gradient(circle, #ffc414 0%, #ffc414cc 30%, #ffc41400 68%); }
-.b4 { --r: 26vmax; --s: 88vmax;  animation-name: wob-d; animation-duration: calc(var(--bg-cycle) * 1.35);
+.b4 { --swirl-color: #62c63c; --r: 26vmax; --s: 88vmax;  animation-name: wob-d; animation-duration: calc(var(--bg-cycle) * 1.35);
       background: radial-gradient(circle, #62c63c 0%, #62c63ccc 30%, #62c63c00 68%); }
-.b5 { --r: 40vmax; --s: 92vmax;  animation-name: wob-b; animation-duration: calc(var(--bg-cycle) * 1.10);
+.b5 { --swirl-color: #10b4a0; --r: 40vmax; --s: 92vmax;  animation-name: wob-b; animation-duration: calc(var(--bg-cycle) * 1.10);
       background: radial-gradient(circle, #10b4a0 0%, #10b4a0cc 30%, #10b4a000 68%); }
-.b6 { --r: 32vmax; --s: 96vmax;  animation-name: wob-a; animation-duration: calc(var(--bg-cycle) * 1.45);
+.b6 { --swirl-color: #2f8aea; --r: 32vmax; --s: 96vmax;  animation-name: wob-a; animation-duration: calc(var(--bg-cycle) * 1.45);
       background: radial-gradient(circle, #2f8aea 0%, #2f8aeacc 30%, #2f8aea00 68%); }
-.b7 { --r: 46vmax; --s: 88vmax;  animation-name: wob-c; animation-duration: calc(var(--bg-cycle) * 1.15);
+.b7 { --swirl-color: #7a62ea; --r: 46vmax; --s: 88vmax;  animation-name: wob-c; animation-duration: calc(var(--bg-cycle) * 1.15);
       background: radial-gradient(circle, #7a62ea 0%, #7a62eacc 30%, #7a62ea00 68%); }
-.b8 { --r: 24vmax; --s: 78vmax;  animation-name: wob-d; animation-duration: calc(var(--bg-cycle) * 0.95);
+.b8 { --swirl-color: #ef4aa8; --r: 24vmax; --s: 78vmax;  animation-name: wob-d; animation-duration: calc(var(--bg-cycle) * 0.95);
       background: radial-gradient(circle, #ef4aa8 0%, #ef4aa8cc 30%, #ef4aa800 68%); }
 
 /* The wobble: small local churn on top of the lap. The slight scaling is

@@ -20,9 +20,30 @@ import {
 import { skyAt, mix } from "../js/lib/sky.js";
 import { pondAt } from "../js/lib/pond.js";
 import { normalizeStatus, formatAgo, idleText, STATUS_MAX } from "../js/lib/status.js";
+import { swirlSize, swirlPose, easeInOut } from "../js/lib/swirl.js";
 
 const MIN = 60_000;
 const local = (s) => new Date(s).getTime();
+
+describe("swirl drawing", () => {
+  it("bounds both landscape and portrait surfaces, leaving small windows unscaled", () => {
+    assert.deepEqual(swirlSize(2880, 1800), { width: 960, height: 600 });
+    assert.deepEqual(swirlSize(800, 1200), { width: 640, height: 960 });
+    assert.deepEqual(swirlSize(600, 400), { width: 600, height: 400 });
+  });
+  it("matches CSS easing and keeps continuous travel distinct from alternate wobble", () => {
+    assert.ok(Math.abs(easeInOut(0.5) - 0.5) < 0.0001);
+    assert.ok(Math.abs(easeInOut(0.25) - 0.12916) < 0.0001);
+    const blob = { radius: 380, diameter: 1000, wobble: "wob-a", wobbleMs: 30000,
+      orbitMs: 150000, delayMs: 0 };
+    const atStart = swirlPose(blob, 0, 1000);
+    assert.ok(Math.abs(atStart.x - 380) < 0.001);
+    assert.ok(Math.abs(atStart.size - 1000) < 0.001);
+    const afterWobble = swirlPose(blob, 60000, 1000);
+    assert.ok(Math.abs(afterWobble.size - 1000) < 0.001);
+    assert.ok(afterWobble.x < 0, "the orbit keeps travelling when the local wobble returns");
+  });
+});
 
 describe("time formatting", () => {
   it("floors the clock and never goes negative", () => {

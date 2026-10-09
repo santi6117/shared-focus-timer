@@ -74,9 +74,13 @@ function initScript({ seedStorage, seedDb, role }) {
  *   seedDb       initial database tree
  *   time         wall-clock time the page starts at
  *   device       "phone" | "laptop" — sets ?device=, overriding detection
+ *   reducedMotion "reduce" by default; motion tests opt into "no-preference"
  */
-export async function openApp({ role = "santi", seedStorage = {}, seedDb = {}, time = T0, device = "laptop" } = {}) {
-  const context = await browser.newContext({ timezoneId: "America/New_York" });
+export async function openApp({ role = "santi", seedStorage = {}, seedDb = {}, time = T0, device = "laptop", reducedMotion = "reduce" } = {}) {
+  // The clock can jump hours in a timer test. Leave the decorative animation
+  // still there, rather than drawing hours of unrelated frames; dedicated
+  // wallpaper tests exercise motion with short, real frame sequences.
+  const context = await browser.newContext({ timezoneId: "America/New_York", reducedMotion });
   // The app-compat script becomes the whole fake; the other two are empty.
   // (Playwright runs the most recently registered matching route first.)
   await context.route(/gstatic\.com\/firebasejs\//, (route) =>
@@ -101,6 +105,9 @@ export async function openApp({ role = "santi", seedStorage = {}, seedDb = {}, t
     errors,
     close: () => context.close(),
     run: (ms) => page.clock.runFor(ms),
+    // Long stopwatch stretches need their final state, not a callback for
+    // every quarter-second. Short run() tests still check normal ticking.
+    fastForward: (ms) => page.clock.fastForward(ms),
     text: (id) => page.locator("#" + id).evaluate((el) => el.textContent.trim()),
     click: (id) => page.locator("#" + id).click(),
     has: (id, cls) => page.locator("#" + id).evaluate((el, c) => el.classList.contains(c), cls),

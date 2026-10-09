@@ -259,7 +259,7 @@ describe("stopwatch", () => {
     await app.run(5 * MIN);
     assert.equal(await app.text("timerDisplay"), "1:00");
     await app.click("startBtn");
-    await app.run(HOUR);
+    await app.fastForward(HOUR);
     assert.equal(await app.text("timerDisplay"), "1:01:00");
 
     await app.click("resetBtn");
@@ -273,7 +273,7 @@ describe("stopwatch", () => {
     await app.page.locator("#categoryInput").fill("Thesis");
     await app.click("modeToggle");
     await app.click("startBtn");
-    await app.run(2 * HOUR + 30_000);
+    await app.fastForward(2 * HOUR + 30_000);
 
     assert.equal(await app.text("timerDisplay"), "2:00:00", "holds at the cap");
     assert.equal(await app.has("timerDisplay", "overrun"), true);
@@ -953,5 +953,95 @@ describe("wallpapers", () => {
     await app.run(250);
     assert.equal(await bg(app), "rain");
     assert.equal(await app.page.evaluate(() => localStorage.getItem("wallpaper:santi")), null);
+  });
+
+  it("keeps Swirl's moving pixels bounded on Retina-sized windows and after resize", async () => {
+    app = await openApp();
+    await app.page.setViewportSize({ width: 2880, height: 1800 });
+    await app.run(100);
+    await app.page.waitForFunction(() => document.querySelector(".swirl-canvas")?.height === 600);
+    const canvas = app.page.locator(".swirl-canvas");
+    assert.deepEqual(await canvas.evaluate(el => [el.width, el.height]), [960, 600]);
+    assert.equal(await app.page.locator(".wp-swirl > .orbit > .blob").first().isVisible(), false);
+    assert.equal(await canvas.isVisible(), true);
+    await app.page.setViewportSize({ width: 600, height: 900 });
+    await app.run(100);
+    await app.page.waitForFunction(() => document.querySelector(".swirl-canvas")?.height === 900);
+    assert.deepEqual(await canvas.evaluate(el => [el.width, el.height]), [600, 900]);
+    assert.equal(await canvas.evaluate(el => el.getContext("2d").getImageData(300, 450, 1, 1).data[3]), 255);
+  });
+
+  it("Swirl moves, stops drawing when unselected or hidden, and respects reduced motion", async () => {
+    app = await openApp({ reducedMotion: "no-preference", seedDb: hours(350) });
+    // Count writes to the visible drawing surface, not a production function.
+    await app.page.evaluate(() => {
+      window.__swirlDraws = 0;
+      const original = CanvasRenderingContext2D.prototype.drawImage;
+      CanvasRenderingContext2D.prototype.drawImage = function(...args) {
+        if (this.canvas.classList.contains("swirl-canvas")) window.__swirlDraws++;
+        return original.apply(this, args);
+      };
+    });
+    const image = () => app.page.locator(".swirl-canvas").evaluate(el => el.toDataURL());
+    const draws = () => app.page.evaluate(() => window.__swirlDraws);
+    const before = await image();
+    await app.run(1000);
+    assert.notEqual(await image(), before, "the color scene actually moves");
+    assert.ok(await draws() > 0);
+    await app.click("statsChip");
+    await option(app, "rain").click();
+    const onRain = await draws();
+    await app.run(1000);
+    assert.equal(await draws(), onRain, "unselected Swirl does no drawing");
+    await option(app, "swirl").click();
+    await app.run(100);
+    assert.ok(await draws() > onRain, "switching back restarts it");
+
+    await app.page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    const hidden = await draws();
+    await app.run(1000);
+    assert.equal(await draws(), hidden);
+    await app.page.evaluate(() => {
+      delete document.visibilityState;
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await app.run(100);
+    assert.ok(await draws() > hidden);
+
+    // Media changes are browser events, independent of the paused app clock.
+    // Wait for delivery before advancing animation time or reading pixels.
+    const motion = async (reducedMotion) => {
+      await app.page.evaluate(() => {
+        window.__motionChanged = new Promise(resolve =>
+          matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", resolve, { once: true }));
+      });
+      await app.page.emulateMedia({ reducedMotion });
+      await app.page.evaluate(() => window.__motionChanged);
+      await app.run(100);
+    };
+    await motion("reduce");
+    const still = await image(), stopped = await draws();
+    await app.run(1000);
+    assert.equal(await image(), still);
+    assert.equal(await draws(), stopped);
+    await motion("no-preference");
+    assert.ok(await draws() > stopped, "changing the OS preference restores motion");
+  });
+
+  it("keeps the CSS Swirl when a canvas context is unavailable", async () => {
+    app = await openApp();
+    await app.page.context().addInitScript(() => {
+      HTMLCanvasElement.prototype.getContext = () => null;
+    });
+    await app.page.reload();
+    await app.run(100);
+    assert.equal(await app.page.locator(".swirl-canvas").count(), 0);
+    assert.equal(await app.page.locator(".wp-swirl > .orbit > .blob").first().isVisible(), true);
+    await app.click("startBtn");
+    await app.run(1000);
+    assert.equal((await app.db("room/santi")).running, true);
   });
 });

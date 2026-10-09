@@ -41,6 +41,7 @@ js/
   messages.js              held messages, top left
   alert.js                 chime, notification, blinking tab title
   wallpapers.js            which wallpaper shows; the picker
+  swirl.js                 bounded canvas for Swirl's moving colours
   sky.js                   Paper hills' time-of-day sky
   lib/                     pure logic with no page or database in it,
                            which is what the unit tests check directly

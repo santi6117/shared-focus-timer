@@ -381,8 +381,14 @@ and radius lives in `css/tokens.css`.
 
 ### 6c. Animated background
 
-A smeared, grainy rainbow that swirls continuously. Pure CSS in
-`css/background.css`; the file's comments carry the full reasoning. Knobs in
+A smeared, grainy rainbow that swirls continuously. `js/swirl.js` draws
+eight cached gradients on one canvas capped at 960px along its longest edge,
+at up to 30fps. Paper and grain stay full-resolution CSS. The loop stops
+when hidden, unselected, or reduced-motion is enabled. `css/background.css`
+owns the palette and motion settings and remains the fallback without a
+canvas context. This avoids eight large moving layers on Retina displays;
+Santi confirmed the local preview looked basically identical and was much
+less laggy in Zen (2026-10-09). Knobs in
 `css/tokens.css`: `--bg-base` (#f6ac74), `--bg-cycle` (30s, Santi's tuned
 value), `--bg-tour` (150s), `--bg-veil` (0.5).
 
