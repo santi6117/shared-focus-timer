@@ -1,24 +1,37 @@
-// The end-of-session alert. When a run reaches zero, three signals fire
-// together, chosen because they fail in different ways and so cover for
-// each other:
-//
-//   chime            works with the tab buried; useless with the volume down
-//   OS notification  works with the volume down; needs permission and a
-//                    real http(s) address (browsers refuse it on file://)
-//   tab title        needs no permission and no audio; blinks until you
-//                    come back, so it's there whenever you glance at the
-//                    tab bar
-//
-// Overrun time is never logged, so without this the minutes between the
-// real end and the moment you notice are simply lost.
-//
-// Every path here is wrapped so that a failure degrades to silence. Audio
-// and notifications are a nicety and must never break the timer.
+// End-of-session signals share one explicit acknowledgement: Got it,
+// Start, or Reset. A persistent panel and repeating chime cover a missed
+// desktop notification; returning to the tab alone is not acknowledgement.
+// Audio and notifications remain optional and cannot break the timer.
 
 import * as timer from "./timer.js";
 import { hasUnread } from "./messages.js";
 
+let panel, volumeInput;
+let volume = 0.75;
+let nextChimeAt = 0;
+const REPEAT_MS = 15_000;
+
 export function init() {
+  panel = document.getElementById("completionPanel");
+  volumeInput = document.getElementById("alertVolume");
+  try {
+    const saved = localStorage.getItem("focus-alert-volume");
+    if (saved !== null && Number.isFinite(Number(saved))) {
+      volume = Math.max(0, Math.min(1, Number(saved)));
+    }
+  } catch (e) {}
+  volumeInput.value = Math.round(volume * 100);
+  updateVolumeLabel();
+  volumeInput.addEventListener("input", () => {
+    volume = Number(volumeInput.value) / 100;
+    updateVolumeLabel();
+    try { localStorage.setItem("focus-alert-volume", String(volume)); } catch (e) {}
+  });
+  document.getElementById("alertPreview").addEventListener("click", () => {
+    primeAudio();
+    playChime();
+  });
+  document.getElementById("alertDismiss").addEventListener("click", dismissAlert);
   // Browsers only allow audio that was started by a user gesture, and the
   // chime fires 25 minutes after any gesture. So audio is primed by the
   // first click or keypress anywhere and left running. Any interaction,
@@ -31,13 +44,37 @@ export function init() {
   timer.on("start", requestNotifyPermission);
 
   timer.on("end", () => {
+    const t = timer.state();
+    document.getElementById("completionDetail").textContent = t.mode === "stopwatch"
+      ? "You reached the 2-hour limit. Your session is logged."
+      : (t.categoryLabel ? t.categoryLabel + " — " : "") + "Your focus session is logged. Take a breath.";
+    panel.hidden = false;
+    panel.closest(".timer-card").classList.add("session-complete");
+    nextChimeAt = Date.now() + REPEAT_MS;
     playChime();
     showNotification();
     startTitleFlash();
   });
   // Starting or resetting is a response to the alert, however it happened.
-  timer.on("start", stopTitleFlash);
-  timer.on("reset", stopTitleFlash);
+  timer.on("start", dismissAlert);
+  timer.on("reset", dismissAlert);
+}
+
+// Keep the panel non-modal so Start and Reset remain available. No focus
+// stealing at completion: an unrelated Enter press must not dismiss it.
+function dismissAlert() {
+  panel.hidden = true;
+  panel.closest(".timer-card").classList.remove("session-complete");
+  nextChimeAt = 0;
+  stopTitleFlash();
+  if (document.activeElement === document.getElementById("alertDismiss")) {
+    document.getElementById("startBtn").focus();
+  }
+}
+
+function updateVolumeLabel() {
+  document.getElementById("alertVolumeValue").textContent = volume === 0
+    ? "Muted" : Math.round(volume * 100) + "%";
 }
 
 // ---- The chime ----
@@ -77,11 +114,11 @@ function tone(freq, delaySec, durSec, peak) {
 }
 
 function playChime() {
-  if (!audioCtx) return;   // never primed: stay silent, don't throw
+  if (!audioCtx || volume === 0) return;   // never primed: stay silent, don't throw
   try {
     if (audioCtx.state === "suspended") audioCtx.resume();
-    tone(880.0, 0.00, 0.70, 0.22);    // A5
-    tone(1318.5, 0.16, 0.90, 0.18);   // E6, overlapping
+    tone(880.0, 0.00, 0.70, 0.30 * volume);    // A5
+    tone(1318.5, 0.16, 0.90, 0.24 * volume);   // E6, overlapping
   } catch (e) {}
 }
 
@@ -120,13 +157,9 @@ function showNotification() {
 }
 
 // ---- The tab title ----
-// Alternates between "⏰ Time's up!" and the normal title every second, with
-// no time limit, until the person shows any sign of being back:
-//
-//   returning to the tab or window   visibilitychange / focus
-//   any click or keypress on the page, which covers the case where the page
-//   was already in front when the session ended, so focus never changes
-//   Start or Reset                   via the timer's events
+// One worker heartbeat drives the title and reminders. Compare wall-clock
+// deadlines rather than counting beats: delayed delivery plays only one
+// reminder, never a burst of missed chimes after the computer wakes.
 const BASE_TITLE = document.title;
 const FLASH_TITLE = "\u23f0 Time's up!";
 const FLASH_MS = 1000;
@@ -137,20 +170,15 @@ function startTitleFlash() {
   let showingAlert = true;
   document.title = FLASH_TITLE;
   stopTicker = startTicker(() => {
+    if (!nextChimeAt) return;
+    if (Date.now() >= nextChimeAt) {
+      nextChimeAt = Date.now() + REPEAT_MS;
+      playChime();
+    }
     showingAlert = !showingAlert;
     document.title = showingAlert ? FLASH_TITLE : BASE_TITLE;
   }, FLASH_MS);
 
-  window.addEventListener("focus", stopTitleFlash);
-  document.addEventListener("visibilitychange", stopIfVisible);
-  // Capture phase, so a click that some widget stops from bubbling still
-  // counts.
-  document.addEventListener("pointerdown", stopTitleFlash, true);
-  document.addEventListener("keydown", stopTitleFlash, true);
-}
-
-function stopIfVisible() {
-  if (document.visibilityState === "visible") stopTitleFlash();
 }
 
 function stopTitleFlash() {
@@ -158,19 +186,10 @@ function stopTitleFlash() {
   stopTicker();
   stopTicker = null;
   document.title = BASE_TITLE;
-  window.removeEventListener("focus", stopTitleFlash);
-  document.removeEventListener("visibilitychange", stopIfVisible);
-  document.removeEventListener("pointerdown", stopTitleFlash, true);
-  document.removeEventListener("keydown", stopTitleFlash, true);
 }
 
-// A steady beat that survives a hidden tab. After five minutes in the
-// background, Chrome runs a page's repeating timers at most once a minute,
-// which would turn a one-second blink into a once-a-minute flip, and a
-// hidden tab is exactly when the blink matters. Timers inside a Web Worker
-// aren't under that rule, so a two-line worker keeps the beat and the page
-// just flips the title on each message. Falls back to a plain interval if
-// a worker can't be created. Returns a function that stops it.
+// Prefer a worker heartbeat for background tabs, with an interval fallback.
+// Browser/OS suspension can still delay delivery; this is not a wake alarm.
 function startTicker(fn, ms) {
   try {
     const url = URL.createObjectURL(

@@ -426,7 +426,7 @@ Free text rather than a to-do list. Writes debounced 800ms. localStorage
 mirror so it paints instantly. A remote edit from the other laptop is applied
 only when the box isn't focused and no save is pending.
 
-### 6f. End-of-session alert (2026-09-11, flash changed 2026-09-28)
+### 6f. End-of-session alert (updated 2026-10-10)
 
 Three signals at the zero crossing, chosen because they fail differently:
 
@@ -436,12 +436,18 @@ Three signals at the zero crossing, chosen because they fail differently:
 | OS notification | volume down | no permission, or `file://` |
 | Tab-title blink | no permission, no audio | not looking at the tab bar |
 
-- **Chime once; notification once** (tagged so a later one replaces it).
-- **The title blinks every second with no time limit** until the person is
-  back: returning to the tab/window, any click or keypress on the page, or
-  Start/Reset. Santi's call on 2026-09-28, reversing the earlier one-shot
-  flash. Driven by a Web Worker, because a hidden tab's own timers are
-  slowed to once a minute after five minutes.
+- **Chime immediately, then every 15 seconds; notification once** (tagged
+  so a later one replaces it). Volume and mute are saved on this browser,
+  with a Test sound button. Default volume is 75%.
+- **A prominent Session complete panel** stays inside the timer card, with
+  a gently pulsing border (static under reduced motion) and a Got it button.
+  It does not steal keyboard focus or prevent access to Start/Reset.
+- **Explicit acknowledgement only:** Got it, Start, or Reset stops the chime,
+  hides the panel and restores the title. Returning to the tab, an unrelated
+  click or a keypress does not count as noticing the alert.
+- **The title blinks every second with no time limit.** A Web Worker drives
+  both the title and wall-clock reminder checks, with an interval fallback.
+  Browser/OS suspension may delay alerts; missed beats never queue a burst.
 - A single long `setTimeout` aimed at zero wakes the page on time in a
   hidden tab; it only calls `tick()`, so zero still has one code path.
 - Every alert path degrades to silence on failure.

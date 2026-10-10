@@ -163,6 +163,15 @@
 
   <main class="stage">
     <section class="card timer-card">
+      <section id="completionPanel" aria-labelledby="completionTitle" hidden>
+        <div role="status" aria-live="polite">
+          <p class="eyebrow">Time’s up</p>
+          <h2 id="completionTitle">Session complete</h2>
+          <p id="completionDetail"></p>
+        </div>
+        <button id="alertDismiss" type="button">Got it</button>
+        <p class="completion-hint">Reminders continue until you dismiss them.</p>
+      </section>
       <!-- The word is its own span because the render loop rewrites it
            ("Focus" / "Focusing" / "Done"); the heart sits outside it so it
            is never overwritten. -->
@@ -187,6 +196,14 @@
         <button id="startBtn" type="button">Start</button>
         <button id="pauseBtn" type="button">Pause</button>
         <button id="resetBtn" type="button">Reset</button>
+      </div>
+
+      <div class="alert-settings">
+        <label for="alertVolume">Chime volume <output id="alertVolumeValue" for="alertVolume">75%</output></label>
+        <div class="alert-volume-row">
+          <input id="alertVolume" type="range" min="0" max="100" step="5" value="75" />
+          <button id="alertPreview" type="button">Test sound</button>
+        </div>
       </div>
 
       <!-- Free-text category, editable any time, mid-session included. -->

@@ -332,3 +332,29 @@ button:active { transform: translateY(1px); }
 
 /* Centred on the phone, where nothing else sits on the bottom edge. */
 .remote #uidDebug { left: 0; right: 0; text-align: center; }
+
+/* Completion stays inside the card so the ordinary timer controls remain
+   usable. A slow halo draws attention without flashing the whole screen. */
+.timer-card.session-complete {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px #d6713e33, var(--shadow);
+  animation: completion-pulse 2.5s ease-in-out infinite;
+}
+#completionPanel { max-width: 360px; text-align: center; }
+#completionPanel[hidden] { display: none; }
+#completionTitle { font-size: 2rem; margin: .5rem 0; letter-spacing: -.04em; }
+#completionDetail { line-height: 1.5; margin: 0 0 1rem; overflow-wrap: anywhere; }
+#alertDismiss { background: var(--accent); color: var(--ink); font-weight: 700; min-width: 160px; }
+.completion-hint { font-size: .75rem; margin-bottom: 0; }
+.alert-settings { width: 100%; max-width: 300px; font-size: .8rem; }
+.alert-settings label { display: flex; justify-content: space-between; }
+.alert-volume-row { display: flex; align-items: center; gap: .75rem; margin-top: .4rem; }
+#alertVolume { flex: 1; min-width: 0; accent-color: var(--accent); }
+#alertPreview { font-size: .75rem; padding: .5rem .7rem; }
+.remote .alert-settings { display: none; }
+@keyframes completion-pulse {
+  50% { box-shadow: 0 0 0 10px #d6713e11, var(--shadow); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer-card.session-complete { animation: none; }
+}

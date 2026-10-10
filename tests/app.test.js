@@ -651,7 +651,7 @@ describe("messages", () => {
 // ---------------------------------------------------------------- alert
 
 describe("end-of-session alert", () => {
-  it("chimes and notifies once, naming the category", async () => {
+  it("repeats the chime until acknowledged, but sends only one notification", async () => {
     app = await openApp();
     await app.page.locator("#categoryInput").fill("Thesis");
     await app.setDuration(1);
@@ -664,9 +664,42 @@ describe("end-of-session alert", () => {
     assert.equal(n[0].body, "Finished: Thesis");
     assert.deepEqual(await app.page.evaluate(() => window.__tones), [880, 1318.5]);
 
-    await app.run(2 * MIN);
+    assert.equal(await app.page.locator("#completionPanel").isVisible(), true);
+    assert.match(await app.text("completionDetail"), /Thesis/);
+    await app.run(15_000);
+    // The background worker uses real time, while the deadline uses the
+    // controlled page clock. Allow its next heartbeat to deliver the chime.
+    await new Promise((r) => setTimeout(r, 1200));
+    assert.equal((await app.page.evaluate(() => window.__tones)).length, 4);
     assert.equal((await app.page.evaluate(() => window.__notifications)).length, 1);
+    await app.click("alertDismiss");
+    assert.equal(await app.page.locator("#completionPanel").isVisible(), false);
+    await app.run(2 * MIN);
+    await new Promise((r) => setTimeout(r, 1200));
+    assert.equal((await app.page.evaluate(() => window.__tones)).length, 4);
+    assert.equal((await app.sessions()).length, 1);
+  });
+
+  it("remembers volume and lets muted sessions finish visibly without audio", async () => {
+    app = await openApp();
+    await app.page.locator("#alertVolume").fill("0");
+    assert.equal(await app.text("alertVolumeValue"), "Muted");
+    await app.page.reload();
+    await app.run(50);
+    assert.equal(await app.page.locator("#alertVolume").inputValue(), "0");
+    await app.click("alertPreview");
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await app.run(MIN + 500);
+    assert.equal(await app.page.locator("#completionPanel").isVisible(), true);
+    assert.equal((await app.page.evaluate(() => window.__tones)).length, 0);
+    await app.page.locator("#alertVolume").fill("50");
+    await app.click("alertPreview");
     assert.equal((await app.page.evaluate(() => window.__tones)).length, 2);
+    assert.equal(await app.page.locator("#completionPanel").isVisible(), true);
+    await app.page.locator("#alertDismiss").focus();
+    await app.page.keyboard.press("Enter");
+    assert.equal(await app.page.locator("#completionPanel").isVisible(), false);
   });
 
   it("a paused run never alerts", async () => {
@@ -713,28 +746,28 @@ describe("title flash", () => {
     assert.deepEqual(await titlesOver(2500), new Set([ALERT, BASE]), "no time limit");
   });
 
-  it("stops on a click anywhere", async () => {
+  it("continues after an unrelated click", async () => {
     await finishSession();
     await app.page.mouse.click(640, 5);
-    assert.deepEqual(await titlesOver(1500), new Set([BASE]));
+    assert.deepEqual(await titlesOver(2500), new Set([ALERT, BASE]));
   });
 
-  it("stops on a keypress", async () => {
+  it("continues after an unrelated keypress", async () => {
     await finishSession();
     await app.page.keyboard.press("Shift");
-    assert.deepEqual(await titlesOver(1500), new Set([BASE]));
+    assert.deepEqual(await titlesOver(2500), new Set([ALERT, BASE]));
   });
 
-  it("stops when the window regains focus", async () => {
+  it("continues when the window regains focus", async () => {
     await finishSession();
     await app.page.evaluate(() => window.dispatchEvent(new Event("focus")));
-    assert.deepEqual(await titlesOver(1500), new Set([BASE]));
+    assert.deepEqual(await titlesOver(2500), new Set([ALERT, BASE]));
   });
 
-  it("stops when the tab becomes visible again", async () => {
+  it("continues when the tab becomes visible again", async () => {
     await finishSession();
     await app.page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
-    assert.deepEqual(await titlesOver(1500), new Set([BASE]));
+    assert.deepEqual(await titlesOver(2500), new Set([ALERT, BASE]));
   });
 
   it("stops on Start and on Reset, however they are triggered", async () => {
