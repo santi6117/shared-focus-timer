@@ -12,8 +12,8 @@ No production data, historical summaries, or rules were changed by this review.
 - `database.rules.json` is the older broad interim template, not a production
   snapshot. Do not publish it as part of this release.
 - `database.rules.pinned.json` is the stricter future option. Santi's outdated
-  laptop UID is corrected to `g6mCVuzg89VR2ttIFr308xtlplu2`; the phone remains
-  `exa5g4kzTpdEuEHqqCw1HI5S7vC3`. Kristina's listed device IDs still need live
+  laptop UID is corrected to `g6mCVuzg89VR2ttIFr308xtlplu2`; the phone is updated to
+  `Hkl51J2q3IT8R7OpSdJUEFtQo0v2`. Kristina's listed device IDs still need live
   confirmation before switching to this option. Do not publish it blindly.
 
 The compatible proposal allows any signed-in anonymous account to read activity

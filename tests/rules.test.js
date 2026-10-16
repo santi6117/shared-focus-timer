@@ -98,14 +98,14 @@ function proposedCan(op, path, uid) {
 }
 describe("calendar rules compatibility proposal", () => {
   it("uses current Santi devices and denies anonymous or outdated Santi writes", () => {
-    for (const uid of ["g6mCVuzg89VR2ttIFr308xtlplu2", "exa5g4kzTpdEuEHqqCw1HI5S7vC3"]) {
+    for (const uid of ["g6mCVuzg89VR2ttIFr308xtlplu2", "Hkl51J2q3IT8R7OpSdJUEFtQo0v2"]) {
       for (const subtree of ["room", "sessions", "categories", "notes", "activity"]) {
         assert.ok(proposedCan("write", `${subtree}/santi`, uid));
       }
       assert.ok(proposedCan("write", "messages/kristina/note", uid));
       assert.ok(proposedCan("write", "messages/santi/read", uid));
     }
-    for (const uid of [null, STRANGER, "gSm4OX7KA5MimXi5unz51JLssOv1"]) {
+    for (const uid of [null, STRANGER, "gSm4OX7KA5MimXi5unz51JLssOv1", "exa5g4kzTpdEuEHqqCw1HI5S7vC3"]) {
       assert.ok(!proposedCan("write", "activity/santi/days/2026-10-16", uid));
       assert.ok(!proposedCan("read", "sessions/santi", uid));
     }
