@@ -4,7 +4,10 @@
 > during Dashboard review. This supersedes §7 only for the calendar; the agreed
 > v2 data/privacy contract governs it. Local rules files may be prepared for
 > review, but no production rules or data may be changed and nothing deployed.
-> See `docs/sessions/2026-10-16.md` for current implementation state.
+> The feature branch may be reviewed and pushed with a PR; merging to main and
+> Firebase publication still require separate authorization. New session sharing
+> is recoverable, historical sharing requires an unchanged reviewed preview.
+> See `docs/firebase-calendar-release.md` and the latest session log.
 
 **Read this file first, at the start of every session.** It is written for an
 assistant starting with zero context about this project. Then read the newest

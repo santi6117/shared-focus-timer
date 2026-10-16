@@ -8,6 +8,7 @@
 // Every scenario that earlier sessions verified by hand-built throwaway
 // harnesses lives here now, so it is re-checked on every change.
 
+import { createHash } from "node:crypto";
 import { describe, it, before, after, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { setup, teardown, openApp, T0, MIN } from "./helpers/harness.js";
@@ -184,6 +185,51 @@ describe("laptop navigation", () => {
     assert.doesNotMatch(JSON.stringify(summaries), /categoryKey|endedAt/);
   });
 
+  it("uses the saved server timestamp even when acknowledgement is on a different client day", async () => {
+    app = await openApp();
+    await app.page.evaluate(() => { window.__timestampOffset = 24 * 60 * 60 * 1000; });
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await app.run(MIN + 500);
+    await app.page.waitForFunction(() => !!window.__fakeDb.get("activity/santi/days/2026-10-01"));
+    const days = await app.db("activity/santi/days");
+    assert.equal(days["2026-10-01"].totalSeconds, 60);
+    assert.equal(days["2026-09-30"], undefined);
+  });
+
+  it("retries failed new activity after reload without sharing older timezone-tagged records", async () => {
+    app = await openApp({ seedDb: { sessions: { santi: {
+      older: { endedAt: T0, elapsedSeconds: 100, timeZone: "UTC" },
+    } } } });
+    await app.page.evaluate(() => window.__fakeDb.failActivityTransactions(10));
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await app.run(MIN + 500);
+    assert.equal(await app.db("activity/santi/days"), null);
+    await app.page.reload();
+    await app.run(100);
+    await app.page.waitForFunction(() => !!window.__fakeDb.get("activity/santi/days"));
+    const days = await app.db("activity/santi/days");
+    assert.equal(Object.values(days).reduce((sum, day) => sum + day.totalSeconds, 0), 60);
+    assert.doesNotMatch(JSON.stringify(days), /-push|older/);
+  });
+
+  it("requires a fresh preview when history changes before publication", async () => {
+    app = await openApp({ seedDb: { sessions: { santi: {
+      old: { endedAt: T0, elapsedSeconds: 100 },
+    } } } });
+    await goTo(app, "dashboard");
+    await app.page.locator(".calendar-backfill summary").click();
+    await app.click("backfillPreviewButton");
+    await app.page.locator("#backfillPreview:not([hidden])").waitFor();
+    await app.remote("sessions/santi/old", { endedAt: T0, elapsedSeconds: 200 });
+    await app.click("backfillPublish");
+    await app.run(100);
+    assert.match(await app.text("backfillStatus"), /History changed/);
+    assert.equal(await app.db("activity/santi/backfill"), null);
+    assert.equal(await app.db("activity/santi/days"), null);
+  });
+
   it("moves a shared daily total when Firebase corrects a session timestamp across midnight", async () => {
     const firstDay = "2026-09-30", nextDay = "2026-10-01";
     const record = { endedAt: T0, elapsedSeconds: 1800, categoryKey: "thesis", timeZone: "America/New_York" };
@@ -192,11 +238,12 @@ describe("laptop navigation", () => {
       activity: { santi: { days: {
         [firstDay]: { date: firstDay, totalSeconds: 1800, sessionCount: 1,
           timeZone: "America/New_York", timeZones: ["America/New_York"], updatedAt: T0,
-          coverage: "new-sessions", applied: { a: true } },
+          coverage: "new-sessions", applied: { [createHash("sha256").update("a").digest("hex")]: true } },
       } } },
     } });
     await app.remote("sessions/santi/a", { ...record, endedAt: T0 + 24 * 60 * MIN });
     await app.run(50);
+    await app.page.waitForFunction(() => window.__fakeDb.get("activity/santi/days/2026-10-01/totalSeconds") === 1800);
     const days = await app.db("activity/santi/days");
     assert.equal(days[firstDay].totalSeconds, 0);
     assert.equal(days[firstDay].sessionCount, 0);

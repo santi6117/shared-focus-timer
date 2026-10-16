@@ -17,7 +17,8 @@
 //                        other person writes to (see messages.js)
 //
 // Apart from messages/, nobody writes into the other person's subtree.
-// database.rules.json enforces that on the server.
+// Rules templates are proposals, not a record of published permissions.
+// See docs/firebase-calendar-release.md for the current deployment contract.
 
 import { firebaseConfig } from "./config.js";
 import { ME, THEM } from "./identity.js";

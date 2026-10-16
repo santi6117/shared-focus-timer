@@ -9,12 +9,6 @@
         ".write": "auth != null && ($person === 'santi' || $person === 'kristina')"
       }
     },
-    "activity": {
-      "$person": {
-        ".read": "auth != null && ($person === 'santi' || $person === 'kristina')",
-        ".write": "auth != null && ($person === 'santi' || $person === 'kristina')"
-      }
-    },
     "sessions": {
       "$person": {
         ".read": "auth != null && ($person === 'santi' || $person === 'kristina')",

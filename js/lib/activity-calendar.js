@@ -46,6 +46,7 @@ export function readDailySummary(value) {
     totalSeconds: value.totalSeconds,
     sessionCount: value.sessionCount,
     timeZone: value.timeZone,
+    timeZones: value.timeZones || [value.timeZone],
     updatedAt: value.updatedAt,
     coverage: value.coverage === "backfilled" ? "backfilled" : "new-sessions",
   };
@@ -68,3 +69,47 @@ export function monthCoveredDays(summaries, key) {
   }).length;
 }
 
+
+// Absolute daily aggregation makes timestamp corrections and retry idempotent.
+// Abort on an incomplete local snapshot so another device's totals aren't lost.
+export function reconcileDays(previous, entries, backfillZone, approvedIds, timestamp) {
+  const byId = new Map(entries.map((entry) => [entry.id, entry]));
+  const sharedIds = new Set(approvedIds);
+  const days = {};
+  for (const [date, day] of Object.entries(previous)) {
+    const ids = Object.keys(day.applied || {});
+    if (!ids.length) { days[date] = { ...day }; continue; }
+    for (const id of ids) {
+      if (!byId.has(id)) throw new Error("Session history is still syncing. Retry shortly.");
+      sharedIds.add(id);
+    }
+    days[date] = { ...day, totalSeconds: 0, sessionCount: 0, applied: {} };
+  }
+  for (const entry of entries) {
+    if (entry.activityVersion !== 1 && !sharedIds.has(entry.id)) continue;
+    if (!Number.isFinite(entry.endedAt) || !Number.isFinite(entry.elapsedSeconds) || entry.elapsedSeconds < 0) {
+      throw new Error("A session has invalid time data; no activity was published.");
+    }
+    const zone = entry.timeZone || backfillZone;
+    if (!zone) throw new Error("Preview the historical timezone before sharing this session.");
+    const date = localDayKey(entry.endedAt, zone);
+    const day = days[date] || {
+      date, totalSeconds: 0, sessionCount: 0, timeZone: zone,
+      timeZones: [], coverage: "new-sessions", applied: {},
+    };
+    day.totalSeconds += Math.round(entry.elapsedSeconds);
+    day.sessionCount++;
+    day.applied[entry.id] = true;
+    day.timeZones = [...new Set([...Object.values(day.timeZones || {}), zone])];
+    day.timeZone = zone;
+    if (approvedIds.includes(entry.id)) day.coverage = "backfilled";
+    days[date] = day;
+  }
+  for (const [date, day] of Object.entries(days)) {
+    const old = previous[date];
+    const { updatedAt: ignored, ...content } = day;
+    const { updatedAt: oldIgnored, ...oldContent } = old || {};
+    day.updatedAt = JSON.stringify(content) === JSON.stringify(oldContent) ? old.updatedAt : timestamp;
+  }
+  return days;
+}

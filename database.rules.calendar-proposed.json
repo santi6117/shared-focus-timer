@@ -1,0 +1,74 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "room": {
+      ".read": "auth != null",
+      "santi": {
+        ".write": "auth != null && (auth.uid === 'g6mCVuzg89VR2ttIFr308xtlplu2' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')"
+      },
+      "kristina": {
+        ".write": "auth != null"
+      }
+    },
+    "sessions": {
+      "santi": {
+        ".read": "auth != null && (auth.uid === 'g6mCVuzg89VR2ttIFr308xtlplu2' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')",
+        ".write": "auth != null && (auth.uid === 'g6mCVuzg89VR2ttIFr308xtlplu2' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')"
+      },
+      "kristina": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "categories": {
+      "santi": {
+        ".read": "auth != null && (auth.uid === 'g6mCVuzg89VR2ttIFr308xtlplu2' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')",
+        ".write": "auth != null && (auth.uid === 'g6mCVuzg89VR2ttIFr308xtlplu2' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')"
+      },
+      "kristina": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "notes": {
+      "santi": {
+        ".read": "auth != null && (auth.uid === 'g6mCVuzg89VR2ttIFr308xtlplu2' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')",
+        ".write": "auth != null && (auth.uid === 'g6mCVuzg89VR2ttIFr308xtlplu2' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')"
+      },
+      "kristina": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "messages": {
+      ".read": "auth != null",
+      "santi": {
+        "note": {
+          ".write": "auth != null"
+        },
+        "read": {
+          ".write": "auth != null && (auth.uid === 'g6mCVuzg89VR2ttIFr308xtlplu2' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')"
+        }
+      },
+      "kristina": {
+        "note": {
+          ".write": "auth != null && (auth.uid === 'g6mCVuzg89VR2ttIFr308xtlplu2' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')"
+        },
+        "read": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "activity": {
+      "santi": {
+        ".read": "auth != null",
+        ".write": "auth != null && (auth.uid === 'g6mCVuzg89VR2ttIFr308xtlplu2' || auth.uid === 'exa5g4kzTpdEuEHqqCw1HI5S7vC3')"
+      },
+      "kristina": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}

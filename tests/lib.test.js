@@ -21,7 +21,7 @@ import { skyAt, mix } from "../js/lib/sky.js";
 import { pondAt } from "../js/lib/pond.js";
 import { normalizeStatus, formatAgo, idleText, STATUS_MAX } from "../js/lib/status.js";
 import { swirlSize, swirlPose, easeInOut } from "../js/lib/swirl.js";
-import { localDayKey, monthCells, monthKey, monthTotal, readDailySummary } from "../js/lib/activity-calendar.js";
+import { localDayKey, monthCells, monthKey, monthTotal, readDailySummary, reconcileDays } from "../js/lib/activity-calendar.js";
 
 const MIN = 60_000;
 const local = (s) => new Date(s).getTime();
@@ -92,6 +92,25 @@ describe("shared activity calendar", () => {
     assert.equal(localDayKey(local("2026-10-17T00:30:00Z"), "Europe/London"), "2026-10-17");
     assert.equal(localDayKey(local("2026-10-17T00:30:00Z"), "America/Los_Angeles"), "2026-10-16");
     assert.equal(monthKey(local("2026-01-01T00:30:00Z"), "America/Los_Angeles"), "2025-12");
+  });
+  it("reconciles corrections and repeated retries without double-counting or losing a day", () => {
+    const entry = { id: "opaque", endedAt: local("2026-10-17T23:30:00Z"),
+      elapsedSeconds: 60, timeZone: "Europe/London", activityVersion: 1 };
+    const first = reconcileDays({}, [entry], null, [], 1);
+    assert.equal(first["2026-10-18"].totalSeconds, 60);
+    const corrected = { ...entry, endedAt: local("2026-10-17T22:30:00Z"), elapsedSeconds: 120 };
+    const next = reconcileDays(first, [corrected], null, [], 2);
+    assert.equal(next["2026-10-18"].totalSeconds, 0);
+    assert.equal(next["2026-10-17"].totalSeconds, 120);
+    assert.deepEqual(reconcileDays(next, [corrected], null, [], 3), next);
+    assert.throws(() => reconcileDays(next, [], null, [], 3), /still syncing/);
+  });
+  it("keeps unapproved legacy entries private and respects DST in historical attribution", () => {
+    const entry = { id: "legacy", endedAt: local("2026-10-25T01:30:00Z"), elapsedSeconds: 60 };
+    assert.deepEqual(reconcileDays({}, [entry], "Europe/London", [], 1), {});
+    const published = reconcileDays({}, [entry], "Europe/London", ["legacy"], 1);
+    assert.equal(published["2026-10-25"].totalSeconds, 60);
+    assert.deepEqual(reconcileDays(published, [entry], "Europe/London", [], 2), published);
   });
   it("builds Monday-first month grids through year and leap-month boundaries", () => {
     const february = monthCells("2024-02");

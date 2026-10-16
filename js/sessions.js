@@ -17,15 +17,12 @@ import { UNCATEGORIZED_KEY } from "./lib/categories.js";
 
 const log = [];
 const listeners = [];
-const newListeners = [];
 let initialLoadComplete = false;
 let connected = false;
 
 export function all() { return log; }
 export function onChange(fn) { listeners.push(fn); }
-export function onNewSession(fn) { newListeners.push(fn); }
 export function isInitialLoadComplete() { return initialLoadComplete; }
-export function isConnected() { return connected; }
 
 async function write({ ms, categoryLabel }) {
   const key = categories.keyFor(categoryLabel);
@@ -35,10 +32,10 @@ async function write({ ms, categoryLabel }) {
     elapsedSeconds: Math.round(ms / 1000),
     categoryKey: key,
     timeZone,
+    activityVersion: 1,
   };
-  const ref = await refs.sessions.push(data);
-  const entry = { ...data, endedAt: Date.now(), id: ref.key };
-  newListeners.forEach((fn) => fn(ref.key, entry));
+  await refs.sessions.push(data);
+  // The database listeners supply the resolved timestamp, including corrections.
   categories.recordUse(key, categoryLabel);
 }
 
@@ -55,10 +52,11 @@ export function init() {
     if (!v || typeof v.elapsedSeconds !== "number") return;
     const entry = {
       id: snap.key,
-      endedAt: v.endedAt || Date.now(),
+      endedAt: v.endedAt,
       elapsedSeconds: v.elapsedSeconds,
       // Records from before categories existed carry `category` instead.
       categoryKey: v.categoryKey || v.category || UNCATEGORIZED_KEY,
+      activityVersion: v.activityVersion,
       timeZone: typeof v.timeZone === "string" ? v.timeZone : null,
     };
     if (!log.some((item) => item.id === entry.id)) log.push(entry);
@@ -72,17 +70,16 @@ export function init() {
     const previous = log[index];
     const next = {
       id: snap.key,
-      endedAt: v.endedAt || previous.endedAt,
+      endedAt: v.endedAt,
       elapsedSeconds: v.elapsedSeconds,
       categoryKey: v.categoryKey || v.category || UNCATEGORIZED_KEY,
+      activityVersion: v.activityVersion,
       timeZone: typeof v.timeZone === "string" ? v.timeZone : previous.timeZone,
     };
     log[index] = next;
-    newListeners.forEach((fn) => fn(next.id, next, previous));
     listeners.forEach((fn) => fn());
   });
   refs.sessions.on("value", () => {
-    if (initialLoadComplete) return;
     initialLoadComplete = true;
     listeners.forEach((fn) => fn());
   });
@@ -96,12 +93,15 @@ export async function refreshCompleteHistory() {
   const snap = await refs.sessions.once("value");
   const values = snap.val() || {};
   const fresh = Object.entries(values).flatMap(([id, v]) => {
-    if (!v || typeof v.elapsedSeconds !== "number") return [];
+    if (!v || !Number.isFinite(v.elapsedSeconds) || v.elapsedSeconds < 0 || !Number.isFinite(v.endedAt)) {
+      throw new Error("History contains a session with invalid time data. No backfill was published.");
+    }
     return [{
       id,
-      endedAt: v.endedAt || Date.now(),
+      endedAt: v.endedAt,
       elapsedSeconds: v.elapsedSeconds,
       categoryKey: v.categoryKey || v.category || UNCATEGORIZED_KEY,
+      activityVersion: v.activityVersion,
       timeZone: typeof v.timeZone === "string" ? v.timeZone : null,
     }];
   });
