@@ -31,6 +31,11 @@ const timerState = (overrides) =>
     logged: false, zeroAt: null, categoryLabel: "", lastTickAt: null, ...overrides,
   });
 
+async function goTo(app, view) {
+  await app.page.locator("#" + view + "Nav").click();
+  await app.page.locator("#" + view + "View").waitFor({ state: "visible" });
+}
+
 // ---------------------------------------------------------------- boot
 
 describe("boot and identity", () => {
@@ -62,6 +67,61 @@ describe("boot and identity", () => {
     app = await openApp();
     const w = (await app.writes()).find((x) => x.op === "onDisconnect.update");
     assert.deepEqual(w, { op: "onDisconnect.update", path: "room/santi", value: { running: false } });
+  });
+});
+
+// ---------------------------------------------------------------- navigation
+
+describe("laptop navigation", () => {
+  it("keeps one running timer alive across views and logs it once", async () => {
+    app = await openApp();
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await app.run(20_000);
+    assert.equal(await app.text("timerDisplay"), "0:40");
+
+    await goTo(app, "dashboard");
+    await app.run(25_000);
+    assert.equal(await app.text("timerDisplay"), "0:15", "hidden timer still advances");
+    assert.match(await app.text("dashboardTimerStatus"), /Focusing · 0:15 left/);
+    await goTo(app, "timer");
+    await app.run(20_000);
+    assert.equal((await app.sessions()).length, 1);
+    assert.equal(await app.text("stageLabel"), "Done");
+  });
+
+  it("preserves query parameters, deep links, and Back/Forward", async () => {
+    app = await openApp();
+    const deepLink = new URL(app.page.url());
+    deepLink.searchParams.set("bg", "hills");
+    deepLink.hash = "dashboard";
+    await app.page.goto(deepLink.href);
+    await app.run(50);
+    await app.page.locator("#dashboardView").waitFor({ state: "visible" });
+    assert.equal(new URL(app.page.url()).searchParams.get("bg"), "hills");
+    assert.equal(new URL(app.page.url()).searchParams.get("me"), "santi");
+    assert.equal(new URL(app.page.url()).searchParams.get("device"), "laptop");
+    assert.equal(new URL(app.page.url()).hash, "#dashboard");
+    await goTo(app, "timer");
+    await app.page.goBack();
+    await app.page.locator("#dashboardView").waitFor({ state: "visible" });
+    assert.equal(await app.page.evaluate(() => document.activeElement.id), "dashboardHeading");
+    await app.page.goForward();
+    await app.page.locator("#timerView").waitFor({ state: "visible" });
+    assert.equal(await app.page.evaluate(() => document.activeElement.id), "timerHeading");
+  });
+
+  it("keeps completion visible and acknowledgeable on the dashboard", async () => {
+    app = await openApp();
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await goTo(app, "dashboard");
+    await app.run(MIN + 500);
+    assert.equal(await app.page.locator("#completionPanel").isVisible(), true);
+    assert.equal(await app.page.locator("#timerView").isVisible(), false);
+    await app.click("alertDismiss");
+    assert.equal(await app.page.locator("#completionPanel").isVisible(), false);
+    assert.equal(await app.page.evaluate(() => document.activeElement.id), "dashboardHeading");
   });
 });
 
@@ -447,6 +507,7 @@ describe("stats and breakdown", () => {
   it("breakdown shows the top three, a remainder, and cycles periods", async () => {
     app = await openApp({ seedDb });
     await app.run(300);
+    await goTo(app, "dashboard");
     assert.equal(await app.text("periodToggle"), "This week");
     assert.equal(await app.text("breakdownTop"), "Thesis");
     const rows = await app.page.locator("#breakdownRows .cat-row .name").allTextContents();
@@ -454,7 +515,6 @@ describe("stats and breakdown", () => {
     assert.equal(await app.text("breakdownMore"), "+ 1 more · 5m");
     assert.equal(await app.page.locator("#shareBar div").count(), 4);
 
-    await app.click("breakdownChip");
     await app.click("periodToggle");
     assert.equal(await app.text("periodToggle"), "All time");
     await app.click("periodToggle");
@@ -521,7 +581,7 @@ describe("the other person's split", () => {
     app = await openApp({ seedDb });
     await app.remote("room/kristina/today", hers(T0 + 60 * MIN));
     await app.run(300);
-    await app.click("breakdownChip");
+    await goTo(app, "dashboard");
     assert.equal(await app.text("whoseToggle"), "You");
 
     await app.click("whoseToggle");
@@ -543,7 +603,7 @@ describe("the other person's split", () => {
   it("their summary expires at their midnight, and is empty when missing", async () => {
     app = await openApp({ seedDb });
     await app.run(300);
-    await app.click("breakdownChip");
+    await goTo(app, "dashboard");
     await app.click("whoseToggle");
     assert.equal(await app.text("breakdownMore"), "Kristina hasn't logged anything today");
 
@@ -567,6 +627,7 @@ describe("the other person's split", () => {
 describe("note", () => {
   it("saves after a pause in typing, and the chip shows the first line", async () => {
     app = await openApp();
+    await goTo(app, "dashboard");
     await app.click("noteChip");
     await app.page.locator("#noteInput").fill("\ncall the bank about the transfer tomorrow\nsecond line");
     assert.equal(await app.db("notes/santi"), null, "not written on every keystroke");
@@ -578,6 +639,7 @@ describe("note", () => {
   it("a remote edit waits until the box loses focus", async () => {
     app = await openApp({ seedDb: { notes: { santi: { text: "old", updatedAt: 1 } } } });
     await app.run(100);
+    await goTo(app, "dashboard");
     assert.equal(await app.page.locator("#noteInput").inputValue(), "old");
     await app.click("noteChip"); // focuses the box
     await app.remote("notes/santi", { text: "from the other laptop", updatedAt: 2 });
@@ -598,6 +660,8 @@ describe("messages", () => {
     assert.equal(await app.text("messageBadge"), "1 message — read it");
     assert.equal(await app.has("messageIcon", "live"), true);
     assert.equal(await app.db("messages/santi/read"), null, "no receipt before opening");
+    await goTo(app, "dashboard");
+    assert.equal(await app.db("messages/santi/read"), null, "a hidden message does not count as read");
     await app.click("messageChip");
     assert.equal(await app.text("inboxText"), "hi from K");
     assert.equal(await app.db("messages/santi/read"), 111);
@@ -612,20 +676,29 @@ describe("messages", () => {
     await app.remote("messages/santi", note("for later"));
     await app.run(300);
     assert.equal(await app.text("messageBadge"), "message when you're done");
+    assert.equal(await app.db("messages/santi/read"), null, "message stays unread while the dashboard is hidden");
+    await goTo(app, "dashboard");
     await app.click("messageChip");
     assert.equal(await app.text("inboxText"), "Sealed until this session ends.");
     assert.equal(await app.db("messages/santi/read"), null, "no receipt while sealed");
     await app.click("messageChip"); // close it again
 
+    await goTo(app, "timer");
     await app.run(MIN);
     assert.equal(await app.text("messageBadge"), "1 message — read it");
+    assert.equal(await app.db("messages/santi/read"), null, "unsealing while the dashboard is hidden writes no receipt");
     const n = await app.page.evaluate(() => window.__notifications);
     assert.equal(n.length, 1);
     assert.match(n[0].body, /A message is waiting for you/);
+    await goTo(app, "dashboard");
+    assert.equal(await app.db("messages/santi/read"), null, "dashboard entry alone does not reveal the collapsed message");
+    await app.click("messageChip");
+    assert.equal(await app.db("messages/santi/read"), 111);
   });
 
   it("sending writes only the note child of the recipient's slot", async () => {
     app = await openApp();
+    await goTo(app, "dashboard");
     await app.click("messageChip");
     assert.equal(await app.page.locator("#messageSend").isDisabled(), true);
     await app.page.locator("#messageInput").fill("dinner at 7?");
@@ -642,9 +715,40 @@ describe("messages", () => {
     await app.run(100);
     assert.equal(await app.page.locator("#messageInput").inputValue(), "dinner at 7?", "pending text is prefilled");
     await app.remote("messages/kristina/read", T0 - 5 * MIN);
+    await goTo(app, "dashboard");
     await app.click("messageChip");
     assert.equal(await app.page.locator("#messageInput").inputValue(), "");
     assert.match(await app.text("messageStatus"), /^read \d{1,2}:\d{2}\s?[AP]M · send another$/);
+  });
+
+  it("writes a receipt only when an expanded message is visible in a visible tab", async () => {
+    app = await openApp({ seedDb: { messages: { santi: note("visible only when opened") } } });
+    await goTo(app, "dashboard");
+    await app.page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await app.click("messageChip");
+    assert.equal(await app.db("messages/santi/read"), null);
+    await app.page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await app.run(50);
+    assert.equal(await app.db("messages/santi/read"), 111);
+  });
+
+  it("keeps note and compose drafts through view changes", async () => {
+    app = await openApp();
+    await goTo(app, "dashboard");
+    await app.click("noteChip");
+    await app.page.locator("#noteInput").fill("draft note");
+    await app.click("messageChip");
+    await app.page.locator("#messageInput").fill("draft message");
+    await goTo(app, "timer");
+    await goTo(app, "dashboard");
+    assert.equal(await app.page.locator("#noteInput").inputValue(), "draft note");
+    assert.equal(await app.page.locator("#messageInput").inputValue(), "draft message");
   });
 });
 
@@ -682,17 +786,20 @@ describe("end-of-session alert", () => {
 
   it("remembers volume and lets muted sessions finish visibly without audio", async () => {
     app = await openApp();
+    await goTo(app, "dashboard");
     await app.page.locator("#alertVolume").fill("0");
     assert.equal(await app.text("alertVolumeValue"), "Muted");
     await app.page.reload();
     await app.run(50);
     assert.equal(await app.page.locator("#alertVolume").inputValue(), "0");
     await app.click("alertPreview");
+    await goTo(app, "timer");
     await app.setDuration(1);
     await app.click("startBtn");
     await app.run(MIN + 500);
     assert.equal(await app.page.locator("#completionPanel").isVisible(), true);
     assert.equal((await app.page.evaluate(() => window.__tones)).length, 0);
+    await goTo(app, "dashboard");
     await app.page.locator("#alertVolume").fill("50");
     await app.click("alertPreview");
     assert.equal((await app.page.evaluate(() => window.__tones)).length, 2);
@@ -788,6 +895,7 @@ describe("title flash", () => {
 
 describe("status", () => {
   const typeStatus = async (app, text) => {
+    await app.click("myStatusChip");
     await app.page.locator("#statusInput").fill(text);
     await app.page.locator("#statusInput").press("Enter");
     await app.run(250);
@@ -920,7 +1028,7 @@ describe("wallpapers", () => {
     app = await openApp({ seedDb: hours(62) });
     await app.run(250);
     assert.equal(await bg(app), "swirl");
-    await app.click("statsChip");
+    await goTo(app, "dashboard");
     assert.equal(await option(app, "rain").isDisabled(), true);
     assert.equal((await option(app, "rain").textContent()).trim(), "Rainy window62 / 100 h");
     assert.equal(await app.has("statsChip", "has-new"), false);
@@ -929,7 +1037,7 @@ describe("wallpapers", () => {
   it("chooses an unlocked one and keeps it across a reload", async () => {
     app = await openApp({ seedDb: hours(120) });
     await app.run(250);
-    await app.click("statsChip");
+    await goTo(app, "dashboard");
     await option(app, "rain").click();
     assert.equal(await bg(app), "rain");
     assert.equal(await app.page.evaluate(() => localStorage.getItem("wallpaper:santi")), '"rain"');
@@ -939,11 +1047,11 @@ describe("wallpapers", () => {
     assert.equal(await bg(app), "rain", "the stored choice paints before the log loads");
   });
 
-  it("marks a new unlock on the chip until the panel is opened", async () => {
+  it("marks a new unlock until the dashboard is opened", async () => {
     app = await openApp({ seedDb: hours(120) });
     await app.run(250);
     assert.equal(await app.has("statsChip", "has-new"), true);
-    await app.click("statsChip");
+    await goTo(app, "dashboard");
     assert.equal(await app.has("statsChip", "has-new"), false);
     await app.page.reload();
     await app.run(250);
@@ -1021,7 +1129,7 @@ describe("wallpapers", () => {
     await app.run(1000);
     assert.notEqual(await image(), before, "the color scene actually moves");
     assert.ok(await draws() > 0);
-    await app.click("statsChip");
+    await goTo(app, "dashboard");
     await option(app, "rain").click();
     const onRain = await draws();
     await app.run(1000);

@@ -1,12 +1,12 @@
 // End-of-session signals share one explicit acknowledgement: Got it,
-// Start, or Reset. A persistent panel and repeating chime cover a missed
-// desktop notification; returning to the tab alone is not acknowledgement.
+// Start, or Reset. A route-independent panel and repeating chime cover a
+// missed desktop notification; returning to the tab alone is not acknowledgement.
 // Audio and notifications remain optional and cannot break the timer.
 
 import * as timer from "./timer.js";
 import { hasUnread } from "./messages.js";
 
-let panel, volumeInput;
+let panel, volumeInput, timerCard;
 let volume = 0.75;
 let nextChimeAt = 0;
 const REPEAT_MS = 15_000;
@@ -14,6 +14,7 @@ const REPEAT_MS = 15_000;
 export function init() {
   panel = document.getElementById("completionPanel");
   volumeInput = document.getElementById("alertVolume");
+  timerCard = document.querySelector(".timer-card");
   try {
     const saved = localStorage.getItem("focus-alert-volume");
     if (saved !== null && Number.isFinite(Number(saved))) {
@@ -49,7 +50,8 @@ export function init() {
       ? "You reached the 2-hour limit. Your session is logged."
       : (t.categoryLabel ? t.categoryLabel + " — " : "") + "Your focus session is logged. Take a breath.";
     panel.hidden = false;
-    panel.closest(".timer-card").classList.add("session-complete");
+    document.body.classList.add("session-complete");
+    timerCard.classList.add("session-complete");
     nextChimeAt = Date.now() + REPEAT_MS;
     playChime();
     showNotification();
@@ -64,11 +66,15 @@ export function init() {
 // stealing at completion: an unrelated Enter press must not dismiss it.
 function dismissAlert() {
   panel.hidden = true;
-  panel.closest(".timer-card").classList.remove("session-complete");
+  document.body.classList.remove("session-complete");
+  timerCard.classList.remove("session-complete");
   nextChimeAt = 0;
   stopTitleFlash();
   if (document.activeElement === document.getElementById("alertDismiss")) {
-    document.getElementById("startBtn").focus();
+    const target = document.getElementById("timerView").hidden
+      ? document.getElementById("dashboardHeading")
+      : document.getElementById("startBtn");
+    target.focus();
   }
 }
 

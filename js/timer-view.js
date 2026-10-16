@@ -6,7 +6,7 @@ import * as timer from "./timer.js";
 import { formatClock, formatElapsed } from "./lib/time.js";
 import { shownMs } from "./lib/timer-math.js";
 
-let displayEl, stageLabelEl, durationInput, modeBtn, durationRow, capNote;
+let displayEl, stageLabelEl, durationInput, modeBtn, durationRow, capNote, card;
 
 export function init() {
   displayEl = document.getElementById("timerDisplay");
@@ -15,6 +15,7 @@ export function init() {
   modeBtn = document.getElementById("modeToggle");
   durationRow = document.getElementById("durationRow");
   capNote = document.getElementById("capNote");
+  card = document.querySelector(".timer-card");
 
   durationInput.value = timer.state().countdownDuration / 60000;
   syncSettings();
@@ -37,6 +38,7 @@ export function init() {
 // the clock runs; clicking it switches.
 function syncSettings() {
   const t = timer.state();
+  card.classList.toggle("is-running", t.running);
   const stopwatch = t.mode === "stopwatch";
   durationInput.disabled = t.running;
   modeBtn.disabled = t.running;

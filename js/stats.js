@@ -118,7 +118,7 @@ function renderBreakdown() {
   $("whoseToggle").textContent = showingTheirs ? name : "You";
   $("periodToggle").textContent = period;
   $("periodToggle").disabled = showingTheirs;
-  $("breakdownLabel").textContent = showingTheirs ? name : "Split";
+  $("breakdownLabel").textContent = showingTheirs ? name : "Categories";
   $("breakdownTop").textContent = b && b.top.length ? b.top[0].label : "—";
   bar.innerHTML = "";
   rows.innerHTML = "";

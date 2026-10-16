@@ -1,0 +1,126 @@
+/* Laptop dashboard views, their navigation, and the shared completion surface. */
+
+/* The laptop routes are two visibility states over the same document.
+   Keeping both sections mounted avoids touching timer deadlines or
+   restarting subscriptions when the user moves between them. */
+.timer-view[hidden],
+.dashboard-view[hidden] { display: none !important; }
+.timer-view { position: relative; min-height: 100vh; }
+.timer-view .stage { min-height: 100vh; }
+.timer-view #timerHeading { font-weight: 400; line-height: 1; }
+.timer-view #timerHeading:focus-visible,
+#dashboardHeading:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 3px; }
+.view-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  color: var(--ink);
+  font-size: 0.86rem;
+  text-decoration: none;
+}
+.view-nav span { color: var(--ink-soft); }
+#dashboardNav { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 2; }
+
+/* Personal status remains one tap away on the laptop. The existing editor
+   is collapsed into the pill; phones retain the original always-visible
+   remote editor and do not use this disclosure control. */
+#statusDisclosure { display: flex; flex-direction: column; align-items: center; width: 100%; }
+#myStatusChip {
+  display: flex; align-items: center; gap: 0.45rem; max-width: 100%;
+  padding: 0.52rem 0.8rem; background: var(--surface); font-size: 0.78rem;
+  box-shadow: var(--shadow-sm); white-space: nowrap;
+}
+#myStatusChip:disabled { cursor: default; opacity: 0.9; }
+.status-own-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--accent); }
+.my-status-label, .status-caret { color: var(--ink-soft); }
+#myStatusValue { overflow: hidden; text-overflow: ellipsis; }
+#statusRow { display: none; }
+#statusDisclosure.expanded #statusRow:not(.hidden) { display: flex; }
+#statusRow.hidden { display: none; }
+.timer-card.is-running #categoryChips { display: none; }
+
+/* Activity and utilities use normal page flow so the dashboard can scroll.
+   The cards are opaque enough to keep text legible over all wallpapers. */
+.dashboard-view {
+  width: min(1420px, 100%);
+  margin: 0 auto;
+  padding: 2rem clamp(1rem, 3vw, 2.75rem) 3rem;
+}
+.dashboard-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin: 0 0 1.25rem; }
+.dashboard-header h1 { margin: 0; font-size: clamp(1.65rem, 3vw, 2.2rem); font-weight: 550; letter-spacing: -0.04em; }
+.dashboard-header p { margin: 0.35rem 0 0; color: var(--ink-soft); font-size: 0.9rem; }
+.dashboard-return { display: flex; align-items: center; gap: 0.65rem; }
+#dashboardTimerStatus { color: var(--ink-soft); font-size: 0.78rem; margin: 0; font-variant-numeric: tabular-nums; }
+.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.82fr); gap: 1rem; align-items: start; }
+.dashboard-card { min-width: 0; padding: 1.1rem 1.25rem; background: rgba(255, 250, 243, 0.96); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.dashboard-card h2 { margin: 0; font-size: 1rem; font-weight: 650; }
+.dashboard-caption { margin: 0.35rem 0 0.75rem; color: var(--ink-soft); font-size: 0.76rem; line-height: 1.45; }
+.dashboard-activity { grid-column: 1; }
+.dashboard-breakdown { grid-column: 1; }
+.dashboard-utilities { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 0.85rem; }
+#cornerDock { position: static; display: block; width: 100%; }
+#statsWidget { width: 100%; border: 0; border-radius: 0; box-shadow: none; background: transparent; overflow: visible; }
+#statsPanel { display: none; padding: 0.5rem 0.1rem 0.65rem; border: 0; }
+#statsWidget.expanded #statsPanel { display: block; }
+#statsChip, #breakdownChip { padding: 0.55rem 0.1rem 0.15rem; background: transparent; border-top: 1px solid var(--line); border-radius: 0; }
+#statsChip:hover, #breakdownChip:hover { background: transparent; color: var(--accent); }
+#breakdownWidget { min-width: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; overflow: visible; }
+#breakdownPanel { display: none; padding: 0.45rem 0.1rem 0.6rem; border: 0; }
+#breakdownWidget.expanded #breakdownPanel { display: block; }
+.dashboard-utilities > .dashboard-card { padding: 0.9rem 1rem; }
+#noteWidget, #messageWidget { position: static; width: 100%; max-width: none; border: 0; border-radius: 0; box-shadow: none; overflow: visible; background: transparent; z-index: auto; }
+#noteChip, #messageChip { padding: 0.15rem 0.1rem; background: transparent; }
+#noteChip:hover, #messageChip:hover { background: transparent; color: var(--accent); }
+#notePanel, #messagePanel { padding-left: 0.1rem; padding-right: 0.1rem; }
+.dashboard-settings .alert-settings { max-width: none; margin-top: 0.75rem; }
+.dashboard-settings .alert-volume-row { gap: 0.6rem; }
+.dashboard-wallpapers #wallpaperPicker { margin-top: 0.7rem; padding-top: 0; border-top: 0; }
+.dashboard-management button { width: 100%; display: flex; align-items: center; justify-content: space-between; text-align: left; }
+.dashboard-management button:disabled { cursor: default; opacity: 0.75; }
+.dashboard-management p { margin: 0.55rem 0 0; color: var(--ink-soft); font-size: 0.72rem; }
+
+/* The completion surface sits above either route, while the timer card's
+   halo remains as a second signal whenever that view is on screen. */
+#completionPanel {
+  position: fixed; z-index: 8; top: 4.25rem; left: 50%; transform: translateX(-50%);
+  width: min(25rem, calc(100vw - 2rem)); max-width: none; padding: 1.1rem 1.25rem;
+  background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius);
+  box-shadow: 0 0 0 4px #d6713e33, var(--shadow); text-align: center;
+}
+#completionPanel[hidden] { display: none !important; }
+body.session-complete #completionPanel { animation: completion-pulse 2.5s ease-in-out infinite; }
+
+@media (max-width: 900px) {
+  .dashboard-grid { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-activity, .dashboard-breakdown, .dashboard-utilities { grid-column: 1; grid-row: auto; }
+  .dashboard-utilities { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+@media (max-width: 620px) {
+  .dashboard-view { padding: 1rem 0.75rem 2rem; }
+  .dashboard-header { align-items: flex-start; }
+  .dashboard-header > div:first-child p { max-width: 14rem; }
+  .dashboard-return { flex-direction: column-reverse; align-items: flex-end; gap: 0.35rem; }
+  #dashboardTimerStatus { max-width: 8rem; text-align: right; }
+  .dashboard-utilities { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.session-complete #completionPanel { animation: none; }
+}
+
+/* Keep the debug UID in the document flow on the scrolling dashboard so it
+   cannot sit over a utility card at narrow laptop widths. */
+#dashboardView:not([hidden]) ~ #uidDebug { position: static; text-align: right; padding: 0 0.5rem 0.5rem; }
+
+/* Phones remain on the existing read-only timer/status surface. */
+.remote #myStatusChip,
+.remote #dashboardNav,
+.remote #dashboardView,
+.remote #completionPanel { display: none !important; }
+.remote #statusDisclosure { display: contents; }
+.remote #statusRow { display: flex; }
+.remote #statusRow.hidden { display: none; }

@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="css/wallpapers/koi.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/widgets.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
 </head>
 <body>
 
@@ -154,6 +155,7 @@
     </div>
   </div>
 
+  <section id="timerView" class="timer-view" aria-label="Focus timer">
   <!-- Presence: whether the OTHER person is working right now. -->
   <div id="presenceWidget">
     <span class="dot" id="presenceDot"></span>
@@ -163,18 +165,10 @@
 
   <main class="stage">
     <section class="card timer-card">
-      <section id="completionPanel" aria-labelledby="completionTitle" hidden>
-        <div role="status" aria-live="polite">
-          <p class="eyebrow">Time’s up</p>
-          <h2 id="completionTitle">Session complete</h2>
-          <p id="completionDetail"></p>
-        </div>
-        <button id="alertDismiss" type="button">Got it</button>
-      </section>
       <!-- The word is its own span because the render loop rewrites it
            ("Focus" / "Focusing" / "Done"); the heart sits outside it so it
            is never overwritten. -->
-      <p class="eyebrow"><span id="stageLabel">Focus</span><span class="heart" aria-hidden="true">&#9829;</span></p>
+      <h1 id="timerHeading" class="eyebrow" tabindex="-1"><span id="stageLabel">Focus</span><span class="heart" aria-hidden="true">&#9829;</span></h1>
       <div id="timerDisplay">25:00</div>
       <!-- Phone only: where the timer above actually runs. -->
       <p id="remoteNote"></p>
@@ -197,14 +191,6 @@
         <button id="resetBtn" type="button">Reset</button>
       </div>
 
-      <div class="alert-settings">
-        <label for="alertVolume">Chime volume <output id="alertVolumeValue" for="alertVolume">75%</output></label>
-        <div class="alert-volume-row">
-          <input id="alertVolume" type="range" min="0" max="100" step="5" value="75" />
-          <button id="alertPreview" type="button">Test sound</button>
-        </div>
-      </div>
-
       <!-- Free-text category, editable any time, mid-session included. -->
       <div class="category-row">
         <input id="categoryInput" type="text" maxlength="40"
@@ -212,98 +198,156 @@
         <div id="categoryChips"></div>
       </div>
 
-      <!-- Your status, for when you're not focusing. Hidden while the timer
-           runs. Presets are filled in by js/status.js. -->
-      <div id="statusRow">
-        <p class="eyebrow" id="statusLabel">Your status</p>
-        <div class="status-field">
-          <input id="statusInput" type="text" maxlength="40"
-                 placeholder="status — eating, out…" autocomplete="off"
-                 enterkeyhint="done" />
-          <button id="statusClear" type="button" aria-label="Clear status">&times;</button>
+      <!-- Laptop status stays reachable from the timer in a compact pill.
+           Phone CSS keeps the existing editor visible in its original place. -->
+      <div id="statusDisclosure">
+        <button id="myStatusChip" type="button" aria-expanded="false" aria-controls="statusRow">
+          <span class="status-own-dot" aria-hidden="true"></span>
+          <span class="my-status-label">My status</span>
+          <span id="myStatusValue">Set a status</span>
+          <span class="status-caret" aria-hidden="true">⌄</span>
+        </button>
+        <div id="statusRow">
+          <p class="eyebrow" id="statusLabel">Your status</p>
+          <div class="status-field">
+            <input id="statusInput" type="text" maxlength="40"
+                   placeholder="status — eating, out…" autocomplete="off"
+                   enterkeyhint="done" />
+            <button id="statusClear" type="button" aria-label="Clear status">&times;</button>
+          </div>
+          <div id="statusAge"></div>
+          <div id="statusPresets"></div>
         </div>
-        <div id="statusAge"></div>
-        <div id="statusPresets"></div>
       </div>
     </section>
   </main>
 
-  <!-- Bottom-left dock. Chips are <button>s so they're keyboard reachable.
-       Panels come before chips so the widgets grow upward. -->
-  <div id="cornerDock">
-    <div id="statsWidget">
-      <div id="statsPanel">
-        <div class="stat-row"><span>Today</span><span id="statToday">—</span></div>
-        <div class="stat-row"><span>This week</span><span id="statWeek">—</span></div>
-        <div class="stat-row"><span>All time</span><span id="statAll">—</span></div>
-        <div class="stat-note" id="statCount">no sessions logged yet</div>
-        <!-- Filled in by js/wallpapers.js. -->
-        <div id="wallpaperPicker">
-          <div class="picker-label">Wallpaper</div>
-          <div id="wallpaperList"></div>
+  <a id="dashboardNav" class="view-nav" href="#dashboard">Dashboard <span aria-hidden="true">→</span></a>
+  </section>
+
+  <!-- Shared by both laptop views, so completion stays visible when the
+       timer card is hidden on the dashboard. -->
+  <section id="completionPanel" aria-labelledby="completionTitle" hidden>
+    <div role="status" aria-live="polite">
+      <p class="eyebrow">Time’s up</p>
+      <h2 id="completionTitle">Session complete</h2>
+      <p id="completionDetail"></p>
+    </div>
+    <button id="alertDismiss" type="button">Got it</button>
+  </section>
+
+  <main id="dashboardView" class="dashboard-view" aria-labelledby="dashboardHeading" hidden>
+    <header class="dashboard-header">
+      <div>
+        <h1 id="dashboardHeading" tabindex="-1">Dashboard</h1>
+        <p>Activity and the things you manage around your focus time.</p>
+      </div>
+      <div class="dashboard-return">
+        <p id="dashboardTimerStatus" aria-live="off">Timer ready · 25:00</p>
+        <a id="timerNav" class="view-nav" href="#timer">← Timer</a>
+      </div>
+    </header>
+    <div class="dashboard-grid">
+      <section class="dashboard-card dashboard-activity" aria-labelledby="activityHeading">
+        <h2 id="activityHeading">Activity</h2>
+        <p class="dashboard-caption">Your recorded focus time. The shared local-day calendar is planned for a later phase.</p>
+        <div id="cornerDock">
+          <div id="statsWidget" class="expanded">
+            <div id="statsPanel">
+              <div class="stat-row"><span>Today</span><span id="statToday">—</span></div>
+              <div class="stat-row"><span>This week</span><span id="statWeek">—</span></div>
+              <div class="stat-row"><span>All time</span><span id="statAll">—</span></div>
+              <div class="stat-note" id="statCount">no sessions logged yet</div>
+            </div>
+            <button id="statsChip" type="button">
+              <span class="chip-label">Activity</span>
+              <span id="chipValue">—</span>
+              <span id="chipCaret">▲</span>
+            </button>
+          </div>
         </div>
-      </div>
-      <button id="statsChip" type="button">
-        <span class="chip-label">Today</span>
-        <span id="chipValue">—</span>
-        <span id="chipCaret">▲</span>
-      </button>
-    </div>
-
-    <div id="breakdownWidget">
-      <div id="breakdownPanel">
-        <div id="shareBar"></div>
-        <div id="breakdownRows"></div>
-        <div id="breakdownMore"></div>
-        <div class="breakdown-toggles">
-          <button id="whoseToggle" type="button">You</button>
-          <button id="periodToggle" type="button">This week</button>
+      </section>
+      <section class="dashboard-card dashboard-breakdown" aria-labelledby="breakdownHeading">
+        <h2 id="breakdownHeading">Category breakdown</h2>
+        <p class="dashboard-caption">Current period summary; category management comes in a later phase.</p>
+        <div id="breakdownWidget" class="expanded">
+          <div id="breakdownPanel">
+            <div id="shareBar"></div>
+            <div id="breakdownRows"></div>
+            <div id="breakdownMore"></div>
+            <div class="breakdown-toggles">
+              <button id="whoseToggle" type="button">You</button>
+              <button id="periodToggle" type="button">This week</button>
+            </div>
+          </div>
+          <button id="breakdownChip" type="button">
+            <span class="chip-label" id="breakdownLabel">Categories</span>
+            <span id="breakdownTop">—</span>
+            <span id="breakdownCaret">▲</span>
+          </button>
         </div>
+      </section>
+      <div class="dashboard-utilities">
+        <section class="dashboard-card">
+          <div id="noteWidget">
+            <button id="noteChip" type="button">
+              <span class="chip-label">Notes</span>
+              <span id="noteBadge" class="empty">—</span>
+              <span id="noteCaret">&#9650;</span>
+            </button>
+            <div id="notePanel">
+              <textarea id="noteInput" placeholder="next up, reminders, anything…"
+                        spellcheck="false"></textarea>
+              <div id="noteStatus">&nbsp;</div>
+            </div>
+          </div>
+        </section>
+        <section class="dashboard-card">
+          <div id="messageWidget">
+            <button id="messageChip" type="button">
+              <span id="messageIcon">&#9993;</span>
+              <span id="messageBadge" class="empty">Message</span>
+              <span id="messageCaret">&#9660;</span>
+            </button>
+            <div id="messagePanel">
+              <div id="inboxSection">
+                <div id="inboxFrom">&nbsp;</div>
+                <div id="inboxText"></div>
+              </div>
+              <label id="composeLabel" for="messageInput">To&nbsp;<span id="composeTo"></span></label>
+              <textarea id="messageInput" maxlength="500" rows="3"
+                        placeholder="waiting for you when you finish…"></textarea>
+              <div id="messageSendRow">
+                <button id="messageSend" type="button">Send</button>
+                <span id="messageStatus">&nbsp;</span>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="dashboard-card dashboard-settings" aria-labelledby="soundHeading">
+          <h2 id="soundHeading">Sound</h2>
+          <div class="alert-settings">
+            <label for="alertVolume">Chime volume <output id="alertVolumeValue" for="alertVolume">75%</output></label>
+            <div class="alert-volume-row">
+              <input id="alertVolume" type="range" min="0" max="100" step="5" value="75" />
+              <button id="alertPreview" type="button">Test sound</button>
+            </div>
+          </div>
+        </section>
+        <section class="dashboard-card dashboard-wallpapers" aria-labelledby="wallpaperHeading">
+          <h2 id="wallpaperHeading">Wallpaper</h2>
+          <div id="wallpaperPicker">
+            <div class="picker-label">Choose a background for this device</div>
+            <div id="wallpaperList"></div>
+          </div>
+        </section>
+        <section class="dashboard-card dashboard-management" aria-label="Time management">
+          <button type="button" disabled aria-describedby="managementNote">Manage time <span aria-hidden="true">→</span></button>
+          <p id="managementNote">Time adjustments are planned for a later phase.</p>
+        </section>
       </div>
-      <button id="breakdownChip" type="button">
-        <span class="chip-label" id="breakdownLabel">Split</span>
-        <span id="breakdownTop">—</span>
-        <span id="breakdownCaret">▲</span>
-      </button>
     </div>
-  </div>
-
-  <!-- Bottom-right note. -->
-  <div id="noteWidget">
-    <div id="notePanel">
-      <textarea id="noteInput" placeholder="next up, reminders, anything…"
-                spellcheck="false"></textarea>
-      <div id="noteStatus">&nbsp;</div>
-    </div>
-    <button id="noteChip" type="button">
-      <span class="chip-label">Note</span>
-      <span id="noteBadge" class="empty">—</span>
-      <span id="noteCaret">&#9650;</span>
-    </button>
-  </div>
-
-  <!-- Top-left messages. Chip before panel: anchored at the top, it grows
-       downward. -->
-  <div id="messageWidget">
-    <button id="messageChip" type="button">
-      <span id="messageIcon">&#9993;</span>
-      <span id="messageBadge" class="empty">Message</span>
-      <span id="messageCaret">&#9660;</span>
-    </button>
-    <div id="messagePanel">
-      <div id="inboxSection">
-        <div id="inboxFrom">&nbsp;</div>
-        <div id="inboxText"></div>
-      </div>
-      <label id="composeLabel" for="messageInput">To&nbsp;<span id="composeTo"></span></label>
-      <textarea id="messageInput" maxlength="500" rows="3"
-                placeholder="waiting for you when you finish…"></textarea>
-      <div id="messageSendRow">
-        <button id="messageSend" type="button">Send</button>
-        <span id="messageStatus">&nbsp;</span>
-      </div>
-    </div>
-  </div>
+  </main>
 
   <div id="uidDebug"></div>
 

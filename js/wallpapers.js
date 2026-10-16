@@ -9,9 +9,8 @@
 // the shared data model. Unlocks come from all-time hours in the session
 // log (lib/wallpapers.js).
 //
-// The picker lives inside the stats panel, since unlocks are about hours.
-// A newly unlocked wallpaper puts a dot on the stats chip until the panel
-// is opened. No toast, no sound: same restraint as messages.
+// The picker lives on the dashboard. A newly unlocked wallpaper puts a dot
+// on the Activity card until the dashboard is actually opened.
 //
 // ?bg=<id> previews any built wallpaper regardless of hours, without
 // saving it. That's for trying them out while they're being designed.
@@ -45,8 +44,8 @@ export function init() {
   // last had, which is the default unless previewed.
   if (REMOTE) return;
 
-  $("statsChip").addEventListener("click", () => {
-    if ($("statsWidget").classList.contains("expanded")) markSeen();
+  window.addEventListener("sft:viewchange", (event) => {
+    if (event.detail?.view === "dashboard") markSeen();
   });
   sessions.onChange(render);
   render();
