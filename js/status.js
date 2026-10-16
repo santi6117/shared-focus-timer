@@ -24,7 +24,7 @@ import { normalizeStatus, formatAgo } from "./lib/status.js";
 const PRESETS = ["eating", "sleeping", "out with friends", "errands", "in lectures"];
 
 const $ = (id) => document.getElementById(id);
-let row, input, ageEl, clearBtn;
+let row, input, ageEl, clearBtn, disclosure, statusChip, statusValue;
 
 function current() { return ownRoom.get().status || null; }
 
@@ -33,6 +33,16 @@ export function init() {
   input = $("statusInput");
   ageEl = $("statusAge");
   clearBtn = $("statusClear");
+  disclosure = $("statusDisclosure");
+  statusChip = $("myStatusChip");
+  statusValue = $("myStatusValue");
+
+  statusChip.addEventListener("click", () => {
+    const open = !disclosure.classList.contains("expanded");
+    disclosure.classList.toggle("expanded", open);
+    statusChip.setAttribute("aria-expanded", String(open));
+    if (open && !row.classList.contains("hidden")) input.focus();
+  });
 
   const presets = $("statusPresets");
   for (const text of PRESETS) {
@@ -70,8 +80,11 @@ function set(raw) {
 // Called on every change to room/<me>, and from the render loop so the age
 // keeps counting.
 export function render() {
-  row.classList.toggle("hidden", ownRoom.running());
+  const running = ownRoom.running();
+  row.classList.toggle("hidden", running);
   const s = current();
+  statusValue.textContent = running ? "Focusing" : (s ? s.text : "Set a status");
+  statusChip.disabled = running;
   // Never overwrite what's being typed.
   if (document.activeElement !== input) input.value = s ? s.text : "";
   clearBtn.classList.toggle("shown", !!s);

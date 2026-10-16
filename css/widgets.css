@@ -1,11 +1,6 @@
-/* The corner widgets: presence (top right), messages (top left), stats and
-   category split (bottom left), note (bottom right), and the UID strip.
-
-   The chip-and-panel widgets share one shape: a button that's always
-   visible, and a panel that opens on click. Bottom-anchored widgets put the
-   panel BEFORE the chip in the DOM, so the box grows upward and the chip
-   stays under the cursor; the top-anchored messages widget does the
-   reverse. */
+/* Shared presence and disclosure-widget styling. Laptop stats, notes,
+   messages and settings are placed in the dashboard; phone rules keep its
+   existing remote interface compact. */
 
 /* ---- Presence, top right ---- */
 #presenceWidget {

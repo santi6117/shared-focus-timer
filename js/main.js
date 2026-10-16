@@ -34,6 +34,7 @@ import * as wallpapers from "./wallpapers.js";
 import * as sky from "./sky.js";
 import * as koi from "./koi.js";
 import * as swirl from "./swirl.js";
+import * as navigation from "./navigation.js";
 
 async function boot() {
   let user;
@@ -74,6 +75,7 @@ async function boot() {
   swirl.init();
   sky.init();
   koi.init();
+  if (!REMOTE) navigation.init();
 
   if (!REMOTE) {
     timer.recoverInterruptedRun();
@@ -91,6 +93,7 @@ async function boot() {
     }
     presence.render();
     status.render();
+    if (!REMOTE) navigation.render();
   };
   setInterval(frame, 250);
   frame();

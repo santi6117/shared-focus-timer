@@ -1,6 +1,6 @@
-// Held messages, top left: a note left for the other person that stays
-// sealed while their timer runs. They see that something is waiting; the
-// text opens when the session ends, or straight away if they aren't in one
+// Held messages on the dashboard: a note left for the other person that
+// stays sealed while their timer runs. They see that something is waiting;
+// the text opens when the session ends, or straight away if they aren't in one
 // (a message that could only be opened by starting a timer would sit unread
 // forever on a day they never start one).
 //
@@ -45,9 +45,15 @@ let widget, input, sendBtn, statusEl;
 
 export function hasUnread() { return isUnread(inbox); }
 
-// The gate is the running timer and nothing else. Paused or idle, there's
-// nothing to protect you from.
+// A hidden dashboard is never an invitation to read. The message must be
+// unsealed, expanded on the active dashboard, and in a visible browser tab.
 function sealed() { return timer.state().running; }
+
+function actuallyRevealed() {
+  const dashboard = $("dashboardView");
+  return !sealed() && document.visibilityState === "visible" &&
+    dashboard && !dashboard.hidden && widget.classList.contains("expanded");
+}
 
 export function init() {
   widget = $("messageWidget");
@@ -63,6 +69,8 @@ export function init() {
     render();
     renderOutboxStatus();
   });
+  window.addEventListener("sft:viewchange", render);
+  document.addEventListener("visibilitychange", render);
   input.addEventListener("input", syncSendButton);
   input.addEventListener("blur", applyRemoteOutbox);
   input.addEventListener("keydown", (e) => {
@@ -96,7 +104,7 @@ function render() {
   // The receipt is written when the text is actually on screen: panel open
   // and not sealed. A receipt sent while the panel was shut would be a lie,
   // and it's the only thing telling the sender whether to expect an answer.
-  if (hasUnread() && !sealed() && widget.classList.contains("expanded")) markRead();
+  if (hasUnread() && actuallyRevealed()) markRead();
 
   const unread = hasUnread();
   $("messageIcon").classList.toggle("live", unread);
