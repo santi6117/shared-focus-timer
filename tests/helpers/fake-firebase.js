@@ -89,6 +89,11 @@
       if (l.event === "child_added" && addedChild && join(parts(l.path)) === join(parts(path))) {
         l.cb(snapshot(join([...parts(path), addedChild])));
       }
+      if (l.event === "child_changed" && !addedChild
+          && parts(path).length === parts(l.path).length + 1
+          && join(parts(path).slice(0, -1)) === join(parts(l.path))) {
+        l.cb(snapshot(path));
+      }
     }
   }
 
@@ -124,6 +129,16 @@
         notify(p, key);
         const ref = makeRef(join([...parts(p), key]));
         return Object.assign(Promise.resolve(ref), ref);
+      },
+      transaction(update) {
+        const next = update(read(p));
+        if (next === undefined) return Promise.resolve({ committed: false, snapshot: snapshot(p) });
+        applyWrite("transaction", p, next);
+        notify(p);
+        return Promise.resolve({ committed: true, snapshot: snapshot(p) });
+      },
+      once(event) {
+        return Promise.resolve(snapshot(p));
       },
       on(event, cb) {
         listeners.push({ path: p, event, cb });

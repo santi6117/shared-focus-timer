@@ -21,6 +21,7 @@ import { skyAt, mix } from "../js/lib/sky.js";
 import { pondAt } from "../js/lib/pond.js";
 import { normalizeStatus, formatAgo, idleText, STATUS_MAX } from "../js/lib/status.js";
 import { swirlSize, swirlPose, easeInOut } from "../js/lib/swirl.js";
+import { localDayKey, monthCells, monthKey, monthTotal, readDailySummary } from "../js/lib/activity-calendar.js";
 
 const MIN = 60_000;
 const local = (s) => new Date(s).getTime();
@@ -83,6 +84,28 @@ describe("calendar boundaries", () => {
     const sunDst = local("2026-11-01T12:00:00");      // the 25-hour Sunday
     assert.equal(startOfDay(sunDst), local("2026-11-01T00:00:00"));
     assert.equal(startOfWeek(sunDst), local("2026-10-26T00:00:00"));
+  });
+});
+
+describe("shared activity calendar", () => {
+  it("attributes a session to its owner's local end date across zones and midnight", () => {
+    assert.equal(localDayKey(local("2026-10-17T00:30:00Z"), "Europe/London"), "2026-10-17");
+    assert.equal(localDayKey(local("2026-10-17T00:30:00Z"), "America/Los_Angeles"), "2026-10-16");
+    assert.equal(monthKey(local("2026-01-01T00:30:00Z"), "America/Los_Angeles"), "2025-12");
+  });
+  it("builds Monday-first month grids through year and leap-month boundaries", () => {
+    const february = monthCells("2024-02");
+    assert.equal(february.length, 35);
+    assert.equal(february[3], "2024-02-01"); // Thursday
+    assert.equal(february[31], "2024-02-29");
+    assert.ok(monthCells("2026-11").includes("2026-11-30"));
+  });
+  it("treats missing days as unknown and explicit zero as known activity data", () => {
+    const zero = { date: "2026-10-16", totalSeconds: 0, sessionCount: 0, timeZone: "UTC", updatedAt: 1 };
+    assert.equal(readDailySummary(null), null);
+    assert.equal(readDailySummary(zero).totalSeconds, 0);
+    assert.equal(monthTotal({ "2026-10-16": zero, "2026-10-17": null }, "2026-10"), 0);
+    assert.equal(readDailySummary({ ...zero, totalSeconds: -1 }), null);
   });
 });
 

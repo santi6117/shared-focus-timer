@@ -111,6 +111,99 @@ describe("laptop navigation", () => {
     assert.equal(await app.page.evaluate(() => document.activeElement.id), "timerHeading");
   });
 
+  it("keeps activity and category cards in a stable strip when notes or messages expand", async () => {
+    app = await openApp();
+    await goTo(app, "dashboard");
+    const tops = async () => app.page.evaluate(() => [
+      document.querySelector(".dashboard-activity").getBoundingClientRect().top,
+      document.querySelector(".dashboard-breakdown").getBoundingClientRect().top,
+    ]);
+    const initial = await tops();
+
+    await app.click("noteChip");
+    assert.deepEqual(await tops(), initial, "notes expansion must not move the insight strip");
+    await app.click("messageChip");
+    assert.deepEqual(await tops(), initial, "messages expansion must not move the insight strip");
+  });
+
+  it("shows shared daily summaries and leaves missing history unknown", async () => {
+    app = await openApp({ seedDb: { activity: {
+      santi: { days: {
+        "2026-09-30": { date: "2026-09-30", totalSeconds: 1800, sessionCount: 1,
+          timeZone: "America/New_York", timeZones: ["America/New_York"], updatedAt: T0, coverage: "backfilled" },
+      } },
+      kristina: { days: {
+        "2026-09-30": { date: "2026-09-30", totalSeconds: 0, sessionCount: 0,
+          timeZone: "Europe/London", timeZones: ["Europe/London"], updatedAt: T0, coverage: "backfilled" },
+      } },
+    } } });
+    await goTo(app, "dashboard");
+    const cell = app.page.locator('[data-date="2026-09-30"]');
+    await cell.waitFor();
+    assert.match(await cell.innerText(), /30[\s\S]*30m[\s\S]*0m/);
+    assert.equal(await app.page.locator('[data-date="2026-09-29"] .calendar-mine').getAttribute("aria-label"), "Santi: no shared data");
+    assert.match(await app.text("calendarMineTotal"), /^30m · 1 shared day$/);
+    assert.match(await app.text("calendarTheirsTotal"), /^0m · 1 shared day$/);
+  });
+
+  it("keeps legacy sessions private until timezone backfill is previewed and explicitly published", async () => {
+    app = await openApp({ seedDb: { sessions: { santi: {
+      old: { endedAt: T0 - 24 * 60 * MIN, elapsedSeconds: 1800, categoryKey: "thesis" },
+    } } } });
+    await goTo(app, "dashboard");
+    assert.equal(await app.db("activity/santi/days"), null, "old sessions are not automatically shared");
+    await app.page.locator(".calendar-backfill summary").click();
+    await app.click("backfillPreviewButton");
+    await app.page.locator("#backfillPreview:not([hidden])").waitFor();
+    assert.equal(await app.db("activity/santi/days"), null, "preview performs no sharing writes");
+    assert.match(await app.text("backfillPreviewText"), /1 sessions · 30m/);
+    await app.click("backfillPublish");
+    await app.run(100);
+    assert.ok(await app.db("activity/santi/days"));
+    const summaries = await app.db("activity/santi/days");
+    assert.equal(Object.values(summaries).reduce((sum, day) => sum + day.totalSeconds, 0), 1800);
+    assert.doesNotMatch(JSON.stringify(summaries), /categoryKey|thesis|endedAt/);
+    await app.click("backfillPreviewButton");
+    await app.page.locator("#backfillPreview:not([hidden])").waitFor();
+    await app.click("backfillPublish");
+    await app.run(100);
+    const retried = await app.db("activity/santi/days");
+    assert.equal(Object.values(retried).reduce((sum, day) => sum + day.totalSeconds, 0), 1800,
+      "repeating a backfill must not double-count session IDs");
+  });
+
+  it("publishes only a new session's daily total, without categories or raw session fields", async () => {
+    app = await openApp();
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await app.run(MIN + 500);
+    await app.run(100);
+    const summaries = await app.db("activity/santi/days");
+    assert.ok(summaries);
+    assert.equal(Object.values(summaries)[0].totalSeconds, 60);
+    assert.doesNotMatch(JSON.stringify(summaries), /categoryKey|endedAt/);
+  });
+
+  it("moves a shared daily total when Firebase corrects a session timestamp across midnight", async () => {
+    const firstDay = "2026-09-30", nextDay = "2026-10-01";
+    const record = { endedAt: T0, elapsedSeconds: 1800, categoryKey: "thesis", timeZone: "America/New_York" };
+    app = await openApp({ seedDb: {
+      sessions: { santi: { a: record } },
+      activity: { santi: { days: {
+        [firstDay]: { date: firstDay, totalSeconds: 1800, sessionCount: 1,
+          timeZone: "America/New_York", timeZones: ["America/New_York"], updatedAt: T0,
+          coverage: "new-sessions", applied: { a: true } },
+      } } },
+    } });
+    await app.remote("sessions/santi/a", { ...record, endedAt: T0 + 24 * 60 * MIN });
+    await app.run(50);
+    const days = await app.db("activity/santi/days");
+    assert.equal(days[firstDay].totalSeconds, 0);
+    assert.equal(days[firstDay].sessionCount, 0);
+    assert.equal(days[nextDay].totalSeconds, 1800);
+    assert.equal(days[nextDay].sessionCount, 1);
+  });
+
   it("keeps completion visible and acknowledgeable on the dashboard", async () => {
     app = await openApp();
     await app.setDuration(1);

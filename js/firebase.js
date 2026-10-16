@@ -37,6 +37,7 @@ export const refs = {
   // A sibling of room/ rather than inside it, so the presence listener
   // keeps receiving a tiny object instead of the whole history with it.
   sessions:   db.ref("sessions/" + ME),
+  activity:   db.ref("activity"),
   categories: db.ref("categories/" + ME),
   notes:      db.ref("notes/" + ME),
   inbox:      db.ref("messages/" + ME),      // what they sent me

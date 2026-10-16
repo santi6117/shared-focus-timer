@@ -1,5 +1,11 @@
 # Shared Focus Timer — Project Roadmap
 
+> **2026-10-16 v2 update:** Santi brought the shared Activity calendar forward
+> during Dashboard review. This supersedes §7 only for the calendar; the agreed
+> v2 data/privacy contract governs it. Local rules files may be prepared for
+> review, but no production rules or data may be changed and nothing deployed.
+> See `docs/sessions/2026-10-16.md` for current implementation state.
+
 **Read this file first, at the start of every session.** It is written for an
 assistant starting with zero context about this project. Then read the newest
 file in `docs/sessions/` to find out where things actually left off, and

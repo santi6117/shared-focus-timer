@@ -50,6 +50,11 @@ describe("pinned security rules", () => {
         assert.ok(can("write", `room/${me}/status`, uid));
         assert.ok(can("read", `room/${them}`, uid));
         assert.ok(!can("write", `room/${them}`, uid));
+        // Shared daily totals: either participant reads, only the owner writes.
+        assert.ok(can("read", `activity/${me}/days/2026-10-16`, uid));
+        assert.ok(can("write", `activity/${me}/days/2026-10-16`, uid));
+        assert.ok(can("read", `activity/${them}/days/2026-10-16`, uid));
+        assert.ok(!can("write", `activity/${them}/days/2026-10-16`, uid));
         // Private subtrees: own only.
         for (const sub of ["sessions", "categories", "notes"]) {
           assert.ok(can("read", `${sub}/${me}`, uid), sub);
@@ -69,7 +74,7 @@ describe("pinned security rules", () => {
   }
 
   it("refuses a stranger everywhere, and nothing grants the root or other slots", () => {
-    for (const p of ["room/santi", "sessions/santi", "categories/kristina", "notes/kristina", "messages/santi"]) {
+    for (const p of ["room/santi", "activity/santi", "sessions/santi", "categories/kristina", "notes/kristina", "messages/santi"]) {
       assert.ok(!can("read", p, STRANGER), p);
       assert.ok(!can("write", p, STRANGER), p);
     }
