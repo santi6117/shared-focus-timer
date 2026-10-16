@@ -97,8 +97,10 @@ export function reconcileDays(previous, entries, backfillZone, approvedIds, time
       date, totalSeconds: 0, sessionCount: 0, timeZone: zone,
       timeZones: [], coverage: "new-sessions", applied: {},
     };
-    day.totalSeconds += Math.round(entry.elapsedSeconds);
-    day.sessionCount++;
+    if (!entry.removed) {
+      day.totalSeconds += Math.round(entry.elapsedSeconds);
+      day.sessionCount++;
+    }
     day.applied[entry.id] = true;
     day.timeZones = [...new Set([...Object.values(day.timeZones || {}), zone])];
     day.timeZone = zone;

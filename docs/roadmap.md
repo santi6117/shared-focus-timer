@@ -1,9 +1,12 @@
 # Shared Focus Timer — Project Roadmap
 
 > **2026-10-16 v2 update:** Santi brought the shared Activity calendar forward
-> during Dashboard review. This supersedes §7 only for the calendar; the agreed
-> v2 data/privacy contract governs it. Local rules files may be prepared for
+> during Dashboard review. Shared calendar and individual time corrections are
+> in scope; the agreed v2 data/privacy contract governs them. Local rules files may be prepared for
 > review, but no production rules or data may be changed and nothing deployed.
+> Time management is now in scope: add missed work, correct or remove logged
+> sessions, and undo changes while preserving originals. Corrections use private
+> snapshots within each session and version checks; legacy sharing remains opt-in.
 > The feature branch may be reviewed and pushed with a PR; merging to main and
 > Firebase publication still require separate authorization. New session sharing
 > is recoverable, historical sharing requires an unchanged reviewed preview.
@@ -257,8 +260,9 @@ messages/<recipient> { note: { text, sentAt }, read: <sentAt> }
   already reads `room/`, and the live rules already allow it.
 - **No heartbeat field in `room/`.** Presence is derived from `running`, and
   `onDisconnect()` clears it (below).
-- **`sessions/` is append-only**, and a sibling of `room/` so the presence
-  listener never re-downloads history.
+- **`sessions/` preserves each original record**, with private correction snapshots
+  and an active pointer for undo. Removed records remain restorable. It is a
+  sibling of `room/` so presence never downloads history.
 - **`categories/` is the vocabulary; `sessions/` stores only the key**
   (`label.trim().toLowerCase()`, whitespace collapsed). A rename edits one
   field and every past session follows.
@@ -616,7 +620,7 @@ Do not build these. Do not let them creep into scope.
   The repo is public, so a real photo of them can't be committed: it needs
   an illustrated version, or to live outside the repo.
 - Category rename / merge tool (the key-vs-label split already makes it cheap)
-- Retroactive labelling of past sessions (would break the append-only log)
+- Bulk category merging and relabelling (individual session correction is available in Time management)
 - Message expiry (open question from 2026-09-11 (c): a message sits in the
   slot until replaced)
 - Shared screen or camera

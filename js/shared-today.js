@@ -58,7 +58,7 @@ export function init() {
 function publish() {
   const now = Date.now();
   const log = sessions.all();
-  if (!log.length) return;
+  // Publish zero too: removing the final session must clear the shared day.
   const summary = shareableToday(
     breakdown(log, startOfDay(now)), categories.labelFor, categories.colorFor, endOfDay(now));
   const json = JSON.stringify(summary);

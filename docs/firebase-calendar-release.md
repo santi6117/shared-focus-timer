@@ -47,6 +47,16 @@ all reviewed days atomically. The chosen zone applies only to entries without
 a stored zone. A later refresh needs a new preview. No history is published by
 opening the page, previewing, or cancelling. Phones do not start this module.
 
+Time management keeps original session fields and appends `timeEdits` snapshots
+inside each existing `sessions/<person>/<id>` record. `activeEdit` chooses the
+visible snapshot and `editVersion` prevents stale forms from overwriting newer
+changes. Undo rewinds the pointer; removal is a restorable snapshot, not a
+Firebase deletion. Manual additions carry a hidden base, so they can be undone
+too. No new top-level permissions are needed. Removed shared sessions keep their
+hashed membership marker with zero contribution, preserving backfill consent on
+restore. Edits to older unshared records do not opt them into the calendar.
+All clients should reload after release so they interpret correction snapshots.
+
 The browser maintains full private history in memory. Reconciliation reads and
 transacts over the owner's activity subtree, deliberately trading tiny writes
 for atomic correctness at this two-person scale. The fake database tests auth

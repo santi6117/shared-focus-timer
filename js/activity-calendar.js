@@ -26,13 +26,15 @@ function zoneList(value) {
 // deltas in separate day writes. Retrying or moving across midnight is atomic.
 // IDs already shared retain consent; older unpublished records require preview.
 async function reconcile(approved = null) {
-  const entries = await Promise.all(sessions.all().map(async (entry) => {
+  const entries = await Promise.all(sessions.history().map(async (entry) => {
     // Firebase push IDs encode creation time; publish only a one-way digest.
     const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(entry.id));
     const id = Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
     return { ...entry, id, approved: approved?.ids.includes(entry.id) };
   }));
+  let failure = null;
   const result = await refs.activity.child(ME).transaction((raw) => {
+    try {
     const owner = raw || {};
     if (approved && owner.backfill && owner.backfill.timeZone !== approved.zone) {
       throw new Error("Backfill timezone is already set differently.");
@@ -45,8 +47,9 @@ async function reconcile(approved = null) {
     };
     owner.days = days;
     return owner;
+    } catch (error) { failure = error; return; }
   });
-  if (!result.committed) throw new Error("Could not save daily activity. Please retry while online.");
+  if (!result.committed) throw failure || new Error("Could not save daily activity. Please retry while online.");
 }
 
 let syncing = false, dirty = false;

@@ -153,3 +153,23 @@ body.session-complete #completionPanel { animation: completion-pulse 2.5s ease-i
 .remote #statusDisclosure { display: contents; }
 .remote #statusRow { display: flex; }
 .remote #statusRow.hidden { display: none; }
+
+/* Time changes stay in a disclosure so the utility column remains a quick
+   glance. Forms and history use normal flow, including at laptop widths. */
+.time-manager { margin-top: 0.75rem; }
+.time-manager summary { cursor: pointer; font-size: 0.8rem; }
+.time-manager h3 { font-size: 0.85rem; margin: 0.85rem 0 0.5rem; }
+.time-manager button { padding: 0.4rem 0.65rem; font-size: 0.75rem; }
+.time-manager form { display: grid; gap: 0.4rem; margin: 0.75rem 0; }
+.time-manager label { font-size: 0.74rem; color: var(--ink-soft); }
+.time-manager input, .time-manager select { width: 100%; min-width: 0; max-width: 100%; padding: 0.45rem; font: inherit; font-size: 0.8rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.time-manager [hidden] { display: none !important; }
+.time-form-actions, .time-record-actions, .time-history-pages { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.time-form-actions { margin-top: 0.4rem; }
+.time-history-pages { justify-content: space-between; }
+#timeHistory { list-style: none; padding: 0; margin: 0.5rem 0; }
+.time-history-row { border-top: 1px solid var(--line); padding: 0.65rem 0; display: grid; gap: 0.35rem; overflow-wrap: anywhere; }
+.time-history-row strong { font-size: 0.76rem; }
+.time-history-row > span { color: var(--ink-soft); font-size: 0.68rem; }
+.time-record-removed strong { color: var(--ink-soft); }
+#timeRemoveReview { margin-top: 0.75rem; padding: 0.65rem; border: 1px solid var(--line); border-radius: var(--radius-sm); }

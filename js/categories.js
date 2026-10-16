@@ -36,6 +36,10 @@ export function whenReady(fn) {
   else waiting.push(fn);
 }
 
+export function options() {
+  return Object.entries(catMap).map(([key, value]) => ({ key, label: value.label || key }));
+}
+
 export function onChange(fn) { listeners.push(fn); }
 
 export function keyFor(typed) {

@@ -376,7 +376,40 @@
         </section>
         <section class="dashboard-card dashboard-management" aria-labelledby="managementHeading">
           <h2 id="managementHeading">Time management</h2>
-          <p id="managementNote">Time adjustments will be available in a later phase.</p>
+          <p id="managementNote">Add missed work or correct your own logged sessions. Removed work stays available to restore.</p>
+          <details id="timeManager" class="time-manager">
+            <summary>Manage logged time</summary>
+            <p>Added work appears in your totals and shared calendar. Corrections update already-shared days; older private history stays private until you publish it from the calendar.</p>
+            <button id="timeAdd" type="button">Add missed work</button>
+            <form id="timeForm" hidden>
+              <h3 id="timeFormHeading">Add missed work</h3>
+              <label for="timeEnd">Work ended</label>
+              <input id="timeEnd" type="datetime-local" step="1" required />
+              <label for="timeZone">Timezone for this work</label>
+              <input id="timeZone" type="text" autocomplete="off" required />
+              <label for="timeMinutes">Minutes worked (decimals allowed)</label>
+              <input id="timeMinutes" type="number" min="0.01" max="1440" step="any" required />
+              <label for="timeCategory">Category</label>
+              <select id="timeCategory"></select>
+              <div class="time-form-actions">
+                <button id="timeSave" type="submit">Add work</button>
+                <button id="timeCancel" type="button">Cancel</button>
+              </div>
+            </form>
+            <div id="timeRemoveReview" hidden>
+              <p id="timeRemoveText"></p>
+              <button id="timeRemoveConfirm" type="button">Remove from totals</button>
+              <button id="timeRemoveCancel" type="button">Keep work</button>
+            </div>
+            <p id="timeStatus" role="status" aria-live="polite"></p>
+            <h3>Session history</h3>
+            <p id="timeHistoryCount"></p>
+            <ul id="timeHistory" aria-label="Your logged sessions"></ul>
+            <div class="time-history-pages">
+              <button id="timeNewer" type="button">← Newer</button>
+              <button id="timeOlder" type="button">Older →</button>
+            </div>
+          </details>
         </section>
       </div>
     </div>
