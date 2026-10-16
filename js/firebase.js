@@ -17,7 +17,8 @@
 //                        other person writes to (see messages.js)
 //
 // Apart from messages/, nobody writes into the other person's subtree.
-// database.rules.json enforces that on the server.
+// Rules templates are proposals, not a record of published permissions.
+// See docs/firebase-calendar-release.md for the current deployment contract.
 
 import { firebaseConfig } from "./config.js";
 import { ME, THEM } from "./identity.js";
@@ -37,6 +38,7 @@ export const refs = {
   // A sibling of room/ rather than inside it, so the presence listener
   // keeps receiving a tiny object instead of the whole history with it.
   sessions:   db.ref("sessions/" + ME),
+  activity:   db.ref("activity"),
   categories: db.ref("categories/" + ME),
   notes:      db.ref("notes/" + ME),
   inbox:      db.ref("messages/" + ME),      // what they sent me

@@ -248,9 +248,10 @@
       </div>
     </header>
     <div class="dashboard-grid">
+      <div class="dashboard-insights" aria-label="Activity and categories">
       <section class="dashboard-card dashboard-activity" aria-labelledby="activityHeading">
         <h2 id="activityHeading">Activity</h2>
-        <p class="dashboard-caption">Your recorded focus time. The shared local-day calendar is planned for a later phase.</p>
+        <p class="dashboard-caption">Your totals and current reporting periods.</p>
         <div id="cornerDock">
           <div id="statsWidget" class="expanded">
             <div id="statsPanel">
@@ -287,6 +288,38 @@
           </button>
         </div>
       </section>
+      <section class="dashboard-card dashboard-calendar" aria-labelledby="calendarHeading">
+        <div class="calendar-heading-row">
+          <div>
+            <h2 id="calendarHeading">Activity calendar</h2>
+            <p class="dashboard-caption">Completed focus time on each person's own local days. A dash means no shared data is available.</p>
+          </div>
+          <div class="calendar-month-nav" aria-label="Calendar month">
+            <button id="calendarPrev" type="button" aria-label="Previous month">←</button>
+            <h3 id="calendarMonth" aria-live="polite"></h3>
+            <button id="calendarNext" type="button" aria-label="Next month">→</button>
+          </div>
+        </div>
+        <div class="calendar-month-totals">
+          <div><span id="calendarMineLabel">You</span><strong id="calendarMineTotal">0m</strong></div>
+          <div><span id="calendarTheirsLabel">Partner</span><strong id="calendarTheirsTotal">0m</strong></div>
+        </div>
+        <div id="calendarGrid" class="activity-calendar-grid" aria-label="Shared activity by local calendar day"></div>
+        <details class="calendar-backfill">
+          <summary>Review earlier activity</summary>
+          <p>Older sessions are private until you review a timezone-based preview. The starting timezone comes from this browser; edit it if needed, then preview. This shares daily totals only, never categories or session records.</p>
+          <label for="backfillTimeZone">Timezone for older sessions</label>
+          <input id="backfillTimeZone" type="text" autocomplete="off" />
+          <button id="backfillPreviewButton" type="button">Preview older activity</button>
+          <div id="backfillStatus" role="status" aria-live="polite"></div>
+          <div id="backfillPreview" hidden>
+            <p id="backfillPreviewText"></p>
+            <button id="backfillPublish" type="button">Publish these daily totals</button>
+            <button id="backfillCancel" type="button">Cancel</button>
+          </div>
+        </details>
+      </section>
+      </div>
       <div class="dashboard-utilities">
         <section class="dashboard-card">
           <div id="noteWidget">
@@ -341,9 +374,42 @@
             <div id="wallpaperList"></div>
           </div>
         </section>
-        <section class="dashboard-card dashboard-management" aria-label="Time management">
-          <button type="button" disabled aria-describedby="managementNote">Manage time <span aria-hidden="true">→</span></button>
-          <p id="managementNote">Time adjustments are planned for a later phase.</p>
+        <section class="dashboard-card dashboard-management" aria-labelledby="managementHeading">
+          <h2 id="managementHeading">Time management</h2>
+          <p id="managementNote">Add missed work or correct your own logged sessions. Removed work stays available to restore.</p>
+          <details id="timeManager" class="time-manager">
+            <summary>Manage logged time</summary>
+            <p>Added work appears in your totals and shared calendar. Corrections update already-shared days; older private history stays private until you publish it from the calendar.</p>
+            <button id="timeAdd" type="button">Add missed work</button>
+            <form id="timeForm" hidden>
+              <h3 id="timeFormHeading">Add missed work</h3>
+              <label for="timeEnd">Work ended</label>
+              <input id="timeEnd" type="datetime-local" step="1" required />
+              <label for="timeZone">Timezone for this work</label>
+              <input id="timeZone" type="text" autocomplete="off" required />
+              <label for="timeMinutes">Minutes worked (decimals allowed)</label>
+              <input id="timeMinutes" type="number" min="0.01" max="1440" step="any" required />
+              <label for="timeCategory">Category</label>
+              <select id="timeCategory"></select>
+              <div class="time-form-actions">
+                <button id="timeSave" type="submit">Add work</button>
+                <button id="timeCancel" type="button">Cancel</button>
+              </div>
+            </form>
+            <div id="timeRemoveReview" hidden>
+              <p id="timeRemoveText"></p>
+              <button id="timeRemoveConfirm" type="button">Remove from totals</button>
+              <button id="timeRemoveCancel" type="button">Keep work</button>
+            </div>
+            <p id="timeStatus" role="status" aria-live="polite"></p>
+            <h3>Session history</h3>
+            <p id="timeHistoryCount"></p>
+            <ul id="timeHistory" aria-label="Your logged sessions"></ul>
+            <div class="time-history-pages">
+              <button id="timeNewer" type="button">← Newer</button>
+              <button id="timeOlder" type="button">Older →</button>
+            </div>
+          </details>
         </section>
       </div>
     </div>

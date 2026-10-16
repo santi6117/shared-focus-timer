@@ -21,6 +21,9 @@ import { skyAt, mix } from "../js/lib/sky.js";
 import { pondAt } from "../js/lib/pond.js";
 import { normalizeStatus, formatAgo, idleText, STATUS_MAX } from "../js/lib/status.js";
 import { swirlSize, swirlPose, easeInOut } from "../js/lib/swirl.js";
+import { localDayKey, monthCells, monthKey, monthTotal, readDailySummary, reconcileDays } from "../js/lib/activity-calendar.js";
+
+import { readSession, reviseSession, parseLocalTime, validateWork } from "../js/lib/session-edits.js";
 
 const MIN = 60_000;
 const local = (s) => new Date(s).getTime();
@@ -83,6 +86,47 @@ describe("calendar boundaries", () => {
     const sunDst = local("2026-11-01T12:00:00");      // the 25-hour Sunday
     assert.equal(startOfDay(sunDst), local("2026-11-01T00:00:00"));
     assert.equal(startOfWeek(sunDst), local("2026-10-26T00:00:00"));
+  });
+});
+
+describe("shared activity calendar", () => {
+  it("attributes a session to its owner's local end date across zones and midnight", () => {
+    assert.equal(localDayKey(local("2026-10-17T00:30:00Z"), "Europe/London"), "2026-10-17");
+    assert.equal(localDayKey(local("2026-10-17T00:30:00Z"), "America/Los_Angeles"), "2026-10-16");
+    assert.equal(monthKey(local("2026-01-01T00:30:00Z"), "America/Los_Angeles"), "2025-12");
+  });
+  it("reconciles corrections and repeated retries without double-counting or losing a day", () => {
+    const entry = { id: "opaque", endedAt: local("2026-10-17T23:30:00Z"),
+      elapsedSeconds: 60, timeZone: "Europe/London", activityVersion: 1 };
+    const first = reconcileDays({}, [entry], null, [], 1);
+    assert.equal(first["2026-10-18"].totalSeconds, 60);
+    const corrected = { ...entry, endedAt: local("2026-10-17T22:30:00Z"), elapsedSeconds: 120 };
+    const next = reconcileDays(first, [corrected], null, [], 2);
+    assert.equal(next["2026-10-18"].totalSeconds, 0);
+    assert.equal(next["2026-10-17"].totalSeconds, 120);
+    assert.deepEqual(reconcileDays(next, [corrected], null, [], 3), next);
+    assert.throws(() => reconcileDays(next, [], null, [], 3), /still syncing/);
+  });
+  it("keeps unapproved legacy entries private and respects DST in historical attribution", () => {
+    const entry = { id: "legacy", endedAt: local("2026-10-25T01:30:00Z"), elapsedSeconds: 60 };
+    assert.deepEqual(reconcileDays({}, [entry], "Europe/London", [], 1), {});
+    const published = reconcileDays({}, [entry], "Europe/London", ["legacy"], 1);
+    assert.equal(published["2026-10-25"].totalSeconds, 60);
+    assert.deepEqual(reconcileDays(published, [entry], "Europe/London", [], 2), published);
+  });
+  it("builds Monday-first month grids through year and leap-month boundaries", () => {
+    const february = monthCells("2024-02");
+    assert.equal(february.length, 35);
+    assert.equal(february[3], "2024-02-01"); // Thursday
+    assert.equal(february[31], "2024-02-29");
+    assert.ok(monthCells("2026-11").includes("2026-11-30"));
+  });
+  it("treats missing days as unknown and explicit zero as known activity data", () => {
+    const zero = { date: "2026-10-16", totalSeconds: 0, sessionCount: 0, timeZone: "UTC", updatedAt: 1 };
+    assert.equal(readDailySummary(null), null);
+    assert.equal(readDailySummary(zero).totalSeconds, 0);
+    assert.equal(monthTotal({ "2026-10-16": zero, "2026-10-17": null }, "2026-10"), 0);
+    assert.equal(readDailySummary({ ...zero, totalSeconds: -1 }), null);
   });
 });
 
@@ -341,5 +385,53 @@ describe("stopwatch maths", () => {
     const t = { ...defaultTimer(), mode: "stopwatch", duration: STOPWATCH_CAP_MS,
       remainingAtStart: STOPWATCH_CAP_MS, running: true, startedAt: 0, lastTickAt: 3 * 60 * MIN };
     assert.deepEqual(planRecovery(t, 10 * 60 * MIN), { workedMs: STOPWATCH_CAP_MS });
+  });
+});
+
+
+describe("session time corrections", () => {
+  const raw = { endedAt: Date.parse("2026-10-16T12:00:00Z"), elapsedSeconds: 1800, categoryKey: "thesis", timeZone: "Europe/London", activityVersion: 1 };
+  it("preserves originals and undoes edits and removals without deleting audit snapshots", () => {
+    const original = structuredClone(raw);
+    const edited = reviseSession(raw, 0, { ...raw, elapsedSeconds: 600 }, 1);
+    assert.equal(edited.elapsedSeconds, 1800);
+    assert.equal(readSession("a", edited).elapsedSeconds, 600);
+    const removed = reviseSession(edited, 1, { ...raw, elapsedSeconds: 600, removed: true }, 2);
+    assert.equal(readSession("a", removed).removed, true);
+    const undoRemoval = reviseSession(removed, 2, "undo", 3);
+    assert.equal(readSession("a", undoRemoval).elapsedSeconds, 600);
+    assert.equal(readSession("a", undoRemoval).removed, false);
+    const undoEdit = reviseSession(undoRemoval, 3, "undo", 4);
+    assert.equal(readSession("a", undoEdit).elapsedSeconds, 1800);
+    assert.equal(readSession("a", undoEdit).canUndo, false);
+    assert.equal(Object.keys(undoEdit.timeEdits).length, 2);
+    assert.deepEqual(raw, original);
+    assert.throws(() => reviseSession(undoEdit, 1, raw, 5), /another device/);
+  });
+  it("validates exact local times across zones, DST gaps and repeated hours", () => {
+    assert.equal(parseLocalTime("2026-10-16T12:00", "Europe/London"), Date.parse("2026-10-16T11:00:00Z"));
+    assert.equal(parseLocalTime("2026-10-16T12:00", "America/New_York"), Date.parse("2026-10-16T16:00:00Z"));
+    assert.throws(() => parseLocalTime("2026-03-29T01:30", "Europe/London"), /does not exist/);
+    assert.throws(() => parseLocalTime("2026-10-25T01:30", "Europe/London"), /occurs twice/);
+    assert.throws(() => parseLocalTime("2026-02-30T12:00", "UTC"), /does not exist/);
+  });
+  it("rejects invalid, future or excessive manual work", () => {
+    const form = { dateTime: "2026-10-16T12:00", timeZone: "UTC", minutes: "30", categoryKey: "thesis" };
+    const now = Date.parse("2026-10-16T13:00:00Z");
+    assert.equal(validateWork(form, now).elapsedSeconds, 1800);
+    for (const minutes of ["", "0", "-10", "NaN", "Infinity", "1441"]) assert.throws(() => validateWork({ ...form, minutes }, now));
+    assert.throws(() => validateWork({ ...form, dateTime: "2026-10-17T12:00" }, now), /past/);
+    assert.throws(() => validateWork({ ...form, timeZone: "nonsense" }, now), /valid timezone/);
+  });
+  it("keeps shared consent through removal, restore and midnight corrections", () => {
+    const entry = { id: "digest", ...raw };
+    const first = reconcileDays({}, [entry], null, [], 1);
+    const removed = reconcileDays(first, [{ ...entry, removed: true }], null, [], 2);
+    assert.equal(removed["2026-10-16"].totalSeconds, 0);
+    assert.equal(removed["2026-10-16"].sessionCount, 0);
+    assert.equal(removed["2026-10-16"].applied.digest, true);
+    assert.equal(reconcileDays(removed, [entry], null, [], 3)["2026-10-16"].totalSeconds, 1800);
+    const legacy = { ...entry, activityVersion: undefined };
+    assert.deepEqual(reconcileDays({}, [{ ...legacy, removed: true }], null, [], 1), {});
   });
 });

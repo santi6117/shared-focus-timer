@@ -50,6 +50,11 @@ describe("pinned security rules", () => {
         assert.ok(can("write", `room/${me}/status`, uid));
         assert.ok(can("read", `room/${them}`, uid));
         assert.ok(!can("write", `room/${them}`, uid));
+        // Shared daily totals: either participant reads, only the owner writes.
+        assert.ok(can("read", `activity/${me}/days/2026-10-16`, uid));
+        assert.ok(can("write", `activity/${me}/days/2026-10-16`, uid));
+        assert.ok(can("read", `activity/${them}/days/2026-10-16`, uid));
+        assert.ok(!can("write", `activity/${them}/days/2026-10-16`, uid));
         // Private subtrees: own only.
         for (const sub of ["sessions", "categories", "notes"]) {
           assert.ok(can("read", `${sub}/${me}`, uid), sub);
@@ -69,11 +74,55 @@ describe("pinned security rules", () => {
   }
 
   it("refuses a stranger everywhere, and nothing grants the root or other slots", () => {
-    for (const p of ["room/santi", "sessions/santi", "categories/kristina", "notes/kristina", "messages/santi"]) {
+    for (const p of ["room/santi", "activity/santi", "sessions/santi", "categories/kristina", "notes/kristina", "messages/santi"]) {
       assert.ok(!can("read", p, STRANGER), p);
       assert.ok(!can("write", p, STRANGER), p);
     }
     assert.ok(!can("read", "room", DEVICES.santi[0]));
     assert.ok(!can("write", "room/eve", DEVICES.santi[0]));
+  });
+});
+
+// Compatibility proposal mirrors the user-supplied production grants, with
+// activity added separately. These auth checks do not emulate validation rules.
+const proposed = JSON.parse(readFileSync(new URL("../database.rules.calendar-proposed.json", import.meta.url))).rules;
+function proposedCan(op, path, uid) {
+  const auth = uid ? { uid } : null;
+  let node = proposed;
+  for (const part of [null, ...path.split("/")]) {
+    if (part !== null) node = node?.[part];
+    if (!node) return false;
+    if (node["." + op] !== undefined && Function("auth", `return (${node["." + op]})`)(auth)) return true;
+  }
+  return false;
+}
+describe("calendar rules compatibility proposal", () => {
+  it("uses current Santi devices and denies anonymous or outdated Santi writes", () => {
+    for (const uid of ["g6mCVuzg89VR2ttIFr308xtlplu2", "Hkl51J2q3IT8R7OpSdJUEFtQo0v2"]) {
+      for (const subtree of ["room", "sessions", "categories", "notes", "activity"]) {
+        assert.ok(proposedCan("write", `${subtree}/santi`, uid));
+      }
+      assert.ok(proposedCan("write", "messages/kristina/note", uid));
+      assert.ok(proposedCan("write", "messages/santi/read", uid));
+    }
+    for (const uid of [null, STRANGER, "gSm4OX7KA5MimXi5unz51JLssOv1", "exa5g4kzTpdEuEHqqCw1HI5S7vC3"]) {
+      assert.ok(!proposedCan("write", "activity/santi/days/2026-10-16", uid));
+      assert.ok(!proposedCan("read", "sessions/santi", uid));
+    }
+  });
+  it("preserves the supplied broad grants without claiming participant-only privacy", () => {
+    for (const subtree of ["room", "sessions", "categories", "notes", "activity"]) {
+      assert.ok(proposedCan("read", `${subtree}/kristina`, STRANGER));
+      assert.ok(proposedCan("write", `${subtree}/kristina`, STRANGER));
+      assert.ok(!proposedCan("read", `${subtree}/kristina`, null));
+    }
+    assert.ok(proposedCan("read", "room", STRANGER));
+    assert.ok(proposedCan("read", "messages", STRANGER));
+    assert.ok(proposedCan("read", "activity/santi", STRANGER));
+    assert.ok(proposedCan("write", "messages/santi/note", STRANGER));
+    assert.ok(!proposedCan("write", "messages/kristina/note", STRANGER));
+    assert.ok(proposedCan("write", "messages/kristina/read", STRANGER));
+    assert.ok(!proposedCan("write", "messages/santi/read", STRANGER));
+    assert.ok(!proposedCan("write", "activity", STRANGER));
   });
 });

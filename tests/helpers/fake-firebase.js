@@ -20,6 +20,8 @@
   const writes = saved ? saved.writes : [];
   let pushCount = saved ? saved.pushCount : 0;
   const listeners = [];
+  let transactionFailures = 0;
+  let sessionTransactionFailures = 0;
 
   const parts = (p) => String(p).split("/").filter(Boolean);
   const join = (ks) => ks.join("/");
@@ -38,7 +40,7 @@
 
   function resolve(v) {
     if (v && typeof v === "object") {
-      if (v[".sv"] === "timestamp") return Date.now();
+      if (v[".sv"] === "timestamp") return Date.now() + (window.__timestampOffset || 0);
       const out = {};
       for (const k of Object.keys(v)) out[k] = resolve(v[k]);
       return out;
@@ -89,6 +91,11 @@
       if (l.event === "child_added" && addedChild && join(parts(l.path)) === join(parts(path))) {
         l.cb(snapshot(join([...parts(path), addedChild])));
       }
+      if (l.event === "child_changed" && !addedChild
+          && parts(path).length === parts(l.path).length + 1
+          && join(parts(path).slice(0, -1)) === join(parts(l.path))) {
+        l.cb(snapshot(path));
+      }
     }
   }
 
@@ -120,10 +127,30 @@
       },
       push(value) {
         const key = "-push" + String(++pushCount).padStart(6, "0");
-        applyWrite("push", join([...parts(p), key]), value);
-        notify(p, key);
+        if (value !== undefined) {
+          applyWrite("push", join([...parts(p), key]), value);
+          notify(p, key);
+        }
         const ref = makeRef(join([...parts(p), key]));
         return Object.assign(Promise.resolve(ref), ref);
+      },
+      transaction(update) {
+        if (sessionTransactionFailures > 0 && p.startsWith("sessions/")) {
+          sessionTransactionFailures--;
+          return Promise.reject(new Error("Simulated session permission failure"));
+        }
+        if (transactionFailures > 0 && p.startsWith("activity/")) {
+          transactionFailures--;
+          return Promise.reject(new Error("Simulated activity permission failure"));
+        }
+        const next = update(read(p));
+        if (next === undefined) return Promise.resolve({ committed: false, snapshot: snapshot(p) });
+        applyWrite("transaction", p, next);
+        notify(p);
+        return Promise.resolve({ committed: true, snapshot: snapshot(p) });
+      },
+      once(event) {
+        return Promise.resolve(snapshot(p));
       },
       on(event, cb) {
         listeners.push({ path: p, event, cb });
@@ -170,6 +197,8 @@
 
   window.__fakeDb = {
     get: read,
+    failSessionTransactions(count = 1) { sessionTransactionFailures = count; },
+    failActivityTransactions(count = 1) { transactionFailures = count; },
     set(path, value) { writeAt(path, resolve(value)); persist(); notify(path); },
     get writes() { return writes; },
   };
