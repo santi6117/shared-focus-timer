@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="css/wallpapers/koi.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/widgets.css" />
-  <link rel="stylesheet" href="css/dashboard.css" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261018" />
 </head>
 <body>
 
@@ -240,7 +240,6 @@
     <header class="dashboard-header">
       <div>
         <h1 id="dashboardHeading" tabindex="-1">Dashboard</h1>
-        <p>Activity and the things you manage around your focus time.</p>
       </div>
       <div class="dashboard-return">
         <p id="dashboardTimerStatus" aria-live="off">Timer ready · 25:00</p>
@@ -261,9 +260,9 @@
               <div class="stat-note" id="statCount">no sessions logged yet</div>
             </div>
             <button id="statsChip" type="button">
+              <span id="chipCaret">▲</span>
               <span class="chip-label">Activity</span>
               <span id="chipValue">—</span>
-              <span id="chipCaret">▲</span>
             </button>
           </div>
         </div>
@@ -282,9 +281,9 @@
             </div>
           </div>
           <button id="breakdownChip" type="button">
+            <span id="breakdownCaret">▲</span>
             <span class="chip-label" id="breakdownLabel">Categories</span>
             <span id="breakdownTop">—</span>
-            <span id="breakdownCaret">▲</span>
           </button>
         </div>
       </section>
@@ -435,6 +434,6 @@
 
   <!-- The app. type="module" runs after the page has parsed, so every
        element above exists by then. -->
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=20261018"></script>
 </body>
 </html>

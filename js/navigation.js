@@ -73,5 +73,17 @@ export function render() {
       : t.remainingAtStart < t.duration ? "Paused · " + left + " left"
       : "Ready · " + left;
   }
-  timerStatus.textContent = text;
+  // Separate the state label from the clock so only the label has accent color.
+  const [label, clock] = text.split(" · ");
+  let labelEl = timerStatus.querySelector(".timer-status-label");
+  let clockEl = timerStatus.querySelector(".timer-status-clock");
+  if (!labelEl || !clockEl) {
+    labelEl = document.createElement("span");
+    labelEl.className = "timer-status-label";
+    clockEl = document.createElement("span");
+    clockEl.className = "timer-status-clock";
+    timerStatus.replaceChildren(labelEl, document.createTextNode(" · "), clockEl);
+  }
+  if (labelEl.textContent !== label) labelEl.textContent = label;
+  if (clockEl.textContent !== clock) clockEl.textContent = clock;
 }

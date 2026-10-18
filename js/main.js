@@ -36,7 +36,7 @@ import * as wallpapers from "./wallpapers.js";
 import * as sky from "./sky.js";
 import * as koi from "./koi.js";
 import * as swirl from "./swirl.js";
-import * as navigation from "./navigation.js";
+import * as navigation from "./navigation.js?v=20261018";
 
 async function boot() {
   let user;

@@ -74,6 +74,36 @@ describe("boot and identity", () => {
 // ---------------------------------------------------------------- navigation
 
 describe("laptop navigation", () => {
+  it("keeps identity on Dashboard and separates the status label from the advancing clock", async () => {
+    app = await openApp();
+    assert.equal(await app.page.locator("#uidDebug").isVisible(), false);
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await goTo(app, "dashboard");
+    assert.equal(await app.page.locator("#uidDebug").isVisible(), true);
+    await app.run(20_000); // Advance the frozen clock through the regular render interval.
+    assert.equal(await app.page.locator(".timer-status-label").textContent(), "Focusing");
+    assert.equal(await app.page.locator(".timer-status-clock").textContent(), "0:40 left");
+    const styles = await app.page.locator("#dashboardTimerStatus").evaluate((el) => ({
+      label: getComputedStyle(el.querySelector(".timer-status-label")).color,
+      clock: getComputedStyle(el.querySelector(".timer-status-clock")).color,
+      weight: getComputedStyle(el.querySelector(".timer-status-clock")).fontWeight,
+    }));
+    assert.notEqual(styles.label, styles.clock);
+    assert.equal(styles.weight, "700");
+    for (const [button, widget, caret] of [
+      ["statsChip", "statsWidget", "chipCaret"],
+      ["breakdownChip", "breakdownWidget", "breakdownCaret"],
+    ]) {
+      assert.equal(await app.page.locator("#" + button + " > :first-child").getAttribute("id"), caret);
+      const expanded = await app.has(widget, "expanded");
+      await app.click(button);
+      assert.equal(await app.has(widget, "expanded"), !expanded);
+    }
+    await goTo(app, "timer");
+    assert.equal(await app.page.locator("#uidDebug").isVisible(), false);
+  });
+
   it("keeps one running timer alive across views and logs it once", async () => {
     app = await openApp();
     await app.setDuration(1);

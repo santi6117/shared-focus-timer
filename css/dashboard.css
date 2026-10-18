@@ -51,11 +51,22 @@
   margin: 0 auto;
   padding: 2rem clamp(1rem, 3vw, 2.75rem) 3rem;
 }
-.dashboard-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin: 0 0 1.25rem; }
-.dashboard-header h1 { margin: 0; font-size: clamp(1.65rem, 3vw, 2.2rem); font-weight: 550; letter-spacing: -0.04em; }
-.dashboard-header p { margin: 0.35rem 0 0; color: var(--ink-soft); font-size: 0.9rem; }
+.dashboard-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 0 1.25rem; }
+.dashboard-header h1 {
+  display: inline-block; margin: 0; padding: 0.25rem 0.8rem 0.35rem;
+  border: 2px solid var(--accent); border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
+  font-size: clamp(1.65rem, 3vw, 2.2rem); font-weight: 550; letter-spacing: -0.04em;
+}
 .dashboard-return { display: flex; align-items: center; gap: 0.65rem; }
-#dashboardTimerStatus { color: var(--ink-soft); font-size: 0.78rem; margin: 0; font-variant-numeric: tabular-nums; }
+/* An opaque inset keeps the small timer legible over changing wallpapers. */
+#dashboardTimerStatus {
+  color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 999px; padding: 0.5rem 0.75rem; font-size: 0.82rem;
+  font-weight: 700; margin: 0; font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-sm); white-space: nowrap;
+}
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.82fr); gap: 1rem; align-items: start; }
 .dashboard-insights { min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
 .dashboard-card { min-width: 0; padding: 1.1rem 1.25rem; background: rgba(255, 250, 243, 0.96); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
@@ -102,6 +113,7 @@
 .dashboard-utilities > .dashboard-card { padding: 0.9rem 1rem; }
 #noteWidget, #messageWidget { position: static; width: 100%; max-width: none; border: 0; border-radius: 0; box-shadow: none; overflow: visible; background: transparent; z-index: auto; }
 #noteChip, #messageChip { padding: 0.15rem 0.1rem; background: transparent; }
+#noteChip .chip-label { color: var(--ink); font-weight: 650; }
 #noteChip:hover, #messageChip:hover { background: transparent; color: var(--accent); }
 #notePanel, #messagePanel { padding-left: 0.1rem; padding-right: 0.1rem; }
 .dashboard-settings .alert-settings { max-width: none; margin-top: 0.75rem; }
@@ -141,8 +153,9 @@ body.session-complete #completionPanel { animation: completion-pulse 2.5s ease-i
   body.session-complete #completionPanel { animation: none; }
 }
 
-/* Keep the debug UID in the document flow on the scrolling dashboard so it
-   cannot sit over a utility card at narrow laptop widths. */
+/* Laptop identity belongs at the dashboard footer; the phone keeps its
+   existing identity display. Keep it mounted so startup can populate it. */
+html:not(.remote) #dashboardView[hidden] ~ #uidDebug { display: none; }
 #dashboardView:not([hidden]) ~ #uidDebug { position: static; text-align: right; padding: 0 0.5rem 0.5rem; }
 
 /* Phones remain on the existing read-only timer/status surface. */
@@ -173,3 +186,7 @@ body.session-complete #completionPanel { animation: completion-pulse 2.5s ease-i
 .time-history-row > span { color: var(--ink-soft); font-size: 0.68rem; }
 .time-record-removed strong { color: var(--ink-soft); }
 #timeRemoveReview { margin-top: 0.75rem; padding: 0.65rem; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+
+/* Keep the state accented while the clock remains bold, dark text. */
+#dashboardTimerStatus .timer-status-label { color: #873d1d; }
+#dashboardTimerStatus .timer-status-clock { color: var(--ink); font-weight: 700; }
