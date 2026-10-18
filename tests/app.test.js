@@ -1188,6 +1188,65 @@ describe("phone (remote) mode", () => {
 // ---------------------------------------------------------------- wallpapers
 
 describe("wallpapers", () => {
+  it("loads the watercolor illustration and glass without design-study controls", async () => {
+    app = await openApp();
+    await app.page.goto(app.page.url().split("?")[0] + "?me=santi&device=laptop&bg=rain");
+    await app.run(250);
+    assert.equal(await app.page.locator(".rain-study").isVisible(), true);
+    assert.equal(await app.page.locator(".rain-phone").isVisible(), false);
+    assert.ok(await app.page.locator(".rain-still-drops use").count() > 100);
+    assert.ok(await app.page.locator(".rain-slide").count() > 0);
+    assert.equal(await app.page.locator(".rain-study-controls").count(), 0);
+    const image = await app.page.locator(".rain-painted-city").evaluate(async el => {
+      const source = getComputedStyle(el).backgroundImage.match(/url\(["']?(.*?)["']?\)/)[1];
+      const img = new Image();
+      img.src = source;
+      await img.decode();
+      return { source, width: img.naturalWidth, height: img.naturalHeight };
+    });
+    assert.match(image.source, /assets\/rain-watercolor\.png$/);
+    assert.ok(image.width > image.height && image.width >= 1600);
+    assert.equal(await app.page.locator(".rain-slide").first().evaluate(el => getComputedStyle(el).animationName), "none");
+  });
+
+  it("pauses the rain motion when unselected or hidden and resumes without rebuilding drops", async () => {
+    app = await openApp({ reducedMotion: "no-preference", seedDb: { sessions: { santi: {
+      earned: { endedAt: T0, elapsedSeconds: 120 * 3600 },
+    } } } });
+    await goTo(app, "dashboard");
+    await app.page.locator('.wp-option[data-id="rain"]').click();
+    const slide = app.page.locator(".rain-slide").first();
+    const playState = () => slide.evaluate(el => getComputedStyle(el).animationPlayState);
+    await app.page.waitForFunction(() => !document.querySelector('.rain-study').classList.contains('rain-paused'));
+    assert.equal(await playState(), "running");
+    // Drive the same lifecycle event as a background tab without platform focus changes.
+    await app.page.evaluate(() => {
+      Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    assert.equal(await playState(), "paused");
+    await app.page.evaluate(() => {
+      delete document.hidden;
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    assert.equal(await playState(), "running");
+    const count = await app.page.locator(".rain-still-drops use").count();
+    await app.page.locator('.wp-option[data-id="swirl"]').click();
+    await app.page.waitForFunction(() => document.querySelector('.rain-study').classList.contains('rain-paused'));
+    assert.equal(await playState(), "paused");
+    await app.page.locator('.wp-option[data-id="rain"]').click();
+    assert.equal(await app.page.locator(".rain-still-drops use").count(), count);
+  });
+
+  it("retains the phone rain scene without initializing laptop glass", async () => {
+    app = await openApp({ device: "phone" });
+    await app.page.goto(app.page.url().split("?")[0] + "?me=santi&device=phone&bg=rain");
+    await app.run(250);
+    assert.equal(await app.page.locator(".rain-phone").isVisible(), true);
+    assert.equal(await app.page.locator(".rain-study").isVisible(), false);
+    assert.equal(await app.page.locator(".rain-still-drops use").count(), 0);
+  });
+
   const hours = (h) => ({
     sessions: { santi: { a: { endedAt: T0 - 3600_000, elapsedSeconds: h * 3600, categoryKey: "thesis" } } },
   });

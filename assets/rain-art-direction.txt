@@ -1,0 +1,6 @@
+Tool: built-in image_gen.imagegen (edit)
+Reference: rain-watercolor-v2.png
+Output: rain-watercolor-v3.png
+
+Prompt:
+Edit the supplied softer watercolor wallpaper with ONLY a subtle depth/focus refinement. Preserve the exact composition, buildings, colors, light placement, wet street, sky and cozy handmade paper/gouache style. Make the NEAREST houses at the extreme left and right corners noticeably clearer than the distant village: gently more defined roof silhouettes, warm window frames, walls and the nearby lantern, retaining broad painterly brushwork, not adding tiny detail or photorealism. Make the FAR background town, distant church tower, hills and lake/bridge slightly blurrier/softer, lower contrast and more veiled in atmospheric blue-gray watercolor haze. The transition should be gradual and natural as distance increases; foreground street and nearest corner houses remain readable, distant houses dissolve into suggestive shapes and small soft amber lights. Maintain the preferred simplified illustration, fine cotton-paper texture, quiet open center for a timer overlay, landscape aspect ratio. Do not add objects, raindrops, text, UI, border or frame. This is selective depth separation, not globally increasing detail or blurring the whole image.

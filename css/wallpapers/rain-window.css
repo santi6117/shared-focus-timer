@@ -1,0 +1,63 @@
+/* Laptop Rainy window: the approved watercolor city and close wet glass.
+   The illustration/filter is static; only small drops and one light animate.
+   Rejected: animating a full-screen blur, which would repaint while studying. */
+html:not(.remote) #backgroundLayer .wp-rain.rain-phone,
+.remote #backgroundLayer .wp-rain.rain-study { display: none; }
+.rain-study { --wetness: .86; --softness: 1.5px; --warmth: .18; background: #687b8e; }
+.rain-study > div, .rain-glass { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.rain-painted-city {
+  background: url('../../assets/rain-watercolor.png') center / cover no-repeat;
+  filter: blur(var(--softness)) saturate(.78); transform: scale(1.014);
+}
+.rain-distance-haze { background: linear-gradient(180deg, #b4bdc916, #a5b4bf12 45%, #4e657114); }
+.rain-window-warmth { background: #dca564; opacity: var(--warmth); mix-blend-mode: soft-light; }
+.rain-window-glow {
+  background: radial-gradient(ellipse 20% 34% at 7% 63%, #ffd6a033, #ffd6a000);
+  animation: rain-lamp-breathe 17s ease-in-out infinite alternate;
+}
+.rain-glass { opacity: var(--wetness); }
+.rain-moving-drops { opacity: var(--wetness); overflow: hidden; }
+.rain-slide {
+  position: absolute; left: var(--x); top: var(--y); width: var(--w); height: calc(var(--w) * 1.7);
+  border-radius: 53% 47% 49% 51% / 69% 62% 38% 31%;
+  background: linear-gradient(145deg, #29435055, #c3d6d211 48%, #ffdfaa66);
+  border: .65px solid #e1e8d833; border-top-color: #29435066;
+  box-shadow: inset 1px 0 #e9f2e54d, inset -1px -1px #f6e3b93d, 0 1px 1px #24344033;
+  animation: rain-glass-slide var(--duration) linear infinite; animation-delay: var(--delay);
+  will-change: transform, opacity;
+}
+.rain-slide::before {
+  content: ''; position: absolute; left: 40%; bottom: 80%; height: var(--trail); width: 1px;
+  background: linear-gradient(to bottom, #c3d6d200, #e3e6d821 85%, #bcd0d448);
+  border-radius: 100%;
+}
+.rain-slide::after {
+  content: ''; position: absolute; width: 21%; height: 30%; left: 20%; top: 19%;
+  border-radius: 60%; background: #fcf4dc6b;
+}
+.rain-glass-edges {
+  background: radial-gradient(ellipse 95% 105% at 50% 43%, #24333d00 42%, #24333d35 100%),
+    linear-gradient(90deg, #e9d3b722, #e9d3b700 8%, #e9d3b700 94%, #e9d3b71c);
+  box-shadow: inset 0 0 65px #21374322;
+}
+@keyframes rain-lamp-breathe { from { opacity: .45; } to { opacity: .9; } }
+/* Most of each cycle is spent gathering on the glass; a few slips accelerate.
+   Tiny sideways offsets keep the water paths irregular as they slip. */
+@keyframes rain-glass-slide {
+  0%, 24% { transform: translate(0, 0) scale(.8); opacity: 0; }
+  29% { transform: translate(0, 0) scale(1); opacity: .9; }
+  47% { transform: translate(1px, 1.5vh); opacity: .9; }
+  56% { transform: translate(-1px, 5vh); opacity: .95; }
+  61% { transform: translate(2px, 16vh); opacity: .95; }
+  68% { transform: translate(0, 39vh); opacity: .8; }
+  77% { transform: translate(3px, 78vh); opacity: 0; }
+  100% { transform: translate(3px, 78vh); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rain-slide { animation: none; opacity: .6; }
+  .rain-window-glow { animation: none; }
+}
+
+/* A background tab and an unselected wallpaper do no animation work. */
+.rain-study.rain-paused .rain-slide,
+.rain-study.rain-paused .rain-window-glow { animation-play-state: paused; }
