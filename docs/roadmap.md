@@ -524,7 +524,7 @@ focus session). A phone is a remote.
 | Wallpaper | Unlocks at | State |
 |---|---|---|
 | Swirl (§6c) | always | built |
-| Rainy window | 100 h | built (iterated twice with Santi) |
+| Rainy window | 100 h | watercolor/glass redesign approved 2026-10-18 (laptop); existing phone scene retained |
 | Paper hills, live sky | 200 h | built 2026-10-03, awaiting feedback |
 | Koi pond | 300 h | built 2026-10-03, awaiting feedback |
 
@@ -536,14 +536,22 @@ focus session). A phone is a remote.
   ("62 / 100 h"). A new unlock puts a dot on the stats chip until the panel
   is opened (`wallpapersSeen:<me>`). No toast, no sound.
 - **`?bg=<id>` previews any built wallpaper** without unlocking or saving.
-- **Markup:** one `.wp-<id>` wrapper per wallpaper inside
+- **Markup:** `.wp-<id>` wrappers per wallpaper inside
   `#backgroundLayer`; `data-bg` picks one and the rest are `display: none`,
   which also stops their animations. Each new wallpaper is its own file in
   `css/wallpapers/`.
-- **Same rules as §6c:** only `transform` and `opacity` animate, no blur,
+- **Same rules as §6c:** only `transform` and `opacity` animate; no animated blur,
   gradients fade to the same hex at alpha `00`, reduced motion freezes.
 - **The phone has no picker** and shows the swirl unless previewed.
-- **Rainy window:** dusk sky; two bokeh layers of city lights (one
+- **Rainy window, laptop (2026-10-18):** approved watercolor illustration on
+  textured paper, with clearer foreground houses and a soft distant village.
+  `css/wallpapers/rain-window.css` layers static haze/warmth and glass over
+  `assets/rain-watercolor.png`. A fixed 1.5px illustration blur is static,
+  never animated. `js/rain.js` lays out seeded glass beads and small sliding
+  drops once; CSS owns motion, which pauses when hidden/unselected and freezes
+  with reduced motion. No study controls or image variants ship. The 100h
+  unlock, local choice, and phone experience remain unchanged.
+- **Rainy window, phone:** dusk sky; two bokeh layers of city lights (one
   element each, a dozen gradients) that crossfade, drift and swell; a few
   lights flickering on their own beat; cars on one wet road near the
   bottom, with soft reflections, passing rarely and irregularly; three depths of rain, gradient streaks, blended with `overlay`

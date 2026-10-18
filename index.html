@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/tokens.css" />
   <link rel="stylesheet" href="css/background.css" />
   <link rel="stylesheet" href="css/wallpapers/rain.css" />
+  <link rel="stylesheet" href="css/wallpapers/rain-window.css?v=20261018" />
   <link rel="stylesheet" href="css/wallpapers/hills.css" />
   <link rel="stylesheet" href="css/wallpapers/koi.css" />
   <link rel="stylesheet" href="css/layout.css" />
@@ -45,7 +46,7 @@
     </div>
 
     <!-- Rainy window: city lights out of focus behind wet glass. -->
-    <div class="wp wp-rain">
+    <div class="wp wp-rain rain-phone">
       <div class="rain-bokeh rain-bokeh-a"></div>
       <div class="rain-bokeh rain-bokeh-b"></div>
       <div class="rain-bokeh rain-bokeh-c"></div>
@@ -67,6 +68,38 @@
       <span class="runner r5"></span>
       <span class="runner r6"></span>
       <span class="runner r7"></span>
+    </div>
+
+    <!-- Laptop Rainy window: painted paper behind a separate wet-glass surface. -->
+    <div class="wp wp-rain rain-study">
+      <div class="rain-painted-city"></div>
+      <div class="rain-distance-haze"></div>
+      <div class="rain-window-warmth"></div>
+      <div class="rain-window-glow"></div>
+      <svg class="rain-glass" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <linearGradient id="glass-body" x1="0" y1="0" x2="0.7" y2="1">
+            <stop stop-color="#1c3446" stop-opacity=".36"/>
+            <stop offset=".4" stop-color="#a8c0cb" stop-opacity=".06"/>
+            <stop offset=".72" stop-color="#edf0dc" stop-opacity=".14"/>
+            <stop offset="1" stop-color="#ffdb9d" stop-opacity=".45"/>
+          </linearGradient>
+          <linearGradient id="glass-rim" x1="0" y1="0" x2=".7" y2="1">
+            <stop stop-color="#162f3d" stop-opacity=".5"/>
+            <stop offset=".52" stop-color="#d9e5df" stop-opacity=".1"/>
+            <stop offset="1" stop-color="#fff3cd" stop-opacity=".7"/>
+          </linearGradient>
+          <g id="glass-drop">
+            <path d="M0,-8 C3,-7 5,-1 5,3 C5,8 2,10 -1,9 C-5,9 -6,6 -5,2 C-4,-2 -3,-8 0,-8Z" fill="url(#glass-body)" stroke="url(#glass-rim)" stroke-width=".7"/>
+            <path d="M-3,0 Q-4,4 -2,6" fill="none" stroke="#eff3e3" stroke-opacity=".38" stroke-width=".7" stroke-linecap="round"/>
+            <path d="M-1,7 Q2,8 3,5" fill="none" stroke="#fff0c4" stroke-opacity=".55" stroke-width=".65" stroke-linecap="round"/>
+            <ellipse cx="-1.4" cy="-3.4" rx=".75" ry="1.15" fill="#f4f5e6" opacity=".37"/>
+          </g>
+        </defs>
+        <g class="rain-still-drops"></g>
+      </svg>
+      <div class="rain-moving-drops"></div>
+      <div class="rain-glass-edges"></div>
     </div>
 
     <!-- Paper hills: cut-paper layers under a sky that follows the local
@@ -434,6 +467,6 @@
 
   <!-- The app. type="module" runs after the page has parsed, so every
        element above exists by then. -->
-  <script type="module" src="js/main.js?v=20261018"></script>
+  <script type="module" src="js/main.js?v=20261018-rain"></script>
 </body>
 </html>

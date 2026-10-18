@@ -36,6 +36,7 @@ import * as wallpapers from "./wallpapers.js";
 import * as sky from "./sky.js";
 import * as koi from "./koi.js";
 import * as swirl from "./swirl.js";
+import * as rain from "./rain.js?v=20261018";
 import * as navigation from "./navigation.js?v=20261018";
 
 async function boot() {
@@ -76,6 +77,7 @@ async function boot() {
   // After stats: its chip toggles the panel first, so the picker sees the
   // panel's new state when deciding whether it was just opened.
   wallpapers.init();
+  rain.init();
   swirl.init();
   sky.init();
   koi.init();
