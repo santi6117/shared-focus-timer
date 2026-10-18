@@ -203,6 +203,56 @@ describe("laptop navigation", () => {
       "repeating a backfill must not double-count session IDs");
   });
 
+  for (const [label, metadata] of [
+    ["missing", {}], ["empty", { timeZone: "" }],
+    ["whitespace", { timeZone: " " }], ["invalid", { timeZone: "Puerto Rico" }],
+  ]) {
+    it(`recovers Kristina's ${label} saved timezone through an explicit Puerto Rico preview`, async () => {
+      const backfill = { ...metadata, from: "2026-09-30", through: "2026-09-30", policyVersion: 1, updatedAt: T0 };
+      // At this instant Puerto Rico is on the next day from the browser's zone.
+      const endedAt = Date.parse("2026-01-15T04:30:00Z");
+      app = await openApp({ role: "kristina", seedDb: {
+        sessions: { kristina: { old: { endedAt, elapsedSeconds: 1800 } } },
+        activity: { kristina: { backfill } },
+      } });
+      await goTo(app, "dashboard");
+      await app.page.locator(".calendar-backfill summary").click();
+      const input = app.page.locator("#backfillTimeZone");
+      assert.equal(await input.inputValue(), "America/New_York");
+      assert.equal(await input.isDisabled(), false);
+      await input.fill(" America/Puerto_Rico ");
+      await app.click("backfillPreviewButton");
+      await app.page.locator("#backfillPreview:not([hidden])").waitFor();
+      assert.match(await app.text("backfillPreviewText"), /2026-01-15 through 2026-01-15/);
+      assert.equal(await app.db("activity/kristina/days"), null, "recovery still requires explicit publication");
+      assert.deepEqual(await app.db("activity/kristina/backfill"), backfill);
+      await app.click("backfillPublish");
+      await app.page.waitForFunction(() => document.getElementById("backfillStatus").textContent.startsWith("Past activity is shared"));
+      assert.equal((await app.db("activity/kristina/backfill")).timeZone, "America/Puerto_Rico");
+      assert.equal((await app.db("activity/kristina/days/2026-01-15")).totalSeconds, 1800);
+      assert.equal(await input.isDisabled(), true);
+      await app.click("backfillPreviewButton");
+      await app.page.locator("#backfillPreview:not([hidden])").waitFor();
+      await app.click("backfillPublish");
+      await app.page.waitForFunction(() => document.getElementById("backfillStatus").textContent.startsWith("Past activity is shared"));
+      assert.equal((await app.db("activity/kristina/days/2026-01-15")).totalSeconds, 1800);
+    });
+  }
+
+  it("keeps a valid saved historical timezone locked and unlocks it if the reservation disappears", async () => {
+    app = await openApp({ role: "kristina", seedDb: { activity: { kristina: {
+      backfill: { timeZone: "America/Puerto_Rico", policyVersion: 1, updatedAt: T0 },
+    } } } });
+    await goTo(app, "dashboard");
+    await app.page.locator(".calendar-backfill summary").click();
+    const input = app.page.locator("#backfillTimeZone");
+    assert.equal(await input.inputValue(), "America/Puerto_Rico");
+    assert.equal(await input.isDisabled(), true);
+    await app.remote("activity/kristina/backfill", null);
+    assert.equal(await input.isDisabled(), false);
+    assert.equal(await input.inputValue(), "America/New_York");
+  });
+
   it("publishes only a new session's daily total, without categories or raw session fields", async () => {
     app = await openApp();
     await app.setDuration(1);

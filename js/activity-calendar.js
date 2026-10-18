@@ -17,6 +17,14 @@ let backfillMeta = null;
 let theirsClock = null;
 let connected = false;
 
+// Only a usable saved zone reserves historical attribution. Malformed metadata
+// must remain recoverable through preview instead of locking an empty field.
+function validTimeZone(value) {
+  if (typeof value !== "string" || !value.trim()) return false;
+  try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; }
+  catch { return false; }
+}
+
 function zoneList(value) {
   if (Array.isArray(value)) return value.filter((zone) => typeof zone === "string");
   if (value && typeof value === "object") return Object.values(value).filter((zone) => typeof zone === "string");
@@ -36,10 +44,11 @@ async function reconcile(approved = null) {
   const result = await refs.activity.child(ME).transaction((raw) => {
     try {
     const owner = raw || {};
-    if (approved && owner.backfill && owner.backfill.timeZone !== approved.zone) {
+    const savedZone = validTimeZone(owner.backfill?.timeZone) ? owner.backfill.timeZone : null;
+    if (approved && savedZone && savedZone !== approved.zone) {
       throw new Error("Backfill timezone is already set differently.");
     }
-    const zone = approved?.zone || owner.backfill?.timeZone;
+    const zone = approved?.zone || savedZone;
     const days = reconcileDays(owner.days || {}, entries, zone, entries.filter((entry) => entry.approved).map((entry) => entry.id), TIMESTAMP);
     if (approved) owner.backfill = {
       timeZone: approved.zone, from: approved.from, through: approved.through,
@@ -171,12 +180,15 @@ async function beginBackfillPreview() {
     showBackfill("Connect and wait for the session history to finish loading first.");
     return;
   }
-  const zone = $("backfillTimeZone").value;
-  try { new Intl.DateTimeFormat("en", { timeZone: zone }); }
-  catch { showBackfill("Enter a valid IANA timezone, such as Europe/London."); return; }
+  const zone = $("backfillTimeZone").value.trim();
+  if (!validTimeZone(zone)) {
+    showBackfill("Enter a valid timezone, such as America/Puerto_Rico or Europe/London.");
+    return;
+  }
+  $("backfillTimeZone").value = zone;
   try {
     const full = await sessions.refreshCompleteHistory();
-    if (backfillMeta && backfillMeta.timeZone !== zone) {
+    if (validTimeZone(backfillMeta?.timeZone) && backfillMeta.timeZone !== zone) {
       showBackfill("This history was already attributed to " + backfillMeta.timeZone + ". Keep that timezone for consistency.");
       return;
     }
@@ -255,11 +267,15 @@ export function init() {
   });
   refs.activity.child(ME).child("backfill").on("value", (snap) => {
     backfillMeta = snap.val();
-    if (backfillMeta) {
-      $("backfillTimeZone").value = backfillMeta.timeZone;
-      $("backfillTimeZone").disabled = true;
-      $("backfillPreviewButton").textContent = "Refresh history preview";
+    const input = $("backfillTimeZone");
+    const reserved = validTimeZone(backfillMeta?.timeZone);
+    if (reserved) {
+      input.value = backfillMeta.timeZone;
+    } else if (input.disabled || !input.value.trim()) {
+      input.value = zone;
     }
+    input.disabled = reserved;
+    $("backfillPreviewButton").textContent = backfillMeta ? "Refresh history preview" : "Preview older activity";
   });
   sessions.onChange(syncSummaries);
   setInterval(() => { publishLocalClock(); if (dirty) syncSummaries(); renderCalendar(); }, 30_000);
