@@ -40,6 +40,7 @@ js/
   note.js                  the bottom-right note
   messages.js              held messages, top left
   alert.js                 chime, notification, blinking tab title
+  cottage.js               dashboard cottage, saved decor and earned-hour milestones
   wallpapers.js            which wallpaper shows; the picker
   swirl.js                 bounded canvas for Swirl's moving colours
   sky.js                   Paper hills' time-of-day sky
@@ -101,3 +102,11 @@ does nothing until it's pasted there:
   shown in the bottom-right corner of the page. Replace `SANTI_UID`,
   `SANTI_PHONE_UID`, `KRISTINA_UID` and `KRISTINA_PHONE_UID`, then paste. Collect the UIDs from the GitHub Pages address, not a local
   file: a new address means a new UID.
+
+## Cottage
+
+The laptop Dashboard includes a cottage below Time management. Personal lifetime
+focus hours unlock the house at 100h and fourteen decorations through 200h.
+Click its door to go inside and use Decorate to place or put away earned items.
+Decoration choices and earned milestones are saved per person in this browser;
+corrections do not remove already earned rewards. The phone remains a remote.

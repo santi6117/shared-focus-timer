@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/widgets.css" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261018" />
+  <link rel="stylesheet" href="css/cottage.css?v=20261031" />
 </head>
 <body>
 
@@ -443,6 +444,158 @@
             </div>
           </details>
         </section>
+      <section id="cottageWidget" class="dashboard-card cottage-card" aria-labelledby="cottageHeading">
+        <div class="card-heading"><h2 id="cottageHeading">Your cottage</h2><span id="cottage-place">A little home</span></div>
+        <div class="scene" id="cottage-scene">
+          <svg viewBox="0 0 400 250" role="img" aria-label="A cream cottage with a terracotta roof, or its single cosy room">
+            <defs>
+              <!-- Material shading stays subtle and shares the room's warm light. -->
+              <clipPath id="cottage-roofClip"><path d="M106 116L200 47L294 116Z"/></clipPath>
+              <linearGradient id="cottage-roofClay" x2="0.2" y2="1"><stop stop-color="#c58463"/><stop offset="1" stop-color="#aa624d"/></linearGradient>
+              <linearGradient id="cottage-curtainCloth"><stop stop-color="#a67762"/><stop offset=".3" stop-color="#c49a81"/><stop offset=".55" stop-color="#b48670"/><stop offset=".8" stop-color="#caa18a"/><stop offset="1" stop-color="#a77864"/></linearGradient>
+              <linearGradient id="cottage-throwCloth" x2=".9" y2=".4"><stop stop-color="#e0c39c"/><stop offset=".45" stop-color="#cfaf86"/><stop offset=".7" stop-color="#b89673"/><stop offset="1" stop-color="#d8ba94"/></linearGradient>
+<pattern id="cottage-boards" width="400" height="17" patternUnits="userSpaceOnUse"><path d="M0 16H400" stroke="#c9a07b" stroke-width="1"/></pattern></defs>
+            <g id="cottage-outside">
+              <path d="M0 222Q80 197 164 213T400 212V250H0" fill="#dbe0c4"/>
+              <ellipse cx="200" cy="224" rx="111" ry="10" fill="#c4caaa"/>
+              <path d="M188 216L174 250H224L211 216" fill="#e9d8bd"/>
+              <rect x="114" y="109" width="172" height="112" rx="3" fill="#f3dfba"/>
+              <rect x="246" y="57" width="20" height="52" rx="2" fill="#ba795e"/><path d="M250 65H263M250 77H263M250 89H263M257 66V76M253 78V88" stroke="#d39c7a" stroke-width="1"/><path d="M263 59V106" stroke="#98654f" stroke-width="3"/><rect x="243" y="54" width="26" height="5" rx="1" fill="#9d6c55"/><path d="M246 55H266" stroke="#d6a380" stroke-width="1"/>
+              <path d="M98 118L200 42L302 118Z" fill="url(#cottage-roofClay)"/>
+
+              <!-- Roof texture is clipped to the slope and painted in front of the chimney. -->
+              <g clip-path="url(#cottage-roofClip)" fill="none" stroke-linecap="round">
+<path d="M100 60Q200 63 300 60" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M108 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M126 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M144 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M162 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M180 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M198 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M216 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M234 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M252 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M270 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M288 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 69Q200 72 300 69" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M117 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M135 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M153 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M171 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M189 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M207 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M225 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M243 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M261 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M279 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M297 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 78Q200 81 300 78" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M108 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M126 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M144 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M162 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M180 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M198 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M216 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M234 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M252 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M270 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M288 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 87Q200 90 300 87" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M117 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M135 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M153 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M171 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M189 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M207 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M225 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M243 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M261 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M279 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M297 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 96Q200 99 300 96" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M108 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M126 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M144 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M162 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M180 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M198 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M216 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M234 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M252 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M270 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M288 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 105Q200 108 300 105" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M117 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M135 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M153 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M171 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M189 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M207 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M225 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M243 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M261 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M279 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M297 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 114Q200 117 300 114" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M108 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M126 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M144 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M162 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M180 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M198 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M216 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M234 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M252 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M270 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M288 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/></g><path d="M100 119H300" stroke="#895f48" stroke-width="3" stroke-linecap="round"/><path d="M116 123H284" stroke="#d5b18b" stroke-width="3" opacity=".65"/>
+              <path d="M110 117L200 51L290 117" fill="none" stroke="#d19a77" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M175 133Q200 124 225 133" fill="none" stroke="#e1c8a3" stroke-width="1"/>
+              <path d="M129 180H169M232 180H271" stroke="#ae8966" stroke-width="3" stroke-linecap="round"/>
+
+              <g fill="#a8c3bd" stroke="#fff0d3" stroke-width="6"><rect x="134" y="143" width="30" height="32" rx="2"/><rect x="236" y="143" width="30" height="32" rx="2"/></g>
+              <path d="M149 144V174M134 159H164M251 144V174M236 159H266" stroke="#fff0d3" stroke-width="3"/>
+              <path d="M181 220V173Q181 151 200 151Q219 151 219 173V220" fill="#8a674e"/>
+              <circle cx="210" cy="190" r="2.5" fill="#efd196"/>
+              <!-- Small masonry and joinery details retain the simple cottage silhouette. -->
+              <path d="M186 176V213M192 161V215M199 158V215M206 161V214M214 174V213" stroke="#73563f" stroke-width=".7" opacity=".6"/>
+              <path d="M177 221H223M174 225H226" stroke="#b39b7b" stroke-width="3"/>
+              <path d="M119 119V217M281 119V217" stroke="#dfc9a4" stroke-width="4"/>
+              <g fill="#9ca780"><ellipse cx="118" cy="217" rx="14" ry="8"/><ellipse cx="277" cy="218" rx="12" ry="7"/><ellipse cx="289" cy="219" rx="9" ry="5"/></g>
+              <path d="M194 232L205 233M184 243L197 244M206 247H215" stroke="#c6b395" stroke-width="2" stroke-linecap="round"/>
+
+
+              <g id="cottage-flowers" hidden><rect x="129" y="177" width="39" height="9" rx="2" fill="#b77e5d"/><path d="M138 177V167M149 177V163M159 177V168" stroke="#708264" stroke-width="3"/><g fill="#d89980"><circle cx="138" cy="165" r="5"/><circle cx="149" cy="162" r="5"/><circle cx="159" cy="166" r="5"/></g></g>
+            </g>
+            <!-- Furnishing zones: reading nook left, desk centre, hearth right; foreground stays open. -->
+            <g id="cottage-inside" hidden>
+            <rect x="15" y="24" width="370" height="210" rx="4" fill="#eadbc5"/>
+            <path d="M15 24H385V39H15Z" fill="#b89776"/><path d="M28 28V175M372 28V175" stroke="#c5aa87" stroke-width="7"/>
+            <path d="M15 171H385V234H15Z" fill="#cba47f"/>
+            <path d="M15 177H385M15 194H385M15 213H385M15 232H385M64 177V194M171 177V194M293 177V194M113 194V213M244 194V213M62 213V234M183 213V234M325 213V234" fill="none" stroke="#b68e6c" stroke-width=".8"/>
+            <path d="M15 169H385" stroke="#a98867" stroke-width="6"/>
+<g transform="translate(12 0)">
+            <path d="M137 41H231V117H137Z" fill="#bd9c7a"/><path d="M141 44H227V113H141Z" fill="#fff0d5"/><path d="M147 50H221V107H147Z" fill="#c3d7d1"/>
+            <path d="M147 91Q163 72 181 88T221 83V107H147" fill="#9daf98"/><path d="M147 100Q176 85 221 98V107H147" fill="#83967d"/>
+            <path d="M183 49V108M147 77H221" stroke="#fff1d9" stroke-width="4"/><path d="M135 116H233" stroke="#ad8866" stroke-width="5"/>
+            <g id="cottage-curtains" hidden>
+              <!-- Gathered cloth hangs from rings, narrows at the ties, then relaxes below. -->
+              <path d="M126 45H149C149 63 144 81 138 91C137 101 141 110 144 119Q134 122 124 119C128 107 129 99 130 91C129 75 126 60 126 45Z" fill="url(#cottage-curtainCloth)"/>
+              <path d="M219 45H242C242 62 239 78 238 91C239 101 240 110 244 119Q234 122 224 119C227 109 231 100 230 91C223 77 219 61 219 45Z" fill="url(#cottage-curtainCloth)"/>
+              <g fill="none" stroke="#e0b9a0" stroke-width=".8" opacity=".7"><path d="M132 48C132 68 136 80 134 90Q133 105 130 117M141 48Q142 70 136 90Q135 105 138 118M225 48Q226 72 233 90Q235 104 230 118M235 48Q234 74 235 91Q237 105 239 118"/></g>
+              <path d="M129 91Q134 94 140 91M229 91Q234 94 239 91" fill="none" stroke="#987459" stroke-width="2"/>
+              <path d="M122 40H246" stroke="#836c51" stroke-width="2.5" stroke-linecap="round"/><g fill="#a78965"><circle cx="121" cy="40" r="3"/><circle cx="247" cy="40" r="3"/></g>
+              <path d="M129 40v6M135 40v6M142 40v6M146 40v6M222 40v6M228 40v6M235 40v6M240 40v6" stroke="#b99c79" stroke-width="1.5"/>
+            </g>
+</g>
+            <g id="cottage-rug" hidden><path d="M116 190L253 190L277 225H96Z" fill="#b9826c"/><path d="M123 195H247L265 220H108Z" fill="none" stroke="#e0b99a" stroke-width="2"/><path d="M147 203L155 209L147 215L139 209ZM189 203L197 209L189 215L181 209ZM231 203L239 209L231 215L223 209Z" fill="#d7ab89"/><path d="M100 225L98 229" stroke="#e0b99a" stroke-width="1"/><path d="M106 225L104 229" stroke="#e0b99a" stroke-width="1"/><path d="M112 225L110 229" stroke="#e0b99a" stroke-width="1"/><path d="M118 225L116 229" stroke="#e0b99a" stroke-width="1"/><path d="M124 225L122 229" stroke="#e0b99a" stroke-width="1"/><path d="M130 225L128 229" stroke="#e0b99a" stroke-width="1"/><path d="M136 225L134 229" stroke="#e0b99a" stroke-width="1"/><path d="M142 225L140 229" stroke="#e0b99a" stroke-width="1"/><path d="M148 225L146 229" stroke="#e0b99a" stroke-width="1"/><path d="M154 225L152 229" stroke="#e0b99a" stroke-width="1"/><path d="M160 225L158 229" stroke="#e0b99a" stroke-width="1"/><path d="M166 225L164 229" stroke="#e0b99a" stroke-width="1"/><path d="M172 225L170 229" stroke="#e0b99a" stroke-width="1"/><path d="M178 225L176 229" stroke="#e0b99a" stroke-width="1"/><path d="M184 225L182 229" stroke="#e0b99a" stroke-width="1"/><path d="M190 225L188 229" stroke="#e0b99a" stroke-width="1"/><path d="M196 225L194 229" stroke="#e0b99a" stroke-width="1"/><path d="M202 225L200 229" stroke="#e0b99a" stroke-width="1"/><path d="M208 225L206 229" stroke="#e0b99a" stroke-width="1"/><path d="M214 225L212 229" stroke="#e0b99a" stroke-width="1"/><path d="M220 225L218 229" stroke="#e0b99a" stroke-width="1"/><path d="M226 225L224 229" stroke="#e0b99a" stroke-width="1"/><path d="M232 225L230 229" stroke="#e0b99a" stroke-width="1"/><path d="M238 225L236 229" stroke="#e0b99a" stroke-width="1"/><path d="M244 225L242 229" stroke="#e0b99a" stroke-width="1"/><path d="M250 225L248 229" stroke="#e0b99a" stroke-width="1"/><path d="M256 225L254 229" stroke="#e0b99a" stroke-width="1"/><path d="M262 225L260 229" stroke="#e0b99a" stroke-width="1"/><path d="M268 225L266 229" stroke="#e0b99a" stroke-width="1"/><path d="M274 225L272 229" stroke="#e0b99a" stroke-width="1"/><path d="M127 198H245L259 217H114Z" fill="none" stroke="#905f51" stroke-width=".8"/><path d="M128 196l2 2l-2 2l-2 -2Z M128 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M136 196l2 2l-2 2l-2 -2Z M136 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M144 196l2 2l-2 2l-2 -2Z M144 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M152 196l2 2l-2 2l-2 -2Z M152 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M160 196l2 2l-2 2l-2 -2Z M160 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M168 196l2 2l-2 2l-2 -2Z M168 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M176 196l2 2l-2 2l-2 -2Z M176 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M184 196l2 2l-2 2l-2 -2Z M184 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M192 196l2 2l-2 2l-2 -2Z M192 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M200 196l2 2l-2 2l-2 -2Z M200 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M208 196l2 2l-2 2l-2 -2Z M208 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M216 196l2 2l-2 2l-2 -2Z M216 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M224 196l2 2l-2 2l-2 -2Z M224 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M232 196l2 2l-2 2l-2 -2Z M232 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M240 196l2 2l-2 2l-2 -2Z M240 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M147 206l4 3l-4 3l-4 -3Z" fill="#9f6e59"/><path d="M134 209h3M157 209h3" stroke="#e8c4a0" stroke-width=".8"/><path d="M189 206l4 3l-4 3l-4 -3Z" fill="#9f6e59"/><path d="M176 209h3M199 209h3" stroke="#e8c4a0" stroke-width=".8"/><path d="M231 206l4 3l-4 3l-4 -3Z" fill="#9f6e59"/><path d="M218 209h3M241 209h3" stroke="#e8c4a0" stroke-width=".8"/></g>
+            <g id="cottage-books" hidden><ellipse cx="69" cy="178" rx="35" ry="5" fill="#705940" opacity=".12"/><rect x="40" y="65" width="56" height="110" rx="2" fill="#947154"/><rect x="45" y="71" width="46" height="98" fill="#725b46"/><rect x="48" y="79" width="5" height="19" rx=".5" fill="#a9b096"/><path d="M49 82h3" stroke="#e4cda5" stroke-width=".7"/><rect x="55" y="75" width="5" height="23" rx=".5" fill="#c6a276"/><path d="M56 78h3" stroke="#e4cda5" stroke-width=".7"/><rect x="62" y="77" width="5" height="21" rx=".5" fill="#b78570"/><path d="M63 80h3" stroke="#e4cda5" stroke-width=".7"/><rect x="69" y="81" width="5" height="17" rx=".5" fill="#8eaaa0"/><path d="M70 84h3" stroke="#e4cda5" stroke-width=".7"/><rect x="76" y="74" width="5" height="24" rx=".5" fill="#c3b18d"/><path d="M77 77h3" stroke="#e4cda5" stroke-width=".7"/><rect x="83" y="78" width="5" height="20" rx=".5" fill="#a6a07e"/><path d="M84 81h3" stroke="#e4cda5" stroke-width=".7"/><rect x="48" y="110" width="5" height="19" rx=".5" fill="#a9b096"/><path d="M49 113h3" stroke="#e4cda5" stroke-width=".7"/><rect x="55" y="106" width="5" height="23" rx=".5" fill="#c6a276"/><path d="M56 109h3" stroke="#e4cda5" stroke-width=".7"/><rect x="62" y="108" width="5" height="21" rx=".5" fill="#b78570"/><path d="M63 111h3" stroke="#e4cda5" stroke-width=".7"/><rect x="69" y="112" width="5" height="17" rx=".5" fill="#8eaaa0"/><path d="M70 115h3" stroke="#e4cda5" stroke-width=".7"/><rect x="76" y="105" width="5" height="24" rx=".5" fill="#c3b18d"/><path d="M77 108h3" stroke="#e4cda5" stroke-width=".7"/><rect x="83" y="109" width="5" height="20" rx=".5" fill="#a6a07e"/><path d="M84 112h3" stroke="#e4cda5" stroke-width=".7"/><rect x="48" y="143" width="5" height="19" rx=".5" fill="#a9b096"/><path d="M49 146h3" stroke="#e4cda5" stroke-width=".7"/><rect x="55" y="139" width="5" height="23" rx=".5" fill="#c6a276"/><path d="M56 142h3" stroke="#e4cda5" stroke-width=".7"/><rect x="62" y="141" width="5" height="21" rx=".5" fill="#b78570"/><path d="M63 144h3" stroke="#e4cda5" stroke-width=".7"/><rect x="69" y="145" width="5" height="17" rx=".5" fill="#8eaaa0"/><path d="M70 148h3" stroke="#e4cda5" stroke-width=".7"/><rect x="76" y="138" width="5" height="24" rx=".5" fill="#c3b18d"/><path d="M77 141h3" stroke="#e4cda5" stroke-width=".7"/><rect x="83" y="142" width="5" height="20" rx=".5" fill="#a6a07e"/><path d="M84 145h3" stroke="#e4cda5" stroke-width=".7"/><path d="M43 101H94M43 132H94M43 165H94" stroke="#c3a07a" stroke-width="4"/><path d="M44 175V181M91 175V181" stroke="#826145" stroke-width="4"/></g>
+            <g id="cottage-art" hidden transform="translate(3 2) translate(116 79) scale(.8) translate(-116 -79)"><rect x="105" y="64" width="22" height="30" fill="#aa805f"/><rect x="108" y="67" width="16" height="24" fill="#f8ecd2"/><path d="M110 85L116 75L122 85Z" fill="#8e9e7a"/><circle cx="119" cy="72" r="2" fill="#d5aa6c"/></g>
+            <g id="cottage-fire" hidden><ellipse cx="321" cy="181" rx="43" ry="5" fill="#72563e" opacity=".12"/><rect x="288" y="112" width="66" height="63" fill="#ba9579"/><path d="M289 123H353M311 123v9" stroke="#d1af90" stroke-width=".7"/><path d="M289 133H353M335 133v9" stroke="#d1af90" stroke-width=".7"/><path d="M289 143H353M294 143v9" stroke="#d1af90" stroke-width=".7"/><path d="M289 154H353M349 154v9" stroke="#d1af90" stroke-width=".7"/><path d="M289 165H353M293 165v9" stroke="#d1af90" stroke-width=".7"/><path d="M299 173V144Q321 118 343 144V173Z" fill="#665343"/><path d="M307 169L333 164M308 164L333 170" stroke="#947052" stroke-width="4"/><g class="fire-flicker"><path d="M312 165Q303 154 319 139Q315 151 328 147Q342 162 327 168" fill="#dfa463"/></g><g class="fire-core"><path d="M319 165Q314 158 323 150Q322 157 328 158L326 166" fill="#f5d493"/></g><path d="M283 111H359" stroke="#957256" stroke-width="7"/><path d="M283 177H359" stroke="#a98363" stroke-width="7"/></g>
+            <!-- The supplied photograph sits within the mat, preserving the full composition. -->
+            <g id="cottage-portrait" hidden role="img" aria-label="Framed photo of Santi and Kristina together">
+              <path d="M318 53L321 49L325 53" fill="none" stroke="#ac8c6b" stroke-width=".8"/>
+              <rect x="295" y="55" width="55" height="42" rx="1.5" fill="#765d47" opacity=".12"/>
+              <rect x="293" y="53" width="55" height="42" rx="1.5" fill="#a6815e"/>
+              <path d="M295 55H346V93H295Z" fill="#d9b98b"/>
+              <path d="M298 58H343V90H298Z" fill="#f5e8cf"/>
+              <image href="assets/cottage-couple.jpeg" x="300" y="60" width="41" height="28" preserveAspectRatio="xMidYMid meet"/>
+              <path d="M294 54H347M294 54V94" fill="none" stroke="#cfac7b" stroke-width=".8"/>
+            </g>
+            <g id="cottage-basket" hidden><!-- Logs are behind the near rim so the woven body contains them. -->
+<ellipse cx="371" cy="182" rx="15" ry="3" fill="#72563e" opacity=".13"/>
+<path d="M358 164Q357 149 369 148Q381 149 383 163" fill="none" stroke="#967652" stroke-width="2"/>
+<path d="M357 163Q370 156 384 163L381 178Q371 185 360 178Z" fill="#b19067"/>
+<ellipse cx="370.5" cy="163" rx="13.5" ry="4" fill="#7d654b"/>
+<path d="M363 165L373 150M371 165L381 153M366 167L363 155" stroke="#86684c" stroke-width="4" stroke-linecap="round"/>
+<path d="M364 163L374 150M372 164L382 153" stroke="#b08b60" stroke-width="1"/>
+<ellipse cx="374" cy="150" rx="2.3" ry="1.4" transform="rotate(-53 374 150)" fill="#d1b184"/>
+<ellipse cx="381" cy="153" rx="2.1" ry="1.3" transform="rotate(-48 381 153)" fill="#c3a174"/>
+<path d="M357 164Q371 171 384 164L381 178Q371 185 360 178Z" fill="#b99970"/>
+<path d="M359 168Q371 174 383 168M360 172Q371 179 382 172M360 176Q371 182 381 176" fill="none" stroke="#d4b68b" stroke-width="1.1"/>
+<path d="M362 167Q365 175 364 180M368 169L369 182M375 169L374 182M381 167Q378 175 379 180" fill="none" stroke="#977953" stroke-width=".8" opacity=".65"/>
+<path d="M357 163Q370 170 384 163" fill="none" stroke="#d7b98b" stroke-width="2.4" stroke-linecap="round"/>
+<path d="M360 178Q370 184 381 178" fill="none" stroke="#987751" stroke-width="1.3"/></g>
+            <g id="cottage-plant" hidden><ellipse cx="263" cy="180" rx="14" ry="3" fill="#93775a" opacity=".15"/><path d="M253 165L256 180H270L273 165Z" fill="#b78060"/><ellipse cx="263" cy="165" rx="10" ry="3" fill="#8f6950"/><path d="M263 165V131M263 151L253 143M263 145L273 137" stroke="#748360" stroke-width="1.5"/><ellipse cx="255" cy="140" rx="8" ry="3.5" transform="rotate(35 255 140)" fill="#91a17a"/><ellipse cx="270" cy="134" rx="8" ry="3.5" transform="rotate(-35 270 134)" fill="#7b9069"/><ellipse cx="255" cy="153" rx="8" ry="3.5" transform="rotate(30 255 153)" fill="#798e67"/><ellipse cx="270" cy="148" rx="8" ry="3.5" transform="rotate(-25 270 148)" fill="#99a67e"/><ellipse cx="262" cy="129" rx="8" ry="3.5" transform="rotate(-70 262 129)" fill="#8b9c74"/><path d="M254 173H272" stroke="#d29a77" stroke-width="1"/></g>
+            <!-- The desk sits under the window; its objects never intersect the reading or hearth zones. -->
+            <ellipse cx="185" cy="187" rx="49" ry="5" fill="#7c6247" opacity=".12"/>
+            <path d="M142 154L139 188M224 154L228 188" stroke="#8c6a4b" stroke-width="5"/><path d="M143 162H224" stroke="#ae8760" stroke-width="4"/><rect x="134" y="147" width="100" height="7" rx="2" fill="#b58b63"/><path d="M139 149H229" stroke="#d5b18a" stroke-width="1"/>
+            <path d="M158 144L177 143L185 147H161Z" fill="#fff3db"/><path d="M164 144L177 144" stroke="#baa88b" stroke-width=".6"/>
+            <g id="cottage-lamp" hidden><!-- Base overlaps the desktop edge; its shadow anchors the brass foot. -->
+<ellipse cx="215" cy="149" rx="10" ry="1.7" fill="#745b40" opacity=".18"/>
+<path d="M214 147V125" stroke="#927550" stroke-width="2"/>
+<ellipse cx="214" cy="148" rx="8" ry="2" fill="#927550"/><ellipse cx="213" cy="147.3" rx="7" ry="1.3" fill="#bea06d"/>
+<path d="M202 128L208 112H220L226 128Z" fill="#d3b079"/>
+<path d="M209 114L207 126M219 114L222 126" stroke="#ead0a1" stroke-width="1"/>
+<ellipse cx="214" cy="129" rx="11" ry="2" fill="#ead09d"/></g>
+            <g id="cottage-tea" hidden><!-- Rounded ceramic bottom rests on the same desktop plane as the lamp. -->
+<ellipse cx="195.8" cy="148.7" rx="7" ry="1.5" fill="#745b40" opacity=".17"/>
+<path d="M199 140Q205 139 203 144Q202 147 199 146" stroke="#718e83" stroke-width="1.7" fill="none"/>
+<path d="M191 139H200L199 146Q195.5 149 192 146Z" fill="#829b91"/>
+<path d="M192.5 140L193 145" stroke="#b6c5b5" stroke-width=".8" stroke-linecap="round"/>
+<ellipse cx="195.5" cy="139" rx="4.5" ry="1.4" fill="#b7c7b7"/><ellipse cx="195.5" cy="139.2" rx="3.3" ry=".8" fill="#74604a"/>
+<path d="M194 135Q191 132 194 129" stroke="#b4a48b" stroke-width=".8" fill="none"/></g>
+            <path d="M173 173V161Q185 158 197 161V173" fill="#a37c58"/><path d="M173 174H197V179H173Z" fill="#bc956c"/><path d="M176 179L174 198M194 179L197 198" stroke="#8d6b4e" stroke-width="3"/>
+            <g id="cottage-chair" hidden><ellipse cx="66" cy="207" rx="31" ry="5" fill="#705940" opacity=".12"/><path d="M44 193L42 209M85 193L88 209" stroke="#947254" stroke-width="4"/><rect x="43" y="151" width="43" height="45" rx="11" fill="#8b9a7c"/><rect x="48" y="155" width="33" height="28" rx="8" fill="#a6b197"/><rect x="40" y="181" width="49" height="15" rx="6" fill="#9aa78b"/><path d="M42 177V190M87 177V190" stroke="#798969" stroke-width="7"/></g>
+            <g id="cottage-blanket" hidden>
+              <!-- The throw follows the back cushion, pools on the seat, and falls over its rounded front. -->
+              <path d="M56 157Q64 154 72 158C74 167 72 174 75 181Q79 186 78 193L76 201Q71 204 67 202Q63 204 58 201C59 195 60 190 58 185C55 177 58 167 56 157Z" fill="#675b43" opacity=".12" transform="translate(1 1)"/>
+              <path d="M55 156Q63 153 71 157C73 166 70 174 74 181Q79 186 77 192L75 200Q71 203 67 200Q62 203 57 200C58 194 60 189 57 184C54 176 57 166 55 156Z" fill="url(#cottage-throwCloth)"/>
+              <path d="M60 158C63 168 58 178 63 184Q66 189 62 199M66 158C69 168 64 178 69 184Q73 189 69 199" fill="none" stroke="#eee0c1" stroke-width="1" opacity=".65"/>
+              <path d="M58 182Q64 185 74 182M59 186Q68 189 77 186M58 196Q67 199 76 196" fill="none" stroke="#ab8969" stroke-width=".8" opacity=".6"/>
+              <path d="M58 200l-1 4M61 201v4M65 201l-1 4M69 201v4M72 201l1 4M75 200l1 4" stroke="#cfaf86" stroke-width="1" stroke-linecap="round"/>
+            </g>
+            <!-- The ribcage breathes independently; the head, paws and curled tail stay settled. -->
+            <g id="cottage-cat" hidden role="img" aria-label="A ginger cat sleeping on a soft cushion">
+              <ellipse cx="317" cy="216" rx="26" ry="5" fill="#735b42" opacity=".1"/>
+              <path d="M292 211Q294 201 315 202Q338 201 342 211Q340 220 317 221Q295 220 292 211Z" fill="#bba17d"/>
+              <ellipse cx="317" cy="210" rx="23" ry="8" fill="#d0b794"/>
+              <path d="M297 215Q316 223 338 215" fill="none" stroke="#e0c9a6" stroke-width=".8"/>
+              <g class="cat-breath">
+                <path d="M298 209C296 201 305 195 315 197C326 197 332 202 331 209Q326 217 313 217Q303 216 298 209Z" fill="#c59065"/>
+                <path d="M301 206Q304 198 314 199" fill="none" stroke="#ddb18a" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M306 199Q305 202 308 204M313 198Q311 201 315 203M319 200Q317 202 320 205" fill="none" stroke="#ac7953" stroke-width="2" stroke-linecap="round"/>
+                <path d="M308 208Q316 203 324 208Q325 213 317 214Q310 214 308 208Z" fill="#d5a57b"/>
+              </g>
+              <path d="M302 204C293 211 302 217 313 216Q321 216 324 213" fill="none" stroke="#a97550" stroke-width="5" stroke-linecap="round"/>
+              <path d="M301 205Q297 211 306 213" fill="none" stroke="#d4a37a" stroke-width="2" stroke-linecap="round"/>
+              <ellipse cx="326" cy="214" rx="5" ry="2.3" fill="#e0b991"/>
+              <path d="M325 214v1M327 214v1" stroke="#b88a62" stroke-width=".6"/>
+              <path d="M322 206L322 198Q325 198 328 202Q331 200 336 199L337 207Q337 214 330 214Q322 213 322 206Z" fill="#ce9b70"/>
+              <path d="M324 201L324 205L327 203M332 203L335 201L335 205" fill="#d7b09a"/>
+              <path d="M327 203L328 205M331 203L330 205" stroke="#ad7b56" stroke-width="1" stroke-linecap="round"/>
+              <path d="M324 208Q326 210 328 208M331 208Q333 210 335 208" fill="none" stroke="#795c44" stroke-width=".8" stroke-linecap="round"/>
+              <ellipse cx="329.5" cy="211" rx="3.5" ry="1.6" fill="#e4c19c"/>
+              <path d="M328.5 210L330.5 210L329.5 211Z" fill="#ad7b68"/>
+              <path d="M325 211L320 210M325 212L320 213M334 211L339 210M334 212L339 213" stroke="#ecd2af" stroke-width=".55" stroke-linecap="round"/>
+            </g>
+            </g>
+          </svg>
+          <button id="cottage-door" class="door" aria-label="Open the cottage door"></button>
+          <button id="cottage-leave" class="leave" hidden>← Outside</button>
+          <div id="cottage-locked" class="locked"><strong>Loading your cottage…</strong><span id="cottage-remaining"></span></div>
+        </div>
+        <div class="scene-caption"><span id="cottage-sceneHint">Your keys are waiting. Open the door.</span><button id="cottage-decorate" hidden aria-expanded="false" aria-controls="cottage-inventory">Decorate</button></div>
+        <div id="cottage-inventory" hidden><p class="inventory-label">Your collection · choose what feels like home</p><button id="cottagePlaceAll" type="button">Place all unlocked</button><div id="cottage-items"></div></div>
+        <footer><div><span id="cottage-nextLabel"></span><span id="cottage-nextHours"></span></div><progress id="cottage-progress" max="100" value="0" aria-label="Progress to next unlock"></progress><p id="cottage-announcement" aria-live="polite"></p></footer>
+      </section>
       </div>
     </div>
   </main>
@@ -467,6 +620,6 @@
 
   <!-- The app. type="module" runs after the page has parsed, so every
        element above exists by then. -->
-  <script type="module" src="js/main.js?v=20261018-rain"></script>
+  <script type="module" src="js/main.js?v=20261031-cottage"></script>
 </body>
 </html>

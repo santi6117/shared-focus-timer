@@ -1,2 +1,5 @@
 node_modules/
 .DS_Store
+
+# Personal photograph used only by the local cottage preview.
+/prototypes/cottage/couple-photo.jpeg

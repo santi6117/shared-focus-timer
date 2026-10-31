@@ -1,5 +1,13 @@
 # Shared Focus Timer — Project Roadmap
 
+> **2026-10-31 cottage scope:** Santi approved roadmapping and prototyping a
+> small individual cottage widget below Time management: exterior → door → one
+> room, unlocked at 100 hours with upgrades every 5–10 hours. This specific
+> compact widget is now in scope despite the older shared-home deferral below.
+> See `cottage-roadmap.md`. Implemented natively with saved per-browser
+> decorations. Santi authorized push and publication of the supplied photograph
+> on 2026-10-31; the earlier local-only restrictions do not apply to this release.
+
 > **2026-10-16 v2 update:** Santi brought the shared Activity calendar forward
 > during Dashboard review. Shared calendar and individual time corrections are
 > in scope; the agreed v2 data/privacy contract governs them. Local rules files may be prepared for

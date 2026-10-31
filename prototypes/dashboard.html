@@ -1,0 +1,629 @@
+<!-- Full dashboard study using an in-memory database, never production Firebase. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="../">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shared Focus Timer</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+
+  <!--
+    Shared Focus Timer: a focus timer for two people. Each person runs their
+    own timer; a corner pill shows whether the other person's is running.
+
+    This file is markup only. Styles are in css/, behaviour in js/
+    (js/main.js is where startup begins). README.md has the map.
+  -->
+
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/background.css" />
+  <link rel="stylesheet" href="css/wallpapers/rain.css" />
+  <link rel="stylesheet" href="css/wallpapers/rain-window.css?v=20261018" />
+  <link rel="stylesheet" href="css/wallpapers/hills.css" />
+  <link rel="stylesheet" href="css/wallpapers/koi.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/widgets.css" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261018" />
+  <link rel="stylesheet" href="css/cottage.css?v=20261031" />
+</head>
+<body>
+
+  <!-- The background. One wrapper per wallpaper; data-bg (set by
+       js/wallpapers.js) picks which one shows, and the hidden ones don't
+       animate. The centre wash and the film grain are pseudo-elements on
+       the layer itself, shared by all of them. aria-hidden because there's
+       nothing here for a screen reader to say. -->
+  <div id="backgroundLayer" data-bg="swirl" aria-hidden="true">
+    <!-- Swirl: eight colour blobs circling the screen. -->
+    <div class="wp wp-swirl">
+    <span class="orbit o1"><span class="blob b1"></span></span>
+    <span class="orbit o2"><span class="blob b2"></span></span>
+    <span class="orbit o3"><span class="blob b3"></span></span>
+    <span class="orbit o4"><span class="blob b4"></span></span>
+    <span class="orbit o5"><span class="blob b5"></span></span>
+    <span class="orbit o6"><span class="blob b6"></span></span>
+    <span class="orbit o7"><span class="blob b7"></span></span>
+    <span class="orbit o8"><span class="blob b8"></span></span>
+    </div>
+
+    <!-- Rainy window: city lights out of focus behind wet glass. -->
+    <div class="wp wp-rain rain-phone">
+      <div class="rain-bokeh rain-bokeh-a"></div>
+      <div class="rain-bokeh rain-bokeh-b"></div>
+      <div class="rain-bokeh rain-bokeh-c"></div>
+      <div class="rain-traffic">
+        <span class="car head car-1"></span>
+        <span class="car tail car-2"></span>
+        <span class="car head car-3"></span>
+      </div>
+      <div class="rain-wind">
+        <div class="rain-fall rain-fall-far"></div>
+        <div class="rain-fall rain-fall-mid"></div>
+        <div class="rain-fall rain-fall-near"></div>
+      </div>
+      <div class="rain-beads"></div>
+      <span class="runner r1"></span>
+      <span class="runner r2"></span>
+      <span class="runner r3"></span>
+      <span class="runner r4"></span>
+      <span class="runner r5"></span>
+      <span class="runner r6"></span>
+      <span class="runner r7"></span>
+    </div>
+
+    <!-- Laptop Rainy window: painted paper behind a separate wet-glass surface. -->
+    <div class="wp wp-rain rain-study">
+      <div class="rain-painted-city"></div>
+      <div class="rain-distance-haze"></div>
+      <div class="rain-window-warmth"></div>
+      <div class="rain-window-glow"></div>
+      <svg class="rain-glass" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <linearGradient id="glass-body" x1="0" y1="0" x2="0.7" y2="1">
+            <stop stop-color="#1c3446" stop-opacity=".36"/>
+            <stop offset=".4" stop-color="#a8c0cb" stop-opacity=".06"/>
+            <stop offset=".72" stop-color="#edf0dc" stop-opacity=".14"/>
+            <stop offset="1" stop-color="#ffdb9d" stop-opacity=".45"/>
+          </linearGradient>
+          <linearGradient id="glass-rim" x1="0" y1="0" x2=".7" y2="1">
+            <stop stop-color="#162f3d" stop-opacity=".5"/>
+            <stop offset=".52" stop-color="#d9e5df" stop-opacity=".1"/>
+            <stop offset="1" stop-color="#fff3cd" stop-opacity=".7"/>
+          </linearGradient>
+          <g id="glass-drop">
+            <path d="M0,-8 C3,-7 5,-1 5,3 C5,8 2,10 -1,9 C-5,9 -6,6 -5,2 C-4,-2 -3,-8 0,-8Z" fill="url(#glass-body)" stroke="url(#glass-rim)" stroke-width=".7"/>
+            <path d="M-3,0 Q-4,4 -2,6" fill="none" stroke="#eff3e3" stroke-opacity=".38" stroke-width=".7" stroke-linecap="round"/>
+            <path d="M-1,7 Q2,8 3,5" fill="none" stroke="#fff0c4" stroke-opacity=".55" stroke-width=".65" stroke-linecap="round"/>
+            <ellipse cx="-1.4" cy="-3.4" rx=".75" ry="1.15" fill="#f4f5e6" opacity=".37"/>
+          </g>
+        </defs>
+        <g class="rain-still-drops"></g>
+      </svg>
+      <div class="rain-moving-drops"></div>
+      <div class="rain-glass-edges"></div>
+    </div>
+
+    <!-- Paper hills: cut-paper layers under a sky that follows the local
+         time (js/sky.js sets the colours once a minute). -->
+    <div class="wp wp-hills">
+      <div class="hills-sky"></div>
+      <div class="hills-stars"></div>
+      <div class="hills-stars hills-stars-twinkle"></div>
+      <div class="hills-sun"></div>
+      <div class="hills-moon"></div>
+      <svg class="paper-cloud cloud-1" viewBox="0 0 189 82"><g><circle cx="30" cy="60" r="19"/><circle cx="51" cy="56" r="25"/><circle cx="80" cy="51" r="34"/><circle cx="119" cy="57" r="23"/><circle cx="145" cy="59" r="20"/><rect x="14" y="56" width="161" height="22" rx="11"/></g></svg>
+      <svg class="paper-cloud cloud-2" viewBox="0 0 203 82"><g><circle cx="30" cy="60" r="18"/><circle cx="50" cy="48" r="39"/><circle cx="96" cy="57" r="24"/><circle cx="124" cy="51" r="35"/><circle cx="164" cy="61" r="17"/><rect x="14" y="56" width="175" height="22" rx="11"/></g></svg>
+      <svg class="paper-cloud cloud-3" viewBox="0 0 196 82"><g><circle cx="30" cy="59" r="20"/><circle cx="53" cy="54" r="29"/><circle cx="86" cy="57" r="24"/><circle cx="114" cy="49" r="38"/><circle cx="157" cy="61" r="16"/><rect x="14" y="56" width="168" height="22" rx="11"/></g></svg>
+      <svg class="hills-land" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+        <defs>
+          <!-- Each layer throws a soft shadow up onto the one behind it,
+               which is what makes flat shapes read as cut paper. Static,
+               so it is drawn once per colour change, not per frame. -->
+          <filter id="paperShadow" x="-5%" y="-20%" width="110%" height="140%">
+            <feDropShadow dx="0" dy="-5" stdDeviation="7" flood-color="#000" flood-opacity="0.22"/>
+          </filter>
+        </defs>
+        <path class="hill hill-1" d="M-100,910 L-100,533 C-41,521 150,465 252,458 C355,451 423,488 515,490 C608,492 702,463 808,471 C914,479 1056,541 1151,538 C1247,534 1294,463 1380,450 C1467,436 1614,451 1670,458 C1727,466 1712,490 1720,496 L1720,910 Z"/>
+        <path class="hill hill-2" d="M-100,910 L-100,529 C-49,544 122,615 206,617 C290,619 324,551 404,541 C484,531 599,554 684,557 C768,561 828,562 910,564 C991,565 1095,563 1173,566 C1251,569 1306,583 1380,581 C1454,578 1560,561 1617,552 C1674,544 1703,534 1720,530 L1720,910 Z"/>
+        <path class="hill hill-3" d="M-100,910 L-100,682 C-63,680 49,676 125,671 C201,666 289,645 356,650 C424,655 457,695 529,700 C600,705 711,693 786,680 C860,667 908,628 976,620 C1044,613 1121,628 1193,633 C1265,638 1344,646 1411,649 C1477,652 1541,648 1592,649 C1644,651 1699,657 1720,659 L1720,910 Z"/>
+        <path class="hill hill-4" d="M-100,910 L-100,770 C-65,769 38,759 108,761 C179,763 246,786 324,781 C401,775 480,737 571,730 C662,723 783,735 870,739 C957,743 1018,747 1094,753 C1169,758 1251,771 1325,774 C1398,777 1468,778 1533,772 C1599,765 1689,741 1720,735 L1720,910 Z"/>
+      </svg>
+    </div>
+
+    <!-- Koi pond: looking straight down into a cut-paper pond. Back to
+         front: the bank and four depths of water, the koi's shadows on the
+         bottom, the koi (built by js/koi.js), lily pads, ripples, then the
+         time-of-day light (js/sky.js) and the sun or moon's reflection. -->
+    <div class="wp wp-koi">
+      <svg class="pond-water" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <!-- Each depth sits under the edge of the one above it, so it
+               gets a shadow just inside its rim: an inner shadow. Static,
+               so it is drawn once, not per frame. -->
+          <filter id="pondInset" x="-10%" y="-10%" width="120%" height="120%">
+            <feComponentTransfer in="SourceAlpha"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer>
+            <feGaussianBlur stdDeviation="9"/>
+            <feOffset dx="0" dy="7" result="rim"/>
+            <feFlood flood-color="#0c2b31" flood-opacity="0.42"/>
+            <feComposite in2="rim" operator="in"/>
+            <feComposite in2="SourceAlpha" operator="in" result="shadow"/>
+            <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="shadow"/></feMerge>
+          </filter>
+          <filter id="pondLift" x="-20%" y="-20%" width="140%" height="160%">
+            <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#0c2b31" flood-opacity="0.28"/>
+          </filter>
+        </defs>
+        <rect class="bank" x="-50" y="-50" width="1700" height="1000"/>
+        <path class="depth depth-1" d="M1667,450 C1668,525 1669,610 1616,677 C1563,744 1453,801 1351,849 C1249,897 1129,945 1003,964 C877,984 718,988 596,966 C475,944 365,883 273,832 C181,781 114,724 44,660 C-25,597 -138,521 -143,450 C-147,379 -51,297 16,232 C83,167 165,113 260,59 C355,5 463,-73 586,-92 C709,-111 866,-74 999,-55 C1133,-35 1286,-22 1388,24 C1489,71 1562,154 1608,225 C1655,296 1666,375 1667,450 Z"/>
+        <path class="depth depth-2" d="M1498,460 C1499,521 1441,585 1388,643 C1335,701 1274,777 1180,807 C1085,836 939,821 820,820 C701,819 566,828 468,800 C369,772 277,707 228,650 C180,594 178,524 176,460 C173,396 159,316 213,265 C267,213 398,182 499,150 C600,119 713,75 820,75 C927,74 1049,114 1143,148 C1236,183 1322,227 1382,279 C1441,331 1497,399 1498,460 Z"/>
+        <path class="depth depth-3" d="M1355,470 C1362,519 1330,577 1285,623 C1239,670 1166,728 1082,748 C997,769 872,756 778,745 C684,734 587,714 515,682 C444,650 371,598 351,550 C331,503 367,445 395,397 C422,348 452,293 515,258 C579,223 682,195 775,185 C869,175 998,174 1076,199 C1153,223 1194,287 1241,332 C1287,377 1347,421 1355,470 Z"/>
+        <path class="depth depth-4" d="M1211,480 C1208,522 1185,571 1139,603 C1092,635 1007,662 932,671 C856,679 751,675 686,654 C621,633 567,586 541,545 C514,505 495,445 526,412 C557,378 658,361 725,343 C792,325 856,303 927,304 C998,306 1105,322 1152,351 C1199,380 1213,438 1211,480 Z"/>
+        <g class="stones">
+          <ellipse cx="70" cy="40" rx="62" ry="40"/><ellipse class="stone-b" cx="168" cy="22" rx="40" ry="28"/>
+          <ellipse class="stone-b" cx="20" cy="118" rx="34" ry="26"/>
+          <ellipse cx="1545" cy="868" rx="70" ry="44"/><ellipse class="stone-b" cx="1440" cy="890" rx="44" ry="28"/>
+          <ellipse class="stone-b" cx="1590" cy="770" rx="30" ry="36"/>
+          <ellipse cx="1580" cy="30" rx="48" ry="34"/><ellipse class="stone-b" cx="28" cy="880" rx="52" ry="34"/>
+        </g>
+      </svg>
+      <div class="koi-shadows"></div>
+      <div class="koi-school"></div>
+      <div class="pond-ripple rp-1"></div>
+      <div class="pond-ripple rp-2"></div>
+      <div class="pond-ripple rp-3"></div>
+      <svg class="pond-pads" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+        <path class="pad pad-a" d="M205,175 L250,234 A74 74 0 1 1 271,209 Z"/><path class="pad-vein" d="M205,175 L215,233 M205,175 L162,216 M205,175 L147,163 M205,175 L183,120 M205,175 L238,126"/>
+        <path class="pad pad-b" d="M318,250 L278,224 A48 48 0 1 1 270,244 Z"/><path class="pad-vein" d="M318,250 L299,217 M318,250 L335,215 M318,250 L356,245 M318,250 L344,279 M318,250 L309,287"/>
+        <path class="pad pad-c" d="M150,300 L177,271 A40 40 0 1 1 162,262 Z"/><path class="pad-vein" d="M150,300 L180,289 M150,300 L176,319 M150,300 L149,332 M150,300 L123,317 M150,300 L121,287"/>
+        <path class="pad pad-a" d="M1395,715 L1358,642 A82 82 0 1 1 1330,666 Z"/><path class="pad-vein" d="M1395,715 L1395,649 M1395,715 L1449,678 M1395,715 L1456,740 M1395,715 L1409,779 M1395,715 L1349,762"/>
+        <path class="pad pad-b" d="M1290,800 L1338,820 A52 52 0 1 1 1342,797 Z"/><path class="pad-vein" d="M1290,800 L1317,832 M1290,800 L1279,840 M1290,800 L1250,813 M1290,800 L1257,774 M1290,800 L1293,759"/>
+        <path class="pad pad-c" d="M1500,610 L1474,638 A38 38 0 1 1 1489,646 Z"/><path class="pad-vein" d="M1500,610 L1471,620 M1500,610 L1475,592 M1500,610 L1501,580 M1500,610 L1526,594 M1500,610 L1528,622"/>
+        <path class="pad pad-b" d="M1450,160 L1409,181 A46 46 0 1 1 1422,197 Z"/><path class="pad-vein" d="M1450,160 L1413,160 M1450,160 L1429,129 M1450,160 L1464,126 M1450,160 L1486,152 M1450,160 L1476,186"/>
+        <path class="pad pad-c" d="M1520,250 L1529,279 A30 30 0 1 1 1540,272 Z"/><path class="pad-vein" d="M1520,250 L1516,274 M1520,250 L1498,260 M1520,250 L1500,237 M1520,250 L1519,226 M1520,250 L1539,236"/>
+        <path class="pad pad-c" d="M300,770 L339,750 A44 44 0 1 1 326,735 Z"/><path class="pad-vein" d="M300,770 L335,770 M300,770 L320,799 M300,770 L287,803 M300,770 L266,777 M300,770 L275,746"/>
+        <g class="lotus"><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(0 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(45 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(90 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(135 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(180 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(225 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(270 212 168)"/><ellipse class="petal-outer" cx="212" cy="151" rx="13" ry="17" transform="rotate(315 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(30 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(90 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(150 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(210 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(270 212 168)"/><ellipse class="petal-inner" cx="212" cy="157" rx="10" ry="11" transform="rotate(330 212 168)"/><circle class="lotus-heart" cx="212" cy="168" r="8"/></g>
+      </svg>
+      <div class="pond-light"></div>
+      <div class="pond-glint pond-glint-sun"></div>
+      <div class="pond-glint pond-glint-moon"></div>
+    </div>
+  </div>
+
+  <section id="timerView" class="timer-view" aria-label="Focus timer">
+  <!-- Presence: whether the OTHER person is working right now. -->
+  <div id="presenceWidget">
+    <span class="dot" id="presenceDot"></span>
+    <span id="presenceName">&nbsp;</span>
+    <span id="presenceState">connecting…</span>
+  </div>
+
+  <main class="stage">
+    <section class="card timer-card">
+      <!-- The word is its own span because the render loop rewrites it
+           ("Focus" / "Focusing" / "Done"); the heart sits outside it so it
+           is never overwritten. -->
+      <h1 id="timerHeading" class="eyebrow" tabindex="-1"><span id="stageLabel">Focus</span><span class="heart" aria-hidden="true">&#9829;</span></h1>
+      <div id="timerDisplay">25:00</div>
+      <!-- Phone only: where the timer above actually runs. -->
+      <p id="remoteNote"></p>
+
+      <!-- The run's settings: countdown / stopwatch, then its length. Both
+           are locked while the timer runs. In stopwatch mode the minutes box
+           is swapped for the cap note, in the same spot. -->
+      <div class="settings-row">
+        <button id="modeToggle" type="button" aria-pressed="false">&darr; Countdown</button>
+        <label class="duration-row" id="durationRow">
+          Minutes
+          <input id="durationInput" type="number" min="1" max="600" value="25" />
+        </label>
+        <p class="duration-row" id="capNote" hidden>Stops itself at 2 hours</p>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn" type="button">Start</button>
+        <button id="pauseBtn" type="button">Pause</button>
+        <button id="resetBtn" type="button">Reset</button>
+      </div>
+
+      <!-- Free-text category, editable any time, mid-session included. -->
+      <div class="category-row">
+        <input id="categoryInput" type="text" maxlength="40"
+               placeholder="working on…" autocomplete="off" />
+        <div id="categoryChips"></div>
+      </div>
+
+      <!-- Laptop status stays reachable from the timer in a compact pill.
+           Phone CSS keeps the existing editor visible in its original place. -->
+      <div id="statusDisclosure">
+        <button id="myStatusChip" type="button" aria-expanded="false" aria-controls="statusRow">
+          <span class="status-own-dot" aria-hidden="true"></span>
+          <span class="my-status-label">My status</span>
+          <span id="myStatusValue">Set a status</span>
+          <span class="status-caret" aria-hidden="true">⌄</span>
+        </button>
+        <div id="statusRow">
+          <p class="eyebrow" id="statusLabel">Your status</p>
+          <div class="status-field">
+            <input id="statusInput" type="text" maxlength="40"
+                   placeholder="status — eating, out…" autocomplete="off"
+                   enterkeyhint="done" />
+            <button id="statusClear" type="button" aria-label="Clear status">&times;</button>
+          </div>
+          <div id="statusAge"></div>
+          <div id="statusPresets"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <a id="dashboardNav" class="view-nav" href="#dashboard">Dashboard <span aria-hidden="true">→</span></a>
+  </section>
+
+  <!-- Shared by both laptop views, so completion stays visible when the
+       timer card is hidden on the dashboard. -->
+  <section id="completionPanel" aria-labelledby="completionTitle" hidden>
+    <div role="status" aria-live="polite">
+      <p class="eyebrow">Time’s up</p>
+      <h2 id="completionTitle">Session complete</h2>
+      <p id="completionDetail"></p>
+    </div>
+    <button id="alertDismiss" type="button">Got it</button>
+  </section>
+
+  <main id="dashboardView" class="dashboard-view" aria-labelledby="dashboardHeading" hidden>
+    <header class="dashboard-header">
+      <div>
+        <h1 id="dashboardHeading" tabindex="-1">Dashboard</h1>
+      </div>
+      <div class="dashboard-return">
+        <p id="dashboardTimerStatus" aria-live="off">Timer ready · 25:00</p>
+        <a id="timerNav" class="view-nav" href="#timer">← Timer</a>
+      </div>
+    </header>
+    <p class="dashboard-caption">Design preview · sample activity · 200 logged hours</p><div class="dashboard-grid">
+      <div class="dashboard-insights" aria-label="Activity and categories">
+      <section class="dashboard-card dashboard-activity" aria-labelledby="activityHeading">
+        <h2 id="activityHeading">Activity</h2>
+        <p class="dashboard-caption">Your totals and current reporting periods.</p>
+        <div id="cornerDock">
+          <div id="statsWidget" class="expanded">
+            <div id="statsPanel">
+              <div class="stat-row"><span>Today</span><span id="statToday">—</span></div>
+              <div class="stat-row"><span>This week</span><span id="statWeek">—</span></div>
+              <div class="stat-row"><span>All time</span><span id="statAll">—</span></div>
+              <div class="stat-note" id="statCount">no sessions logged yet</div>
+            </div>
+            <button id="statsChip" type="button">
+              <span id="chipCaret">▲</span>
+              <span class="chip-label">Activity</span>
+              <span id="chipValue">—</span>
+            </button>
+          </div>
+        </div>
+      </section>
+      <section class="dashboard-card dashboard-breakdown" aria-labelledby="breakdownHeading">
+        <h2 id="breakdownHeading">Category breakdown</h2>
+        <p class="dashboard-caption">Current period summary; category management comes in a later phase.</p>
+        <div id="breakdownWidget" class="expanded">
+          <div id="breakdownPanel">
+            <div id="shareBar"></div>
+            <div id="breakdownRows"></div>
+            <div id="breakdownMore"></div>
+            <div class="breakdown-toggles">
+              <button id="whoseToggle" type="button">You</button>
+              <button id="periodToggle" type="button">This week</button>
+            </div>
+          </div>
+          <button id="breakdownChip" type="button">
+            <span id="breakdownCaret">▲</span>
+            <span class="chip-label" id="breakdownLabel">Categories</span>
+            <span id="breakdownTop">—</span>
+          </button>
+        </div>
+      </section>
+      <section class="dashboard-card dashboard-calendar" aria-labelledby="calendarHeading">
+        <div class="calendar-heading-row">
+          <div>
+            <h2 id="calendarHeading">Activity calendar</h2>
+            <p class="dashboard-caption">Completed focus time on each person's own local days. A dash means no shared data is available.</p>
+          </div>
+          <div class="calendar-month-nav" aria-label="Calendar month">
+            <button id="calendarPrev" type="button" aria-label="Previous month">←</button>
+            <h3 id="calendarMonth" aria-live="polite"></h3>
+            <button id="calendarNext" type="button" aria-label="Next month">→</button>
+          </div>
+        </div>
+        <div class="calendar-month-totals">
+          <div><span id="calendarMineLabel">You</span><strong id="calendarMineTotal">0m</strong></div>
+          <div><span id="calendarTheirsLabel">Partner</span><strong id="calendarTheirsTotal">0m</strong></div>
+        </div>
+        <div id="calendarGrid" class="activity-calendar-grid" aria-label="Shared activity by local calendar day"></div>
+        <details class="calendar-backfill">
+          <summary>Review earlier activity</summary>
+          <p>Older sessions are private until you review a timezone-based preview. The starting timezone comes from this browser; edit it if needed, then preview. This shares daily totals only, never categories or session records.</p>
+          <label for="backfillTimeZone">Timezone for older sessions</label>
+          <input id="backfillTimeZone" type="text" autocomplete="off" />
+          <button id="backfillPreviewButton" type="button">Preview older activity</button>
+          <div id="backfillStatus" role="status" aria-live="polite"></div>
+          <div id="backfillPreview" hidden>
+            <p id="backfillPreviewText"></p>
+            <button id="backfillPublish" type="button">Publish these daily totals</button>
+            <button id="backfillCancel" type="button">Cancel</button>
+          </div>
+        </details>
+      </section>
+      </div>
+      <div class="dashboard-utilities">
+        <section class="dashboard-card">
+          <div id="noteWidget">
+            <button id="noteChip" type="button">
+              <span class="chip-label">Notes</span>
+              <span id="noteBadge" class="empty">—</span>
+              <span id="noteCaret">&#9650;</span>
+            </button>
+            <div id="notePanel">
+              <textarea id="noteInput" placeholder="next up, reminders, anything…"
+                        spellcheck="false"></textarea>
+              <div id="noteStatus">&nbsp;</div>
+            </div>
+          </div>
+        </section>
+        <section class="dashboard-card">
+          <div id="messageWidget">
+            <button id="messageChip" type="button">
+              <span id="messageIcon">&#9993;</span>
+              <span id="messageBadge" class="empty">Message</span>
+              <span id="messageCaret">&#9660;</span>
+            </button>
+            <div id="messagePanel">
+              <div id="inboxSection">
+                <div id="inboxFrom">&nbsp;</div>
+                <div id="inboxText"></div>
+              </div>
+              <label id="composeLabel" for="messageInput">To&nbsp;<span id="composeTo"></span></label>
+              <textarea id="messageInput" maxlength="500" rows="3"
+                        placeholder="waiting for you when you finish…"></textarea>
+              <div id="messageSendRow">
+                <button id="messageSend" type="button">Send</button>
+                <span id="messageStatus">&nbsp;</span>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="dashboard-card dashboard-settings" aria-labelledby="soundHeading">
+          <h2 id="soundHeading">Sound</h2>
+          <div class="alert-settings">
+            <label for="alertVolume">Chime volume <output id="alertVolumeValue" for="alertVolume">75%</output></label>
+            <div class="alert-volume-row">
+              <input id="alertVolume" type="range" min="0" max="100" step="5" value="75" />
+              <button id="alertPreview" type="button">Test sound</button>
+            </div>
+          </div>
+        </section>
+        <section class="dashboard-card dashboard-wallpapers" aria-labelledby="wallpaperHeading">
+          <h2 id="wallpaperHeading">Wallpaper</h2>
+          <div id="wallpaperPicker">
+            <div class="picker-label">Choose a background for this device</div>
+            <div id="wallpaperList"></div>
+          </div>
+        </section>
+        <section class="dashboard-card dashboard-management" aria-labelledby="managementHeading">
+          <h2 id="managementHeading">Time management</h2>
+          <p id="managementNote">Add missed work or correct your own logged sessions. Removed work stays available to restore.</p>
+          <details id="timeManager" class="time-manager">
+            <summary>Manage logged time</summary>
+            <p>Added work appears in your totals and shared calendar. Corrections update already-shared days; older private history stays private until you publish it from the calendar.</p>
+            <button id="timeAdd" type="button">Add missed work</button>
+            <form id="timeForm" hidden>
+              <h3 id="timeFormHeading">Add missed work</h3>
+              <label for="timeEnd">Work ended</label>
+              <input id="timeEnd" type="datetime-local" step="1" required />
+              <label for="timeZone">Timezone for this work</label>
+              <input id="timeZone" type="text" autocomplete="off" required />
+              <label for="timeMinutes">Minutes worked (decimals allowed)</label>
+              <input id="timeMinutes" type="number" min="0.01" max="1440" step="any" required />
+              <label for="timeCategory">Category</label>
+              <select id="timeCategory"></select>
+              <div class="time-form-actions">
+                <button id="timeSave" type="submit">Add work</button>
+                <button id="timeCancel" type="button">Cancel</button>
+              </div>
+            </form>
+            <div id="timeRemoveReview" hidden>
+              <p id="timeRemoveText"></p>
+              <button id="timeRemoveConfirm" type="button">Remove from totals</button>
+              <button id="timeRemoveCancel" type="button">Keep work</button>
+            </div>
+            <p id="timeStatus" role="status" aria-live="polite"></p>
+            <h3>Session history</h3>
+            <p id="timeHistoryCount"></p>
+            <ul id="timeHistory" aria-label="Your logged sessions"></ul>
+            <div class="time-history-pages">
+              <button id="timeNewer" type="button">← Newer</button>
+              <button id="timeOlder" type="button">Older →</button>
+            </div>
+          </details>
+        </section>
+      <section id="cottageWidget" class="dashboard-card cottage-card" aria-labelledby="cottageHeading">
+        <div class="card-heading"><h2 id="cottageHeading">Your cottage</h2><span id="cottage-place">A little home</span></div>
+        <div class="scene" id="cottage-scene">
+          <svg viewBox="0 0 400 250" role="img" aria-label="A cream cottage with a terracotta roof, or its single cosy room">
+            <defs>
+              <!-- Material shading stays subtle and shares the room's warm light. -->
+              <clipPath id="cottage-roofClip"><path d="M106 116L200 47L294 116Z"/></clipPath>
+              <linearGradient id="cottage-roofClay" x2="0.2" y2="1"><stop stop-color="#c58463"/><stop offset="1" stop-color="#aa624d"/></linearGradient>
+              <linearGradient id="cottage-curtainCloth"><stop stop-color="#a67762"/><stop offset=".3" stop-color="#c49a81"/><stop offset=".55" stop-color="#b48670"/><stop offset=".8" stop-color="#caa18a"/><stop offset="1" stop-color="#a77864"/></linearGradient>
+              <linearGradient id="cottage-throwCloth" x2=".9" y2=".4"><stop stop-color="#e0c39c"/><stop offset=".45" stop-color="#cfaf86"/><stop offset=".7" stop-color="#b89673"/><stop offset="1" stop-color="#d8ba94"/></linearGradient>
+<pattern id="cottage-boards" width="400" height="17" patternUnits="userSpaceOnUse"><path d="M0 16H400" stroke="#c9a07b" stroke-width="1"/></pattern></defs>
+            <g id="cottage-outside">
+              <path d="M0 222Q80 197 164 213T400 212V250H0" fill="#dbe0c4"/>
+              <ellipse cx="200" cy="224" rx="111" ry="10" fill="#c4caaa"/>
+              <path d="M188 216L174 250H224L211 216" fill="#e9d8bd"/>
+              <rect x="114" y="109" width="172" height="112" rx="3" fill="#f3dfba"/>
+              <rect x="246" y="57" width="20" height="52" rx="2" fill="#ba795e"/><path d="M250 65H263M250 77H263M250 89H263M257 66V76M253 78V88" stroke="#d39c7a" stroke-width="1"/><path d="M263 59V106" stroke="#98654f" stroke-width="3"/><rect x="243" y="54" width="26" height="5" rx="1" fill="#9d6c55"/><path d="M246 55H266" stroke="#d6a380" stroke-width="1"/>
+              <path d="M98 118L200 42L302 118Z" fill="url(#cottage-roofClay)"/>
+
+              <!-- Roof texture is clipped to the slope and painted in front of the chimney. -->
+              <g clip-path="url(#cottage-roofClip)" fill="none" stroke-linecap="round">
+<path d="M100 60Q200 63 300 60" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M108 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M126 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M144 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M162 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M180 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M198 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M216 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M234 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M252 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M270 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M288 61l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 69Q200 72 300 69" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M117 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M135 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M153 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M171 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M189 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M207 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M225 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M243 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M261 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M279 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M297 70l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 78Q200 81 300 78" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M108 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M126 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M144 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M162 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M180 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M198 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M216 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M234 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M252 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M270 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M288 79l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 87Q200 90 300 87" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M117 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M135 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M153 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M171 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M189 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M207 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M225 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M243 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M261 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M279 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M297 88l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 96Q200 99 300 96" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M108 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M126 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M144 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M162 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M180 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M198 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M216 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M234 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M252 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M270 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M288 97l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 105Q200 108 300 105" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M117 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M135 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M153 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M171 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M189 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M207 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M225 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M243 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M261 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M279 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M297 106l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M100 114Q200 117 300 114" stroke="#e0a07a" stroke-width=".7" opacity=".5"/><path d="M108 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M126 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M144 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M162 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M180 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M198 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M216 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M234 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M252 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M270 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/><path d="M288 115l-2 7" stroke="#8f5745" stroke-width=".6" opacity=".4"/></g><path d="M100 119H300" stroke="#895f48" stroke-width="3" stroke-linecap="round"/><path d="M116 123H284" stroke="#d5b18b" stroke-width="3" opacity=".65"/>
+              <path d="M110 117L200 51L290 117" fill="none" stroke="#d19a77" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M175 133Q200 124 225 133" fill="none" stroke="#e1c8a3" stroke-width="1"/>
+              <path d="M129 180H169M232 180H271" stroke="#ae8966" stroke-width="3" stroke-linecap="round"/>
+
+              <g fill="#a8c3bd" stroke="#fff0d3" stroke-width="6"><rect x="134" y="143" width="30" height="32" rx="2"/><rect x="236" y="143" width="30" height="32" rx="2"/></g>
+              <path d="M149 144V174M134 159H164M251 144V174M236 159H266" stroke="#fff0d3" stroke-width="3"/>
+              <path d="M181 220V173Q181 151 200 151Q219 151 219 173V220" fill="#8a674e"/>
+              <circle cx="210" cy="190" r="2.5" fill="#efd196"/>
+              <!-- Small masonry and joinery details retain the simple cottage silhouette. -->
+              <path d="M186 176V213M192 161V215M199 158V215M206 161V214M214 174V213" stroke="#73563f" stroke-width=".7" opacity=".6"/>
+              <path d="M177 221H223M174 225H226" stroke="#b39b7b" stroke-width="3"/>
+              <path d="M119 119V217M281 119V217" stroke="#dfc9a4" stroke-width="4"/>
+              <g fill="#9ca780"><ellipse cx="118" cy="217" rx="14" ry="8"/><ellipse cx="277" cy="218" rx="12" ry="7"/><ellipse cx="289" cy="219" rx="9" ry="5"/></g>
+              <path d="M194 232L205 233M184 243L197 244M206 247H215" stroke="#c6b395" stroke-width="2" stroke-linecap="round"/>
+
+
+              <g id="cottage-flowers" hidden><rect x="129" y="177" width="39" height="9" rx="2" fill="#b77e5d"/><path d="M138 177V167M149 177V163M159 177V168" stroke="#708264" stroke-width="3"/><g fill="#d89980"><circle cx="138" cy="165" r="5"/><circle cx="149" cy="162" r="5"/><circle cx="159" cy="166" r="5"/></g></g>
+            </g>
+            <!-- Furnishing zones: reading nook left, desk centre, hearth right; foreground stays open. -->
+            <g id="cottage-inside" hidden>
+            <rect x="15" y="24" width="370" height="210" rx="4" fill="#eadbc5"/>
+            <path d="M15 24H385V39H15Z" fill="#b89776"/><path d="M28 28V175M372 28V175" stroke="#c5aa87" stroke-width="7"/>
+            <path d="M15 171H385V234H15Z" fill="#cba47f"/>
+            <path d="M15 177H385M15 194H385M15 213H385M15 232H385M64 177V194M171 177V194M293 177V194M113 194V213M244 194V213M62 213V234M183 213V234M325 213V234" fill="none" stroke="#b68e6c" stroke-width=".8"/>
+            <path d="M15 169H385" stroke="#a98867" stroke-width="6"/>
+<g transform="translate(12 0)">
+            <path d="M137 41H231V117H137Z" fill="#bd9c7a"/><path d="M141 44H227V113H141Z" fill="#fff0d5"/><path d="M147 50H221V107H147Z" fill="#c3d7d1"/>
+            <path d="M147 91Q163 72 181 88T221 83V107H147" fill="#9daf98"/><path d="M147 100Q176 85 221 98V107H147" fill="#83967d"/>
+            <path d="M183 49V108M147 77H221" stroke="#fff1d9" stroke-width="4"/><path d="M135 116H233" stroke="#ad8866" stroke-width="5"/>
+            <g id="cottage-curtains" hidden>
+              <!-- Gathered cloth hangs from rings, narrows at the ties, then relaxes below. -->
+              <path d="M126 45H149C149 63 144 81 138 91C137 101 141 110 144 119Q134 122 124 119C128 107 129 99 130 91C129 75 126 60 126 45Z" fill="url(#cottage-curtainCloth)"/>
+              <path d="M219 45H242C242 62 239 78 238 91C239 101 240 110 244 119Q234 122 224 119C227 109 231 100 230 91C223 77 219 61 219 45Z" fill="url(#cottage-curtainCloth)"/>
+              <g fill="none" stroke="#e0b9a0" stroke-width=".8" opacity=".7"><path d="M132 48C132 68 136 80 134 90Q133 105 130 117M141 48Q142 70 136 90Q135 105 138 118M225 48Q226 72 233 90Q235 104 230 118M235 48Q234 74 235 91Q237 105 239 118"/></g>
+              <path d="M129 91Q134 94 140 91M229 91Q234 94 239 91" fill="none" stroke="#987459" stroke-width="2"/>
+              <path d="M122 40H246" stroke="#836c51" stroke-width="2.5" stroke-linecap="round"/><g fill="#a78965"><circle cx="121" cy="40" r="3"/><circle cx="247" cy="40" r="3"/></g>
+              <path d="M129 40v6M135 40v6M142 40v6M146 40v6M222 40v6M228 40v6M235 40v6M240 40v6" stroke="#b99c79" stroke-width="1.5"/>
+            </g>
+</g>
+            <g id="cottage-rug" hidden><path d="M116 190L253 190L277 225H96Z" fill="#b9826c"/><path d="M123 195H247L265 220H108Z" fill="none" stroke="#e0b99a" stroke-width="2"/><path d="M147 203L155 209L147 215L139 209ZM189 203L197 209L189 215L181 209ZM231 203L239 209L231 215L223 209Z" fill="#d7ab89"/><path d="M100 225L98 229" stroke="#e0b99a" stroke-width="1"/><path d="M106 225L104 229" stroke="#e0b99a" stroke-width="1"/><path d="M112 225L110 229" stroke="#e0b99a" stroke-width="1"/><path d="M118 225L116 229" stroke="#e0b99a" stroke-width="1"/><path d="M124 225L122 229" stroke="#e0b99a" stroke-width="1"/><path d="M130 225L128 229" stroke="#e0b99a" stroke-width="1"/><path d="M136 225L134 229" stroke="#e0b99a" stroke-width="1"/><path d="M142 225L140 229" stroke="#e0b99a" stroke-width="1"/><path d="M148 225L146 229" stroke="#e0b99a" stroke-width="1"/><path d="M154 225L152 229" stroke="#e0b99a" stroke-width="1"/><path d="M160 225L158 229" stroke="#e0b99a" stroke-width="1"/><path d="M166 225L164 229" stroke="#e0b99a" stroke-width="1"/><path d="M172 225L170 229" stroke="#e0b99a" stroke-width="1"/><path d="M178 225L176 229" stroke="#e0b99a" stroke-width="1"/><path d="M184 225L182 229" stroke="#e0b99a" stroke-width="1"/><path d="M190 225L188 229" stroke="#e0b99a" stroke-width="1"/><path d="M196 225L194 229" stroke="#e0b99a" stroke-width="1"/><path d="M202 225L200 229" stroke="#e0b99a" stroke-width="1"/><path d="M208 225L206 229" stroke="#e0b99a" stroke-width="1"/><path d="M214 225L212 229" stroke="#e0b99a" stroke-width="1"/><path d="M220 225L218 229" stroke="#e0b99a" stroke-width="1"/><path d="M226 225L224 229" stroke="#e0b99a" stroke-width="1"/><path d="M232 225L230 229" stroke="#e0b99a" stroke-width="1"/><path d="M238 225L236 229" stroke="#e0b99a" stroke-width="1"/><path d="M244 225L242 229" stroke="#e0b99a" stroke-width="1"/><path d="M250 225L248 229" stroke="#e0b99a" stroke-width="1"/><path d="M256 225L254 229" stroke="#e0b99a" stroke-width="1"/><path d="M262 225L260 229" stroke="#e0b99a" stroke-width="1"/><path d="M268 225L266 229" stroke="#e0b99a" stroke-width="1"/><path d="M274 225L272 229" stroke="#e0b99a" stroke-width="1"/><path d="M127 198H245L259 217H114Z" fill="none" stroke="#905f51" stroke-width=".8"/><path d="M128 196l2 2l-2 2l-2 -2Z M128 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M136 196l2 2l-2 2l-2 -2Z M136 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M144 196l2 2l-2 2l-2 -2Z M144 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M152 196l2 2l-2 2l-2 -2Z M152 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M160 196l2 2l-2 2l-2 -2Z M160 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M168 196l2 2l-2 2l-2 -2Z M168 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M176 196l2 2l-2 2l-2 -2Z M176 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M184 196l2 2l-2 2l-2 -2Z M184 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M192 196l2 2l-2 2l-2 -2Z M192 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M200 196l2 2l-2 2l-2 -2Z M200 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M208 196l2 2l-2 2l-2 -2Z M208 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M216 196l2 2l-2 2l-2 -2Z M216 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M224 196l2 2l-2 2l-2 -2Z M224 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M232 196l2 2l-2 2l-2 -2Z M232 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M240 196l2 2l-2 2l-2 -2Z M240 216l2 2l-2 2l-2 -2Z" fill="#e2ba96" opacity=".8"/><path d="M147 206l4 3l-4 3l-4 -3Z" fill="#9f6e59"/><path d="M134 209h3M157 209h3" stroke="#e8c4a0" stroke-width=".8"/><path d="M189 206l4 3l-4 3l-4 -3Z" fill="#9f6e59"/><path d="M176 209h3M199 209h3" stroke="#e8c4a0" stroke-width=".8"/><path d="M231 206l4 3l-4 3l-4 -3Z" fill="#9f6e59"/><path d="M218 209h3M241 209h3" stroke="#e8c4a0" stroke-width=".8"/></g>
+            <g id="cottage-books" hidden><ellipse cx="69" cy="178" rx="35" ry="5" fill="#705940" opacity=".12"/><rect x="40" y="65" width="56" height="110" rx="2" fill="#947154"/><rect x="45" y="71" width="46" height="98" fill="#725b46"/><rect x="48" y="79" width="5" height="19" rx=".5" fill="#a9b096"/><path d="M49 82h3" stroke="#e4cda5" stroke-width=".7"/><rect x="55" y="75" width="5" height="23" rx=".5" fill="#c6a276"/><path d="M56 78h3" stroke="#e4cda5" stroke-width=".7"/><rect x="62" y="77" width="5" height="21" rx=".5" fill="#b78570"/><path d="M63 80h3" stroke="#e4cda5" stroke-width=".7"/><rect x="69" y="81" width="5" height="17" rx=".5" fill="#8eaaa0"/><path d="M70 84h3" stroke="#e4cda5" stroke-width=".7"/><rect x="76" y="74" width="5" height="24" rx=".5" fill="#c3b18d"/><path d="M77 77h3" stroke="#e4cda5" stroke-width=".7"/><rect x="83" y="78" width="5" height="20" rx=".5" fill="#a6a07e"/><path d="M84 81h3" stroke="#e4cda5" stroke-width=".7"/><rect x="48" y="110" width="5" height="19" rx=".5" fill="#a9b096"/><path d="M49 113h3" stroke="#e4cda5" stroke-width=".7"/><rect x="55" y="106" width="5" height="23" rx=".5" fill="#c6a276"/><path d="M56 109h3" stroke="#e4cda5" stroke-width=".7"/><rect x="62" y="108" width="5" height="21" rx=".5" fill="#b78570"/><path d="M63 111h3" stroke="#e4cda5" stroke-width=".7"/><rect x="69" y="112" width="5" height="17" rx=".5" fill="#8eaaa0"/><path d="M70 115h3" stroke="#e4cda5" stroke-width=".7"/><rect x="76" y="105" width="5" height="24" rx=".5" fill="#c3b18d"/><path d="M77 108h3" stroke="#e4cda5" stroke-width=".7"/><rect x="83" y="109" width="5" height="20" rx=".5" fill="#a6a07e"/><path d="M84 112h3" stroke="#e4cda5" stroke-width=".7"/><rect x="48" y="143" width="5" height="19" rx=".5" fill="#a9b096"/><path d="M49 146h3" stroke="#e4cda5" stroke-width=".7"/><rect x="55" y="139" width="5" height="23" rx=".5" fill="#c6a276"/><path d="M56 142h3" stroke="#e4cda5" stroke-width=".7"/><rect x="62" y="141" width="5" height="21" rx=".5" fill="#b78570"/><path d="M63 144h3" stroke="#e4cda5" stroke-width=".7"/><rect x="69" y="145" width="5" height="17" rx=".5" fill="#8eaaa0"/><path d="M70 148h3" stroke="#e4cda5" stroke-width=".7"/><rect x="76" y="138" width="5" height="24" rx=".5" fill="#c3b18d"/><path d="M77 141h3" stroke="#e4cda5" stroke-width=".7"/><rect x="83" y="142" width="5" height="20" rx=".5" fill="#a6a07e"/><path d="M84 145h3" stroke="#e4cda5" stroke-width=".7"/><path d="M43 101H94M43 132H94M43 165H94" stroke="#c3a07a" stroke-width="4"/><path d="M44 175V181M91 175V181" stroke="#826145" stroke-width="4"/></g>
+            <g id="cottage-art" hidden transform="translate(3 2) translate(116 79) scale(.8) translate(-116 -79)"><rect x="105" y="64" width="22" height="30" fill="#aa805f"/><rect x="108" y="67" width="16" height="24" fill="#f8ecd2"/><path d="M110 85L116 75L122 85Z" fill="#8e9e7a"/><circle cx="119" cy="72" r="2" fill="#d5aa6c"/></g>
+            <g id="cottage-fire" hidden><ellipse cx="321" cy="181" rx="43" ry="5" fill="#72563e" opacity=".12"/><rect x="288" y="112" width="66" height="63" fill="#ba9579"/><path d="M289 123H353M311 123v9" stroke="#d1af90" stroke-width=".7"/><path d="M289 133H353M335 133v9" stroke="#d1af90" stroke-width=".7"/><path d="M289 143H353M294 143v9" stroke="#d1af90" stroke-width=".7"/><path d="M289 154H353M349 154v9" stroke="#d1af90" stroke-width=".7"/><path d="M289 165H353M293 165v9" stroke="#d1af90" stroke-width=".7"/><path d="M299 173V144Q321 118 343 144V173Z" fill="#665343"/><path d="M307 169L333 164M308 164L333 170" stroke="#947052" stroke-width="4"/><g class="fire-flicker"><path d="M312 165Q303 154 319 139Q315 151 328 147Q342 162 327 168" fill="#dfa463"/></g><g class="fire-core"><path d="M319 165Q314 158 323 150Q322 157 328 158L326 166" fill="#f5d493"/></g><path d="M283 111H359" stroke="#957256" stroke-width="7"/><path d="M283 177H359" stroke="#a98363" stroke-width="7"/></g>
+            <!-- The supplied photograph sits within the mat, preserving the full composition. -->
+            <g id="cottage-portrait" hidden role="img" aria-label="Framed photo of Santi and Kristina together">
+              <path d="M318 53L321 49L325 53" fill="none" stroke="#ac8c6b" stroke-width=".8"/>
+              <rect x="295" y="55" width="55" height="42" rx="1.5" fill="#765d47" opacity=".12"/>
+              <rect x="293" y="53" width="55" height="42" rx="1.5" fill="#a6815e"/>
+              <path d="M295 55H346V93H295Z" fill="#d9b98b"/>
+              <path d="M298 58H343V90H298Z" fill="#f5e8cf"/>
+              <image href="assets/cottage-couple.jpeg" x="300" y="60" width="41" height="28" preserveAspectRatio="xMidYMid meet"/>
+              <path d="M294 54H347M294 54V94" fill="none" stroke="#cfac7b" stroke-width=".8"/>
+            </g>
+            <g id="cottage-basket" hidden><!-- Logs are behind the near rim so the woven body contains them. -->
+<ellipse cx="371" cy="182" rx="15" ry="3" fill="#72563e" opacity=".13"/>
+<path d="M358 164Q357 149 369 148Q381 149 383 163" fill="none" stroke="#967652" stroke-width="2"/>
+<path d="M357 163Q370 156 384 163L381 178Q371 185 360 178Z" fill="#b19067"/>
+<ellipse cx="370.5" cy="163" rx="13.5" ry="4" fill="#7d654b"/>
+<path d="M363 165L373 150M371 165L381 153M366 167L363 155" stroke="#86684c" stroke-width="4" stroke-linecap="round"/>
+<path d="M364 163L374 150M372 164L382 153" stroke="#b08b60" stroke-width="1"/>
+<ellipse cx="374" cy="150" rx="2.3" ry="1.4" transform="rotate(-53 374 150)" fill="#d1b184"/>
+<ellipse cx="381" cy="153" rx="2.1" ry="1.3" transform="rotate(-48 381 153)" fill="#c3a174"/>
+<path d="M357 164Q371 171 384 164L381 178Q371 185 360 178Z" fill="#b99970"/>
+<path d="M359 168Q371 174 383 168M360 172Q371 179 382 172M360 176Q371 182 381 176" fill="none" stroke="#d4b68b" stroke-width="1.1"/>
+<path d="M362 167Q365 175 364 180M368 169L369 182M375 169L374 182M381 167Q378 175 379 180" fill="none" stroke="#977953" stroke-width=".8" opacity=".65"/>
+<path d="M357 163Q370 170 384 163" fill="none" stroke="#d7b98b" stroke-width="2.4" stroke-linecap="round"/>
+<path d="M360 178Q370 184 381 178" fill="none" stroke="#987751" stroke-width="1.3"/></g>
+            <g id="cottage-plant" hidden><ellipse cx="263" cy="180" rx="14" ry="3" fill="#93775a" opacity=".15"/><path d="M253 165L256 180H270L273 165Z" fill="#b78060"/><ellipse cx="263" cy="165" rx="10" ry="3" fill="#8f6950"/><path d="M263 165V131M263 151L253 143M263 145L273 137" stroke="#748360" stroke-width="1.5"/><ellipse cx="255" cy="140" rx="8" ry="3.5" transform="rotate(35 255 140)" fill="#91a17a"/><ellipse cx="270" cy="134" rx="8" ry="3.5" transform="rotate(-35 270 134)" fill="#7b9069"/><ellipse cx="255" cy="153" rx="8" ry="3.5" transform="rotate(30 255 153)" fill="#798e67"/><ellipse cx="270" cy="148" rx="8" ry="3.5" transform="rotate(-25 270 148)" fill="#99a67e"/><ellipse cx="262" cy="129" rx="8" ry="3.5" transform="rotate(-70 262 129)" fill="#8b9c74"/><path d="M254 173H272" stroke="#d29a77" stroke-width="1"/></g>
+            <!-- The desk sits under the window; its objects never intersect the reading or hearth zones. -->
+            <ellipse cx="185" cy="187" rx="49" ry="5" fill="#7c6247" opacity=".12"/>
+            <path d="M142 154L139 188M224 154L228 188" stroke="#8c6a4b" stroke-width="5"/><path d="M143 162H224" stroke="#ae8760" stroke-width="4"/><rect x="134" y="147" width="100" height="7" rx="2" fill="#b58b63"/><path d="M139 149H229" stroke="#d5b18a" stroke-width="1"/>
+            <path d="M158 144L177 143L185 147H161Z" fill="#fff3db"/><path d="M164 144L177 144" stroke="#baa88b" stroke-width=".6"/>
+            <g id="cottage-lamp" hidden><!-- Base overlaps the desktop edge; its shadow anchors the brass foot. -->
+<ellipse cx="215" cy="149" rx="10" ry="1.7" fill="#745b40" opacity=".18"/>
+<path d="M214 147V125" stroke="#927550" stroke-width="2"/>
+<ellipse cx="214" cy="148" rx="8" ry="2" fill="#927550"/><ellipse cx="213" cy="147.3" rx="7" ry="1.3" fill="#bea06d"/>
+<path d="M202 128L208 112H220L226 128Z" fill="#d3b079"/>
+<path d="M209 114L207 126M219 114L222 126" stroke="#ead0a1" stroke-width="1"/>
+<ellipse cx="214" cy="129" rx="11" ry="2" fill="#ead09d"/></g>
+            <g id="cottage-tea" hidden><!-- Rounded ceramic bottom rests on the same desktop plane as the lamp. -->
+<ellipse cx="195.8" cy="148.7" rx="7" ry="1.5" fill="#745b40" opacity=".17"/>
+<path d="M199 140Q205 139 203 144Q202 147 199 146" stroke="#718e83" stroke-width="1.7" fill="none"/>
+<path d="M191 139H200L199 146Q195.5 149 192 146Z" fill="#829b91"/>
+<path d="M192.5 140L193 145" stroke="#b6c5b5" stroke-width=".8" stroke-linecap="round"/>
+<ellipse cx="195.5" cy="139" rx="4.5" ry="1.4" fill="#b7c7b7"/><ellipse cx="195.5" cy="139.2" rx="3.3" ry=".8" fill="#74604a"/>
+<path d="M194 135Q191 132 194 129" stroke="#b4a48b" stroke-width=".8" fill="none"/></g>
+            <path d="M173 173V161Q185 158 197 161V173" fill="#a37c58"/><path d="M173 174H197V179H173Z" fill="#bc956c"/><path d="M176 179L174 198M194 179L197 198" stroke="#8d6b4e" stroke-width="3"/>
+            <g id="cottage-chair" hidden><ellipse cx="66" cy="207" rx="31" ry="5" fill="#705940" opacity=".12"/><path d="M44 193L42 209M85 193L88 209" stroke="#947254" stroke-width="4"/><rect x="43" y="151" width="43" height="45" rx="11" fill="#8b9a7c"/><rect x="48" y="155" width="33" height="28" rx="8" fill="#a6b197"/><rect x="40" y="181" width="49" height="15" rx="6" fill="#9aa78b"/><path d="M42 177V190M87 177V190" stroke="#798969" stroke-width="7"/></g>
+            <g id="cottage-blanket" hidden>
+              <!-- The throw follows the back cushion, pools on the seat, and falls over its rounded front. -->
+              <path d="M56 157Q64 154 72 158C74 167 72 174 75 181Q79 186 78 193L76 201Q71 204 67 202Q63 204 58 201C59 195 60 190 58 185C55 177 58 167 56 157Z" fill="#675b43" opacity=".12" transform="translate(1 1)"/>
+              <path d="M55 156Q63 153 71 157C73 166 70 174 74 181Q79 186 77 192L75 200Q71 203 67 200Q62 203 57 200C58 194 60 189 57 184C54 176 57 166 55 156Z" fill="url(#cottage-throwCloth)"/>
+              <path d="M60 158C63 168 58 178 63 184Q66 189 62 199M66 158C69 168 64 178 69 184Q73 189 69 199" fill="none" stroke="#eee0c1" stroke-width="1" opacity=".65"/>
+              <path d="M58 182Q64 185 74 182M59 186Q68 189 77 186M58 196Q67 199 76 196" fill="none" stroke="#ab8969" stroke-width=".8" opacity=".6"/>
+              <path d="M58 200l-1 4M61 201v4M65 201l-1 4M69 201v4M72 201l1 4M75 200l1 4" stroke="#cfaf86" stroke-width="1" stroke-linecap="round"/>
+            </g>
+            <!-- The ribcage breathes independently; the head, paws and curled tail stay settled. -->
+            <g id="cottage-cat" hidden role="img" aria-label="A ginger cat sleeping on a soft cushion">
+              <ellipse cx="317" cy="216" rx="26" ry="5" fill="#735b42" opacity=".1"/>
+              <path d="M292 211Q294 201 315 202Q338 201 342 211Q340 220 317 221Q295 220 292 211Z" fill="#bba17d"/>
+              <ellipse cx="317" cy="210" rx="23" ry="8" fill="#d0b794"/>
+              <path d="M297 215Q316 223 338 215" fill="none" stroke="#e0c9a6" stroke-width=".8"/>
+              <g class="cat-breath">
+                <path d="M298 209C296 201 305 195 315 197C326 197 332 202 331 209Q326 217 313 217Q303 216 298 209Z" fill="#c59065"/>
+                <path d="M301 206Q304 198 314 199" fill="none" stroke="#ddb18a" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M306 199Q305 202 308 204M313 198Q311 201 315 203M319 200Q317 202 320 205" fill="none" stroke="#ac7953" stroke-width="2" stroke-linecap="round"/>
+                <path d="M308 208Q316 203 324 208Q325 213 317 214Q310 214 308 208Z" fill="#d5a57b"/>
+              </g>
+              <path d="M302 204C293 211 302 217 313 216Q321 216 324 213" fill="none" stroke="#a97550" stroke-width="5" stroke-linecap="round"/>
+              <path d="M301 205Q297 211 306 213" fill="none" stroke="#d4a37a" stroke-width="2" stroke-linecap="round"/>
+              <ellipse cx="326" cy="214" rx="5" ry="2.3" fill="#e0b991"/>
+              <path d="M325 214v1M327 214v1" stroke="#b88a62" stroke-width=".6"/>
+              <path d="M322 206L322 198Q325 198 328 202Q331 200 336 199L337 207Q337 214 330 214Q322 213 322 206Z" fill="#ce9b70"/>
+              <path d="M324 201L324 205L327 203M332 203L335 201L335 205" fill="#d7b09a"/>
+              <path d="M327 203L328 205M331 203L330 205" stroke="#ad7b56" stroke-width="1" stroke-linecap="round"/>
+              <path d="M324 208Q326 210 328 208M331 208Q333 210 335 208" fill="none" stroke="#795c44" stroke-width=".8" stroke-linecap="round"/>
+              <ellipse cx="329.5" cy="211" rx="3.5" ry="1.6" fill="#e4c19c"/>
+              <path d="M328.5 210L330.5 210L329.5 211Z" fill="#ad7b68"/>
+              <path d="M325 211L320 210M325 212L320 213M334 211L339 210M334 212L339 213" stroke="#ecd2af" stroke-width=".55" stroke-linecap="round"/>
+            </g>
+            </g>
+          </svg>
+          <button id="cottage-door" class="door" aria-label="Open the cottage door"></button>
+          <button id="cottage-leave" class="leave" hidden>← Outside</button>
+          <div id="cottage-locked" class="locked"><strong>Loading your cottage…</strong><span id="cottage-remaining"></span></div>
+        </div>
+        <div class="scene-caption"><span id="cottage-sceneHint">Your keys are waiting. Open the door.</span><button id="cottage-decorate" hidden aria-expanded="false" aria-controls="cottage-inventory">Decorate</button></div>
+        <div id="cottage-inventory" hidden><p class="inventory-label">Your collection · choose what feels like home</p><button id="cottagePlaceAll" type="button">Place all unlocked</button><div id="cottage-items"></div></div>
+        <footer><div><span id="cottage-nextLabel"></span><span id="cottage-nextHours"></span></div><progress id="cottage-progress" max="100" value="0" aria-label="Progress to next unlock"></progress><p id="cottage-announcement" aria-live="polite"></p></footer>
+      </section>
+      </div>
+    </div>
+  </main>
+
+  <div id="uidDebug"></div>
+
+  <!-- Browsers refuse to load JavaScript modules from a file opened by
+       double-click, so say so instead of showing a page that never
+       connects. -->
+  <script>
+    if (location.protocol === "file:") {
+      document.getElementById("presenceState").textContent =
+        "open the GitHub Pages link — this file can't run on its own";
+    }
+  </script>
+
+  <!-- Firebase's "compat" build, as plain scripts: they put a global
+       `firebase` on the page, which js/firebase.js picks up. -->
+  
+  
+  
+
+  <!-- The app. type="module" runs after the page has parsed, so every
+       element above exists by then. -->
+  <script src="prototypes/dashboard-preview.js"></script>
+  <script src="tests/helpers/fake-firebase.js"></script>
+  <script type="module" src="js/main.js?v=20261031-cottage"></script>
+</body>
+</html>

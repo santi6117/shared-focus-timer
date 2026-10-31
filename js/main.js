@@ -26,6 +26,7 @@ import * as remoteView from "./remote-view.js";
 import * as presence from "./presence.js";
 import * as status from "./status.js";
 import * as stats from "./stats.js";
+import * as cottage from "./cottage.js";
 import * as timeManagement from "./time-management.js";
 import * as activityCalendar from "./activity-calendar.js";
 import * as sharedToday from "./shared-today.js";
@@ -70,6 +71,7 @@ async function boot() {
     sharedToday.init();
     stats.init();
     timeManagement.init();
+    cottage.init();
     note.init();
     messages.init();
     alert.init();
