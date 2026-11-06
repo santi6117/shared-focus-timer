@@ -7,16 +7,21 @@
   position: fixed;
   top: 1.25rem;
   right: 1.25rem;
+}
+
+#presenceWidget,
+.is-compact .timer-card {
   padding: 0.7rem 1.1rem;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 999px;
-  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   gap: 0.6rem;
   font-size: 0.9rem;
 }
+#presenceWidget,
+.is-compact .timer-card:not(.session-complete) { box-shadow: var(--shadow-sm); }
 
 /* Two states only: a paused timer, a closed tab and an offline laptop are
    all "not working" and look identical. */

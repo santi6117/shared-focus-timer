@@ -22,8 +22,8 @@
   <link rel="stylesheet" href="css/wallpapers/hills.css" />
   <link rel="stylesheet" href="css/wallpapers/koi.css" />
   <link rel="stylesheet" href="css/layout.css" />
-  <link rel="stylesheet" href="css/widgets.css" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261106-compact-timer" />
+  <link rel="stylesheet" href="css/widgets.css?v=20261106-matched-pills" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261106-matched-pills" />
   <link rel="stylesheet" href="css/cottage.css?v=20261031" />
 </head>
 <body>
@@ -190,6 +190,7 @@
   </div>
 
   <section id="timerView" class="timer-view" aria-label="Focus timer">
+  <div class="timer-dock">
   <!-- Presence: whether the OTHER person is working right now. -->
   <div id="presenceWidget">
     <span class="dot" id="presenceDot"></span>
@@ -210,6 +211,7 @@
       <!-- The word is its own span because the render loop rewrites it
            ("Focus" / "Focusing" / "Done"); the heart sits outside it so it
            is never overwritten. -->
+      <span class="dot compact-timer-dot" aria-hidden="true"></span>
       <h1 id="timerHeading" class="eyebrow" tabindex="-1"><span id="stageLabel">Focus</span><span class="heart" aria-hidden="true">&#9829;</span></h1>
       <div id="timerDisplay">25:00</div>
       <!-- Phone only: where the timer above actually runs. -->
@@ -263,6 +265,7 @@
       </div>
     </section>
   </main>
+  </div>
 
   <a id="dashboardNav" class="view-nav" href="#dashboard">Dashboard <span aria-hidden="true">→</span></a>
   </section>

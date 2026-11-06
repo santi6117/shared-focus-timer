@@ -26,8 +26,8 @@
 .view-nav span { color: var(--ink-soft); }
 #dashboardNav { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 2; }
 
-/* Compact mode puts the presence pill and the existing timer in the same
-   flow, so the timer follows even when the presence text wraps. */
+/* The compact dock gives both pills the same tracks, including when the
+   presence text wraps. */
 .timer-card { position: relative; }
 #compactTimerToggle {
   position: absolute;
@@ -46,28 +46,54 @@
 .is-compact #compactTimerToggle .restore-icon { display: initial; }
 
 .timer-view.is-compact { padding: 1.25rem; }
-.is-compact #presenceWidget {
-  position: static;
-  width: fit-content;
+.is-compact .timer-dock {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.5rem;
+  width: max-content;
   max-width: 100%;
   margin-left: auto;
 }
+.is-compact #presenceWidget { position: static; }
 .is-compact #presenceState { overflow-wrap: anywhere; }
 .timer-view.is-compact .stage {
   min-height: 0;
-  align-items: flex-end;
-  padding: 0.5rem 0 0;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
 }
 .is-compact .timer-card {
+  flex: 1;
   flex-direction: row;
-  gap: 0.65rem;
   min-width: 0;
-  padding: 0.35rem 0.45rem 0.35rem 0.9rem;
-  border-radius: 999px;
 }
-.is-compact .timer-card:not(.session-complete) { box-shadow: var(--shadow-sm); }
-.is-compact #timerDisplay { font-size: 1.25rem; font-weight: 600; }
-.is-compact #compactTimerToggle { position: static; order: 1; flex: none; }
+.is-compact .timer-card.session-complete { border-color: var(--accent); }
+.compact-timer-dot { display: none; }
+.is-compact .compact-timer-dot { display: block; }
+.is-compact .is-running .compact-timer-dot { background: var(--accent); }
+.timer-view.is-compact #timerHeading,
+.is-compact #timerDisplay {
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.is-compact #timerDisplay { font-variant-numeric: tabular-nums; }
+.is-compact #compactTimerToggle {
+  position: static;
+  order: 1;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  background: transparent;
+  border: 0;
+}
+.is-compact #compactTimerToggle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.is-compact #timerHeading .heart,
 .is-compact .settings-row,
 .is-compact .controls,
 .is-compact .category-row,

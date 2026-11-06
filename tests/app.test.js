@@ -89,7 +89,9 @@ describe("compact timer", () => {
     const presence = await app.page.locator("#presenceWidget").boundingBox();
     const compact = await card.boundingBox();
     assert.ok(compact.y >= presence.y + presence.height);
-    assert.ok(Math.abs(compact.x + compact.width - presence.x - presence.width) < 1);
+    assert.equal(compact.x, presence.x);
+    assert.equal(compact.width, presence.width);
+    assert.equal(compact.height, presence.height);
     assert.ok(compact.height < full.height / 2);
 
     await app.run(20_000);
