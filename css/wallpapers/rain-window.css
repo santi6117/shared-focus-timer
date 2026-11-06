@@ -6,7 +6,7 @@ html:not(.remote) #backgroundLayer .wp-rain.rain-phone,
 .rain-study { --wetness: .86; --softness: 1.5px; --warmth: .18; background: #687b8e; }
 .rain-study > div, .rain-glass { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .rain-painted-city {
-  background: url('../../assets/rain-watercolor.png') center / cover no-repeat;
+  background: url('../../assets/rain-watercolor.png?v=20261106') center / cover no-repeat;
   filter: blur(var(--softness)) saturate(.78); transform: scale(1.014);
 }
 .rain-distance-haze { background: linear-gradient(180deg, #b4bdc916, #a5b4bf12 45%, #4e657114); }

@@ -1254,7 +1254,7 @@ describe("wallpapers", () => {
       await img.decode();
       return { source, width: img.naturalWidth, height: img.naturalHeight };
     });
-    assert.match(image.source, /assets\/rain-watercolor\.png$/);
+    assert.match(image.source, /assets\/rain-watercolor\.png\?v=20261106$/);
     assert.ok(image.width > image.height && image.width >= 1600);
     assert.equal(await app.page.locator(".rain-slide").first().evaluate(el => getComputedStyle(el).animationName), "none");
   });
