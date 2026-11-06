@@ -17,6 +17,15 @@ export function init() {
   capNote = document.getElementById("capNote");
   card = document.querySelector(".timer-card");
 
+  const view = document.getElementById("timerView");
+  const compactToggle = document.getElementById("compactTimerToggle");
+  compactToggle.hidden = false;
+  compactToggle.addEventListener("click", () => {
+    const compact = view.classList.toggle("is-compact");
+    compactToggle.setAttribute("aria-pressed", String(compact));
+    compactToggle.title = compact ? "Expand timer" : "Minimize timer";
+  });
+
   durationInput.value = timer.state().countdownDuration / 60000;
   syncSettings();
 

@@ -21,7 +21,7 @@ import * as timer from "./timer.js";
 import * as ownRoom from "./own-room.js";
 import * as sessions from "./sessions.js";
 import * as categories from "./categories.js";
-import * as timerView from "./timer-view.js";
+import * as timerView from "./timer-view.js?v=20261106-compact-timer";
 import * as remoteView from "./remote-view.js";
 import * as presence from "./presence.js";
 import * as status from "./status.js";

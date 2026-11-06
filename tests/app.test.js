@@ -71,6 +71,43 @@ describe("boot and identity", () => {
   });
 });
 
+// ---------------------------------------------------------------- compact timer
+
+describe("compact timer", () => {
+  it("docks under presence and keeps the same countdown when expanded", async () => {
+    app = await openApp();
+    const toggle = app.page.getByRole("button", { name: "Compact timer" });
+    const card = app.page.locator(".timer-card");
+    const full = await card.boundingBox();
+    await app.setDuration(1);
+    await app.click("startBtn");
+    await toggle.focus();
+    await toggle.press("Enter");
+
+    assert.equal(await toggle.getAttribute("aria-pressed"), "true");
+    assert.equal(await app.page.locator("#pauseBtn").isVisible(), false);
+    const presence = await app.page.locator("#presenceWidget").boundingBox();
+    const compact = await card.boundingBox();
+    assert.ok(compact.y >= presence.y + presence.height);
+    assert.ok(Math.abs(compact.x + compact.width - presence.x - presence.width) < 1);
+    assert.ok(compact.height < full.height / 2);
+
+    await app.run(20_000);
+    assert.equal(await app.text("timerDisplay"), "0:40");
+    assert.equal(await app.text("stageLabel"), "Focusing");
+    await toggle.press("Enter");
+    assert.equal(await toggle.getAttribute("aria-pressed"), "false");
+    assert.equal(await app.page.locator("#pauseBtn").isVisible(), true);
+    assert.equal(await app.text("timerDisplay"), "0:40");
+  });
+
+  it("keeps the phone remote layout", async () => {
+    app = await openApp({ device: "phone" });
+    assert.equal(await app.page.locator("#compactTimerToggle").isVisible(), false);
+    assert.equal(await app.page.locator("#statusInput").isVisible(), true);
+  });
+});
+
 // ---------------------------------------------------------------- navigation
 
 describe("laptop navigation", () => {

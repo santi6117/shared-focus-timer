@@ -26,6 +26,53 @@
 .view-nav span { color: var(--ink-soft); }
 #dashboardNav { position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 2; }
 
+/* Compact mode puts the presence pill and the existing timer in the same
+   flow, so the timer follows even when the presence text wraps. */
+.timer-card { position: relative; }
+#compactTimerToggle {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink-soft);
+}
+#compactTimerToggle[hidden],
+#compactTimerToggle .restore-icon,
+.is-compact #compactTimerToggle .minimize-icon { display: none; }
+.is-compact #compactTimerToggle .restore-icon { display: initial; }
+
+.timer-view.is-compact { padding: 1.25rem; }
+.is-compact #presenceWidget {
+  position: static;
+  width: fit-content;
+  max-width: 100%;
+  margin-left: auto;
+}
+.is-compact #presenceState { overflow-wrap: anywhere; }
+.timer-view.is-compact .stage {
+  min-height: 0;
+  align-items: flex-end;
+  padding: 0.5rem 0 0;
+}
+.is-compact .timer-card {
+  flex-direction: row;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.35rem 0.45rem 0.35rem 0.9rem;
+  border-radius: 999px;
+}
+.is-compact .timer-card:not(.session-complete) { box-shadow: var(--shadow-sm); }
+.is-compact #timerDisplay { font-size: 1.25rem; font-weight: 600; }
+.is-compact #compactTimerToggle { position: static; order: 1; flex: none; }
+.is-compact .settings-row,
+.is-compact .controls,
+.is-compact .category-row,
+.is-compact #statusDisclosure { display: none; }
+
 /* Personal status remains one tap away on the laptop. The existing editor
    is collapsed into the pill; phones retain the original always-visible
    remote editor and do not use this disclosure control. */
@@ -130,6 +177,10 @@
   box-shadow: 0 0 0 4px #d6713e33, var(--shadow); text-align: center;
 }
 #completionPanel[hidden] { display: none !important; }
+.timer-view.is-compact:not([hidden]) ~ #completionPanel {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
 body.session-complete #completionPanel { animation: completion-pulse 2.5s ease-in-out infinite; }
 
 @media (max-width: 900px) {

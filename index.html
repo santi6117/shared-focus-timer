@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="css/wallpapers/koi.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/widgets.css" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261018" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261106-compact-timer" />
   <link rel="stylesheet" href="css/cottage.css?v=20261031" />
 </head>
 <body>
@@ -199,6 +199,14 @@
 
   <main class="stage">
     <section class="card timer-card">
+      <button id="compactTimerToggle" type="button" aria-label="Compact timer"
+              aria-pressed="false" title="Minimize timer" hidden>
+        <svg viewBox="0 0 16 16" width="16" height="16" fill="none"
+             stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path class="minimize-icon" d="M4 8h8"/>
+          <path class="restore-icon" d="M9 3h4v4M13 3 9 7M7 13H3V9m0 4 4-4"/>
+        </svg>
+      </button>
       <!-- The word is its own span because the render loop rewrites it
            ("Focus" / "Focusing" / "Done"); the heart sits outside it so it
            is never overwritten. -->
@@ -620,6 +628,6 @@
 
   <!-- The app. type="module" runs after the page has parsed, so every
        element above exists by then. -->
-  <script type="module" src="js/main.js?v=20261031-cottage"></script>
+  <script type="module" src="js/main.js?v=20261106-compact-timer"></script>
 </body>
 </html>
