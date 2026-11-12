@@ -22,6 +22,7 @@
   const listeners = [];
   let transactionFailures = 0;
   let sessionTransactionFailures = 0;
+  let progressLinkFailures = 0;
 
   const parts = (p) => String(p).split("/").filter(Boolean);
   const join = (ks) => ks.join("/");
@@ -135,6 +136,10 @@
         return Object.assign(Promise.resolve(ref), ref);
       },
       transaction(update) {
+        if (progressLinkFailures > 0 && /^progress\/[^/]+\/links\//.test(p)) {
+          progressLinkFailures--;
+          return Promise.reject(new Error("Simulated private link sync failure"));
+        }
         if (sessionTransactionFailures > 0 && p.startsWith("sessions/")) {
           sessionTransactionFailures--;
           return Promise.reject(new Error("Simulated session permission failure"));
@@ -152,7 +157,11 @@
       once(event) {
         return Promise.resolve(snapshot(p));
       },
-      on(event, cb) {
+      on(event, cb, cancel) {
+        if (window.__denyProgress && p.startsWith("progress/")) {
+          queueMicrotask(() => cancel?.(new Error("Permission denied")));
+          return cb;
+        }
         listeners.push({ path: p, event, cb });
         // Real Firebase delivers initial data asynchronously.
         queueMicrotask(() => {
@@ -198,6 +207,7 @@
   window.__fakeDb = {
     get: read,
     failSessionTransactions(count = 1) { sessionTransactionFailures = count; },
+    failProgressLinks(count = 1) { progressLinkFailures = count; },
     failActivityTransactions(count = 1) { transactionFailures = count; },
     set(path, value) { writeAt(path, resolve(value)); persist(); notify(path); },
     get writes() { return writes; },

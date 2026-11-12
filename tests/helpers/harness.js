@@ -30,9 +30,10 @@ export async function teardown() {
 
 // Runs before any page script. Stubs the two browser APIs that can't be
 // observed from outside (notifications, audio) and seeds storage once.
-function initScript({ seedStorage, seedDb, role }) {
+function initScript({ seedStorage, seedDb, role, denyProgress }) {
   window.__role = role;
   window.__seedDb = seedDb;
+  window.__denyProgress = denyProgress;
   if (!sessionStorage.getItem("__seeded")) {
     sessionStorage.setItem("__seeded", "1");
     for (const [k, v] of Object.entries(seedStorage)) localStorage.setItem(k, v);
@@ -76,7 +77,10 @@ function initScript({ seedStorage, seedDb, role }) {
  *   device       "phone" | "laptop" — sets ?device=, overriding detection
  *   reducedMotion "reduce" by default; motion tests opt into "no-preference"
  */
-export async function openApp({ role = "santi", seedStorage = {}, seedDb = {}, time = T0, device = "laptop", reducedMotion = "reduce" } = {}) {
+export async function openApp({
+  role = "santi", seedStorage = {}, seedDb = {}, time = T0,
+  device = "laptop", reducedMotion = "reduce", denyProgress = false,
+} = {}) {
   // The clock can jump hours in a timer test. Leave the decorative animation
   // still there, rather than drawing hours of unrelated frames; dedicated
   // wallpaper tests exercise motion with short, real frame sequences.
@@ -87,7 +91,7 @@ export async function openApp({ role = "santi", seedStorage = {}, seedDb = {}, t
     route.fulfill({ contentType: "text/javascript", body: "" }));
   await context.route(/gstatic\.com\/firebasejs\/.*firebase-app-compat\.js/, (route) =>
     route.fulfill({ contentType: "text/javascript", body: FAKE_FIREBASE }));
-  await context.addInitScript(initScript, { seedStorage, seedDb, role: role || "none" });
+  await context.addInitScript(initScript, { seedStorage, seedDb, role: role || "none", denyProgress });
 
   const page = await context.newPage();
   const errors = [];

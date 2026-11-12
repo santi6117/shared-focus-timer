@@ -34,13 +34,64 @@ async function calendar(seconds, count) {
   }, [seconds, count]);
 }
 
+async function pick(buttonId, query, choice) {
+  await app.click(buttonId);
+  const dialog = app.page.getByRole("dialog");
+  await dialog.getByRole("searchbox").fill(query);
+  await dialog.getByRole("button", { name: choice, exact: true }).click();
+}
+
 describe('Dashboard time management', () => {
+  it("filters by task, adds missed task time, and undoes a reassignment with its duration", async () => {
+    app = await openApp({ seedDb: {
+      sessions: { santi: { a: record } },
+      progress: { santi: {
+        board: {
+          columns: { work: { title: "Work", status: "active", position: 0 } },
+          tasks: {
+            notes: { title: "Write notes", columnId: "work", position: 0, completedAt: T0 - 1000 },
+            reading: { title: "Read paper", columnId: "work", position: 1 },
+          },
+        },
+        links: { a: { columnId: "work", taskId: "reading", note: "Keep this note" } },
+      } },
+    } });
+    await app.click("dashboardNav");
+    await app.page.locator("#timeManager summary").click();
+    await pick("timeFocusFilter", "Read paper", "Read paper Task · Work");
+    assert.match(await row().innerText(), /30m · Read paper/);
+    await row().getByRole("button", { name: "Edit", exact: true }).click();
+    await pick("timeFocusChoice", "Write notes", "Write notes Task · Work");
+    await app.page.locator("#timeMinutes").fill("20");
+    await app.click("timeSave");
+    assert.match(await app.text("timeHistoryCount"), /No sessions match/);
+    await pick("timeFocusFilter", "Write notes", "Write notes Task · Work");
+    assert.match(await row().innerText(), /20m · Write notes/);
+    const edited = await app.db("sessions/santi/a");
+    const revision = edited.timeEdits[edited.activeEdit].progressRevision;
+    assert.deepEqual(await app.db("progress/santi/links/a/targets/" + revision),
+      { columnId: "work", taskId: "notes" });
+    assert.equal(await app.db("progress/santi/links/a/note"), "Keep this note");
+    assert.doesNotMatch(JSON.stringify(edited), /taskId|columnId|Write notes/);
+    await row().getByRole("button", { name: "Undo", exact: true }).click();
+    await pick("timeFocusFilter", "Read paper", "Read paper Task · Work");
+    assert.match(await row().innerText(), /30m · Read paper/);
+
+    await app.click("timeAdd");
+    await pick("timeFocusChoice", "Read paper", "Read paper Task · Work");
+    await app.page.locator("#timeMinutes").fill("15");
+    await app.click("timeSave");
+    assert.equal(await app.page.locator("#timeHistory li").count(), 2);
+    await app.page.locator("#dashboardView").getByRole("link", { name: "Progress" }).click();
+    assert.match(await app.page.getByRole("region", { name: "Work", exact: true }).textContent(), /Total 45m/);
+  });
+
   it('adds missed work to personal totals, categories and calendar, then undoes the addition', async () => {
     await open(null);
     await app.click('timeAdd');
     await app.page.locator('#timeEnd').fill('2026-09-30T08:00');
     await app.page.locator('#timeMinutes').fill('45');
-    await app.page.locator('#timeCategory').selectOption('reading');
+    await pick("timeFocusChoice", "Reading", "Reading Category");
     await app.click('timeSave');
     await total('45m');
     await calendar(2700, 1);

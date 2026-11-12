@@ -108,7 +108,7 @@ export function planRecovery(t, now) {
   if (now - diedAt < STALE_MS) return null;
   const zeroTime = t.startedAt + t.remainingAtStart;
   const endedAt = Math.min(diedAt, zeroTime);
-  const workedMs = Math.min(Math.max(endedAt - t.startedAt, 0), t.duration);
+  const workedMs = elapsedMs(t, Math.max(t.startedAt, endedAt));
   return { workedMs };
 }
 

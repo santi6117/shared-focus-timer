@@ -13,20 +13,24 @@ import { refs, TIMESTAMP } from "./firebase.js";
 import * as timer from "./timer.js";
 import * as categories from "./categories.js";
 import { readSession, reviseSession } from "./lib/session-edits.js";
+import { stageSessionTarget } from "./progress-store.js";
 
 const log = [];
 const listeners = [];
 let initialLoadComplete = false;
 let connected = false;
+let ownerUid;
+let flushing = false;
+let retryRequested = false;
+let watching = false;
 
 export function all() { return log.filter((entry) => !entry.removed); }
 export function history() { return log; }
 export function onChange(fn) { listeners.push(fn); }
 export function isInitialLoadComplete() { return initialLoadComplete; }
 
-async function write({ ms, categoryLabel }) {
+async function write({ id, ms, categoryLabel, timeZone, target }) {
   const key = categories.keyFor(categoryLabel);
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   const data = {
     endedAt: TIMESTAMP,
     elapsedSeconds: Math.round(ms / 1000),
@@ -34,16 +38,70 @@ async function write({ ms, categoryLabel }) {
     timeZone,
     activityVersion: 1,
   };
-  await refs.sessions.push(data);
-  // The database listeners supply the resolved timestamp, including corrections.
-  categories.recordUse(key, categoryLabel);
+  // Create only once. Retrying after acknowledgement loss must also preserve
+  // time-management edits that may have happened since the original write.
+  const result = await refs.sessions.child(id).transaction(
+    (current) => current === null ? data : undefined, undefined, false,
+  );
+  if (result.committed) categories.recordUse(key, categoryLabel);
+  if (target?.uid === ownerUid) {
+    const link = { columnId: target.columnId };
+    if (target.taskId) link.taskId = target.taskId;
+    // This is private even on deployments where legacy session grants are
+    // broader. A retry leaves the original attribution and any note intact.
+    await refs.progress.child("links/" + id).transaction(
+      (current) => current?.columnId ? undefined : { ...current, ...link }, undefined, false,
+    );
+  }
 }
 
-export function init() {
-  timer.on("session", (work) => categories.whenReady(() => {
-    write(work).catch((error) => console.error("Session could not be saved:", error));
-  }));
+async function flushPending() {
+  if (!connected) return;
+  if (flushing) {
+    retryRequested = true;
+    return;
+  }
+  flushing = true;
+  try {
+    const keys = Object.keys(localStorage).filter((key) => key.startsWith(timer.PENDING_PREFIX));
+    const results = await Promise.allSettled(keys.map(async (key) => {
+      const work = JSON.parse(localStorage.getItem(key));
+      if (work?.uid !== ownerUid) return;
+      await write(work);
+      localStorage.removeItem(key);
+    }));
+    const failure = results.find((result) => result.status === "rejected");
+    if (failure) console.error("Session sync will retry:", failure.reason);
+    window.dispatchEvent(new CustomEvent("sft:sessionsync", { detail: { failed: Boolean(failure) } }));
+  } finally {
+    flushing = false;
+    if (retryRequested) {
+      retryRequested = false;
+      flushPending();
+    }
+  }
+}
 
+export function init(uid) {
+  ownerUid = uid;
+  const flush = () => categories.whenReady(flushPending);
+  timer.on("session", flush);
+  window.addEventListener("storage", (event) => {
+    if (event.key?.startsWith(timer.PENDING_PREFIX) && event.newValue) flush();
+  });
+  setInterval(() => {
+    if (Object.keys(localStorage).some((key) => key.startsWith(timer.PENDING_PREFIX))) flush();
+  }, 30_000);
+  watchHistory();
+  refs.connected.on("value", (snap) => {
+    connected = snap.val() === true;
+    if (connected) flush();
+  });
+}
+
+export function watchHistory() {
+  if (watching) return;
+  watching = true;
   // A value snapshot applies edits and undo as one coherent log. Firebase
   // still transports deltas; the callback exposes the complete local view.
   refs.sessions.on("value", (snap) => {
@@ -52,7 +110,6 @@ export function init() {
     initialLoadComplete = true;
     listeners.forEach((fn) => fn());
   });
-  refs.connected.on("value", (snap) => { connected = snap.val() === true; });
 }
 
 // An online value read refreshes history immediately before the explicit
@@ -74,8 +131,9 @@ export async function refreshCompleteHistory() {
 
 // Editing is online-only: a stale offline form must not overwrite newer work.
 // The transaction rechecks its version whenever Firebase retries the callback.
-export async function changeSession(id, expectedVersion, change) {
+export async function changeSession(id, expectedVersion, change, target) {
   if (!connected || !initialLoadComplete) throw new Error("Connect and wait for your history before saving changes.");
+  if (target !== undefined) change = { ...change, progressRevision: await stageSessionTarget(id, target) };
   let failure = null;
   const result = await refs.sessions.child(id).transaction((raw) => {
     // Firebase may first call with an empty cache; return it unchanged so the
@@ -88,13 +146,15 @@ export async function changeSession(id, expectedVersion, change) {
 }
 
 export function newManualId() { return refs.sessions.push().key; }
-export async function addManual(id, work) {
+export async function addManual(id, work, target) {
   if (!connected || !initialLoadComplete) throw new Error("Connect and wait for your history before adding work.");
+  if (target) work = { ...work, progressRevision: await stageSessionTarget(id, target) };
   const result = await refs.sessions.child(id).transaction((raw) => {
     if (raw) return;
     // The hidden base lets Undo also undo an addition. Its original fields
     // and every subsequent snapshot remain in the private record.
-    return reviseSession({ ...work, removed: true, source: "manual", activityVersion: 1 }, 0, work, TIMESTAMP);
+    const { progressRevision, ...base } = work;
+    return reviseSession({ ...base, removed: true, source: "manual", activityVersion: 1 }, 0, work, TIMESTAMP);
   });
   if (!result.committed) throw new Error("This work may already be saved. Check your history before adding more.");
 }

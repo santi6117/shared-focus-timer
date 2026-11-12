@@ -6,29 +6,62 @@ import * as categories from "./categories.js";
 import { serverNow } from "./firebase.js";
 import { formatTotal } from "./lib/time.js";
 import { dateTimeInZone, validateWork } from "./lib/session-edits.js";
+import { showSession } from "./progress.js";
+import * as progressStore from "./progress-store.js";
+import { openForTime, targetLabel } from "./focus-picker.js";
 
 const $ = (id) => document.getElementById(id);
 const PAGE_SIZE = 5;
 let page = 0, editing = null, draftId = null, removal = null, busy = false;
+let draftFocus, originalTarget, historyFilter;
 const browserZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 const status = (text) => { $("timeStatus").textContent = text; };
 
-function categoryOptions(selected = $("timeCategory").value || "uncategorized") {
-  const options = [{ key: "uncategorized", label: "Uncategorized" }, ...categories.options()];
-  if (!options.some(({ key }) => key === selected)) options.push({ key: selected, label: categories.labelFor(selected) });
-  $("timeCategory").replaceChildren(...options.map(({ key, label }) => {
-    const option = document.createElement("option");
-    option.value = key;
-    option.textContent = label;
-    return option;
-  }));
-  $("timeCategory").value = selected;
+function sessionTarget(entry) {
+  const link = entry && progressStore.sessionLink(entry);
+  return link?.columnId ? { columnId: link.columnId, taskId: link.taskId } : null;
+}
+
+function renderDraftFocus() {
+  if (!draftFocus) return;
+  $("timeFocusChoice").textContent = [targetLabel(draftFocus.target), draftFocus.categoryLabel]
+    .filter(Boolean).join(" · ") || "Unassigned";
+}
+
+function pickDraftFocus() {
+  openForTime({
+    ...draftFocus, title: "Assign time to",
+    choose(choice, editingCategory) {
+      if (choice.target) {
+        draftFocus.target = choice.target;
+      } else {
+        if (!editingCategory) draftFocus.target = null;
+        draftFocus.categoryKey = choice.key;
+        draftFocus.categoryLabel = choice.label;
+        draftFocus.categorySelected = true;
+      }
+      renderDraftFocus();
+    },
+  });
+}
+
+function pickHistoryFilter() {
+  openForTime({
+    title: "Filter logged time", filter: true, target: historyFilter?.target,
+    categoryLabel: historyFilter?.key ? historyFilter.label : "",
+    choose(choice) {
+      historyFilter = choice.label ? choice : null;
+      page = 0;
+      renderHistory();
+    },
+  });
 }
 
 function closeForm() {
   $("timeForm").hidden = true;
   editing = null;
   draftId = null;
+  draftFocus = null;
 }
 
 function openForm(entry = null) {
@@ -44,7 +77,13 @@ function openForm(entry = null) {
   $("timeEnd").value = dateTimeInZone(entry?.endedAt ?? serverNow() - 60_000, zone);
   $("timeZone").value = zone;
   $("timeMinutes").value = entry ? entry.elapsedSeconds / 60 : "";
-  categoryOptions(entry?.categoryKey || "uncategorized");
+  originalTarget = sessionTarget(entry);
+  const categoryKey = entry?.categoryKey || (!entry && historyFilter?.key) || "uncategorized";
+  draftFocus = {
+    target: entry ? originalTarget : historyFilter?.target || null, categoryKey,
+    categoryLabel: categoryKey === "uncategorized" ? "" : categories.labelFor(categoryKey),
+  };
+  renderDraftFocus();
   $("timeSave").textContent = entry ? "Save correction" : "Add work";
   $("timeForm").hidden = false;
   status("");
@@ -54,12 +93,22 @@ function openForm(entry = null) {
 // The list can refresh while an edit form stays open. Keep that form's version
 // fixed so the save reports a conflict rather than overwriting a remote edit.
 function renderHistory() {
-  const entries = sessions.history().slice().sort((a, b) => b.endedAt - a.endedAt || a.id.localeCompare(b.id));
+  const filterTarget = historyFilter?.target;
+  $("timeFocusFilter").textContent = historyFilter
+    ? "Filter · " + (targetLabel(filterTarget) || historyFilter.label)
+    : "Filter by task or category";
+  const entries = sessions.history().filter((entry) => {
+    if (!historyFilter) return true;
+    if (!filterTarget) return entry.categoryKey === historyFilter.key;
+    const target = sessionTarget(entry);
+    return filterTarget.taskId ? target?.taskId === filterTarget.taskId : target?.columnId === filterTarget.columnId;
+  }).sort((a, b) => b.endedAt - a.endedAt || a.id.localeCompare(b.id));
   page = Math.min(page, Math.max(0, Math.ceil(entries.length / PAGE_SIZE) - 1));
   const list = $("timeHistory");
   list.replaceChildren();
   $("timeHistoryCount").textContent = sessions.isInitialLoadComplete()
-    ? (entries.length ? `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, entries.length)} of ${entries.length} records` : "No logged work yet.")
+    ? (entries.length ? `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, entries.length)} of ${entries.length} records`
+      : historyFilter ? "No sessions match this filter." : "No logged work yet.")
     : "Loading your history…";
   $("timeNewer").disabled = busy || page === 0;
   $("timeOlder").disabled = busy || (page + 1) * PAGE_SIZE >= entries.length;
@@ -68,7 +117,9 @@ function renderHistory() {
     row.dataset.sessionId = entry.id;
     row.className = "time-history-row" + (entry.removed ? " time-record-removed" : "");
     const title = document.createElement("strong");
+    const target = sessionTarget(entry);
     title.textContent = (entry.elapsedSeconds < 60 ? entry.elapsedSeconds + "s" : formatTotal(entry.elapsedSeconds))
+      + (target ? " · " + targetLabel(target) : "")
       + " · " + categories.labelFor(entry.categoryKey) + (entry.removed ? " · Removed" : "");
     const date = document.createElement("span");
     const zone = entry.timeZone || browserZone();
@@ -86,6 +137,9 @@ function renderHistory() {
     };
     if (!entry.removed) {
       action("Edit", () => openForm(entry));
+      if ((entry.source === "timer" || target) && progressStore.state().ready) {
+        action("Session note", () => showSession(entry));
+      }
       action("Remove", () => {
         closeForm();
         removal = { ...entry };
@@ -112,23 +166,32 @@ function workFields(entry) {
 function setBusy(value) {
   busy = value;
   $("timeAdd").disabled = value;
+  $("timeFocusFilter").disabled = value;
   for (const input of $("timeForm").elements) input.disabled = value;
   $("timeRemoveConfirm").disabled = value;
   $("timeRemoveCancel").disabled = value;
   renderHistory();
 }
 
-async function saveChange(entry, change, message) {
+async function saveChange(entry, change, message, { target, category } = {}) {
   if (busy) return;
   setBusy(true);
   try {
-    await sessions.changeSession(entry.id, entry.editVersion, change);
+    if (category) await saveNewCategory();
+    await sessions.changeSession(entry.id, entry.editVersion, change, target);
     closeForm();
     removal = null;
     $("timeRemoveReview").hidden = true;
     status(message);
   } catch (error) { status(error.message || "Couldn't save the change. Please try again."); }
   finally { setBusy(false); }
+}
+
+async function saveNewCategory() {
+  const { categoryKey, categoryLabel, categorySelected } = draftFocus;
+  if (categorySelected && categoryLabel && !categories.options().some(({ key }) => key === categoryKey)) {
+    await categories.recordUse(categoryKey, categoryLabel);
+  }
 }
 
 async function submit(event) {
@@ -138,13 +201,18 @@ async function submit(event) {
   try {
     work = validateWork({
       dateTime: $("timeEnd").value, timeZone: $("timeZone").value.trim(),
-      minutes: $("timeMinutes").value, categoryKey: $("timeCategory").value,
+      minutes: $("timeMinutes").value, categoryKey: draftFocus.categoryKey,
     }, serverNow());
   } catch (error) { status(error.message); return; }
-  if (editing) return saveChange(editing, work, "Correction saved.");
+  const target = draftFocus.target;
+  const changedTarget = target?.columnId !== originalTarget?.columnId || target?.taskId !== originalTarget?.taskId;
+  if (editing) return saveChange(editing, work, "Correction saved.", {
+    target: changedTarget ? target : undefined, category: true,
+  });
   setBusy(true);
   try {
-    await sessions.addManual(draftId, work);
+    await saveNewCategory();
+    await sessions.addManual(draftId, work, target);
     closeForm();
     page = 0;
     status("Missed work added. Undo is available beside the record.");
@@ -155,6 +223,8 @@ async function submit(event) {
 export function init() {
   $("timeAdd").addEventListener("click", () => openForm());
   $("timeForm").addEventListener("submit", submit);
+  $("timeFocusChoice").addEventListener("click", pickDraftFocus);
+  $("timeFocusFilter").addEventListener("click", pickHistoryFilter);
   $("timeCancel").addEventListener("click", () => { closeForm(); status("No changes saved."); });
   $("timeRemoveConfirm").addEventListener("click", () => {
     if (removal) saveChange(removal, { ...workFields(removal), removed: true }, "Work removed. You can restore it or undo the change.");
@@ -167,7 +237,7 @@ export function init() {
   $("timeNewer").addEventListener("click", () => { page--; renderHistory(); });
   $("timeOlder").addEventListener("click", () => { page++; renderHistory(); });
   sessions.onChange(renderHistory);
-  categories.onChange(() => { categoryOptions(); renderHistory(); });
-  categoryOptions();
+  progressStore.onChange(renderHistory);
+  categories.onChange(renderHistory);
   renderHistory();
 }

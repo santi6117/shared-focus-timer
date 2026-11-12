@@ -10,7 +10,7 @@
 //   "start"    the Start action, fired inside the click, so listeners may
 //              do things browsers only allow during a user gesture
 //   "end"      the run reached zero — fires exactly once per run
-//   "session"  a block of work should be logged: { ms, categoryLabel }
+//   "session"  a finished block of work with its stable run ID and target
 //
 // Events rather than direct calls because the old single-file version had
 // the timer call into messages, stats and the alert by name, which is what
@@ -29,8 +29,10 @@ import {
 // windows on one machine (?me=santi, ?me=kristina) would otherwise share one
 // timer.
 const STORAGE_KEY = "timerData:" + ME;
+export const PENDING_PREFIX = "pendingFocus:" + ME + ":";
 
 let timer = null;
+let ownerUid;
 const events = new EventTarget();
 
 export function on(type, fn) {
@@ -40,8 +42,22 @@ function emit(type, detail) {
   events.dispatchEvent(new CustomEvent(type, { detail }));
 }
 
-export function init() {
+export function init(uid) {
+  ownerUid = uid;
   timer = parseTimer(localStorage.getItem(STORAGE_KEY));
+  if (timer.focusTarget?.uid !== uid) timer.focusTarget = null;
+  if (focusTargetLocked() && !timer.runId) {
+    timer.runId = crypto.randomUUID();
+    save();
+  }
+  if (timer.runId && localStorage.getItem(PENDING_PREFIX + timer.runId)) {
+    // The page exited after journaling but before saving the finished state.
+    Object.assign(timer, {
+      runId: null, startedAt: null, running: false, logged: false,
+      remainingAtStart: timer.duration, zeroAt: null,
+    });
+    save();
+  }
 }
 
 // Read-only view for other modules. They change the timer only through the
@@ -50,6 +66,18 @@ export function state() { return timer; }
 export function remaining() { return remainingMs(timer, Date.now()); }
 
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(timer)); }
+
+export function focusTargetLocked() {
+  return !timer.logged && (timer.running || timer.remainingAtStart < timer.duration);
+}
+
+export function setFocusTarget(target) {
+  if (focusTargetLocked()) return false;
+  timer.focusTarget = target ? { ...target, uid: ownerUid } : null;
+  save();
+  emit("target");
+  return true;
+}
 
 // ---- Publishing to room/<me> ----
 // In SECONDS; the local state stays in milliseconds and converts only here.
@@ -111,7 +139,17 @@ function flushUnlogged() {
 
 function logWork(ms) {
   if (ms < MIN_LOGGABLE_MS) return;
-  emit("session", { ms, categoryLabel: timer.categoryLabel || "" });
+  const id = timer.runId || crypto.randomUUID();
+  const key = PENDING_PREFIX + id;
+  const work = {
+    id, ms, uid: ownerUid, categoryLabel: timer.categoryLabel || "",
+    target: timer.focusTarget || null,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+  };
+  // Journal before clearing the run. A refresh before Firebase acknowledges
+  // it can retry the same ID without counting the run again.
+  if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(work));
+  emit("session");
 }
 
 // ---- Waking up on time ----
@@ -140,7 +178,9 @@ export function start() {
     timer.remainingAtStart = timer.duration;
     timer.zeroAt = null;
     timer.logged = false;
+    timer.runId = null;
   }
+  timer.runId ||= crypto.randomUUID();
   timer.startedAt = Date.now();
   timer.running = true;
   timer.lastTickAt = Date.now();
@@ -154,8 +194,13 @@ export function start() {
 
 export function pause() {
   if (!timer.running) return;
+  const left = remaining();
+  if (left <= 0) {
+    completeAtZero();
+    return;
+  }
   clearAlarm();
-  timer.remainingAtStart = Math.max(0, remaining());
+  timer.remainingAtStart = left;
   timer.running = false;
   timer.startedAt = null;
   save();
@@ -170,6 +215,7 @@ export function reset() {
   timer.remainingAtStart = timer.duration;
   timer.running = false;
   timer.logged = false;
+  timer.runId = null;
   timer.zeroAt = null;
   save();
   publish(false, null);
@@ -208,6 +254,7 @@ function endRunWithLength(lengthMs) {
   timer.startedAt = null;
   timer.zeroAt = null;
   timer.logged = false;
+  timer.runId = null;
   save();
   publish(false, null);
   emit("change");
@@ -266,14 +313,15 @@ export function tick() {
 export function recoverInterruptedRun() {
   const plan = planRecovery(timer, Date.now());
   if (!plan) return;
+  logWork(plan.workedMs);
   timer.running = false;
   timer.startedAt = null;
   timer.lastTickAt = null;
   timer.remainingAtStart = timer.duration;
   timer.zeroAt = null;
   timer.logged = false;
+  timer.runId = null;
   save();
   publish(false, null);
-  logWork(plan.workedMs);
   emit("change");
 }

@@ -1,5 +1,5 @@
-// Categories: the vocabulary in categories/<me>, the "working on…" input,
-// and the recently-used chips under it.
+// Categories: the vocabulary in categories/<me> for the focus picker and
+// session history.
 //
 // Categories are derived, not declared. There is no settings screen; the
 // set is whatever has been typed, so there's no setup step before starting
@@ -66,81 +66,29 @@ export function labelFor(key) {
 export function recordUse(key, typed) {
   if (key === UNCATEGORIZED_KEY) return;
   const known = catMap[key];
-  refs.categories.child(key).update({
+  return refs.categories.child(key).update({
     label: (known && known.label) || typed.trim(),
     color: (known && known.color) || pickColor(catMap),
     lastUsedAt: TIMESTAMP,
   });
 }
 
-// ---- The input and chips ----
-let input, chipsEl;
-
-export function init() {
-  input = document.getElementById("categoryInput");
-  chipsEl = document.getElementById("categoryChips");
-  input.value = timer.state().categoryLabel || "";
-
-  input.addEventListener("input", (e) => timer.setCategoryLabel(e.target.value));
-  // Published on commit (enter or leaving the box), not per keystroke,
-  // or the other person would watch you type.
-  const commit = () => { snapToKnownLabel(); timer.publishCategoryIfRunning(); };
-  input.addEventListener("change", commit);
-  input.addEventListener("blur", commit);
-
-  // Small enough to re-read whole on every change, which also makes this
-  // the initial load.
-  refs.categories.on("value", (snap) => {
-    catMap = snap.val() || {};
-    if (!ready) markReady();
-    renderChips();
-    listeners.forEach((fn) => fn());
-  });
-  setTimeout(() => { if (!ready) markReady(); }, 5000);
-
-  renderChips();
+export function recentOptions() {
+  return options().sort((a, b) => (catMap[b.key].lastUsedAt || 0) - (catMap[a.key].lastUsedAt || 0));
 }
 
-// A typed variant snaps back to the established spelling, so the input
-// agrees with what the chips and breakdown show.
-function snapToKnownLabel() {
-  const typed = (timer.state().categoryLabel || "").trim();
-  if (!typed) return;
-  const known = catMap[normalizeKey(typed)] && catMap[normalizeKey(typed)].label;
-  if (known && known !== typed) {
-    timer.setCategoryLabel(known);
-    input.value = known;
-  }
-}
-
-function choose(label) {
-  timer.setCategoryLabel(label);
-  input.value = label;
+export function setSelection(label) {
+  const typed = label.trim();
+  const known = catMap[keyFor(typed)]?.label;
+  timer.setCategoryLabel(typed ? known || typed : "");
   timer.publishCategoryIfRunning();
 }
 
-// The five most recently used, newest first. Hidden below two: a row with
-// one chip is noise on day one.
-function renderChips() {
-  const keys = Object.keys(catMap)
-    .sort((a, b) => (catMap[b].lastUsedAt || 0) - (catMap[a].lastUsedAt || 0))
-    .slice(0, 5);
-
-  chipsEl.innerHTML = "";
-  chipsEl.classList.toggle("visible", keys.length >= 2);
-  if (keys.length < 2) return;
-
-  for (const key of keys) {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "cat-chip";
-    const swatch = document.createElement("span");
-    swatch.className = "swatch";
-    swatch.style.background = colorFor(key);
-    const text = document.createElement("span");
-    text.textContent = labelFor(key);
-    chip.append(swatch, text);
-    chip.addEventListener("click", () => choose(labelFor(key)));
-    chipsEl.appendChild(chip);
-  }
+export function init() {
+  refs.categories.on("value", (snap) => {
+    catMap = snap.val() || {};
+    if (!ready) markReady();
+    listeners.forEach((fn) => fn());
+  });
+  setTimeout(() => { if (!ready) markReady(); }, 5000);
 }

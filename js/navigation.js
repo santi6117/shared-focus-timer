@@ -1,4 +1,4 @@
-// The laptop's two visible views. This module only changes which existing
+// The application's visible views. This module only changes which existing
 // DOM section is shown; the timer and feature modules are initialized once.
 
 import { REMOTE } from "./device.js";
@@ -6,42 +6,41 @@ import * as timer from "./timer.js";
 import { formatClock, formatElapsed } from "./lib/time.js";
 import { shownMs } from "./lib/timer-math.js";
 
-let timerView, dashboardView, activeView, timerStatus;
+let views, activeView, timerStatus;
 
 // Hashes keep deep links and browser history native while leaving identity,
 // device and wallpaper query parameters untouched.
 function routeFromLocation() {
-  if (REMOTE) return "timer";
   const route = window.location.hash.slice(1);
-  if (!route || route === "timer" || route === "dashboard") return route || "timer";
+  if (!route || route === "timer" || route === "progress" || (!REMOTE && route === "dashboard")) {
+    return route || "timer";
+  }
   const url = new URL(window.location.href);
   url.hash = "timer";
   history.replaceState(history.state, "", url);
   return "timer";
 }
 
-// Apply visibility to the two already-mounted sections, then tell modules
+// Apply visibility to the already-mounted sections, then tell modules
 // that depend on actual visibility (notably message receipts) about the route.
 function applyRoute({ focus = false } = {}) {
   const next = routeFromLocation();
   if (next === activeView) return;
   activeView = next;
-  timerView.hidden = next !== "timer";
-  dashboardView.hidden = next !== "dashboard";
+  for (const [name, view] of Object.entries(views)) view.hidden = name !== next;
   if (focus) {
-    document.getElementById(next === "timer" ? "timerHeading" : "dashboardHeading")
-      .focus({ preventScroll: true });
+    document.getElementById(next + "Heading").focus({ preventScroll: true });
   }
   window.dispatchEvent(new CustomEvent("sft:viewchange", { detail: { view: next } }));
 }
 
 export function init() {
-  timerView = document.getElementById("timerView");
-  dashboardView = document.getElementById("dashboardView");
+  views = Object.fromEntries(["timer", "dashboard", "progress"]
+    .map((name) => [name, document.getElementById(name + "View")]));
   timerStatus = document.getElementById("dashboardTimerStatus");
   const initial = routeFromLocation();
   activeView = null;
-  applyRoute({ focus: window.location.hash === "#dashboard" });
+  applyRoute({ focus: initial !== "timer" });
   if (initial === "timer" && !window.location.hash && !REMOTE) {
     const url = new URL(window.location.href);
     url.hash = "timer";

@@ -12,6 +12,7 @@ export function readSession(id, raw) {
     categoryKey: value.categoryKey || value.category || "uncategorized",
     timeZone: typeof value.timeZone === "string" ? value.timeZone : null,
     activityVersion: raw.activityVersion,
+    progressRevision: value.progressRevision,
     removed: value.removed === true,
     source: raw.source === "manual" ? "manual" : "timer",
     editVersion: raw.editVersion || 0,
@@ -75,7 +76,9 @@ export function reviseSession(raw, expectedVersion, change, timestamp) {
     if (!active) throw new Error("There is no earlier change to undo.");
     next.activeEdit = active.previousEdit || 0;
   } else {
+    const previous = raw.activeEdit ? raw.timeEdits?.[raw.activeEdit] : raw;
     next.timeEdits = { ...raw.timeEdits, [next.editVersion]: {
+      ...(previous?.progressRevision && { progressRevision: previous.progressRevision }),
       ...change, previousEdit: raw.activeEdit || 0, changedAt: timestamp,
     } };
     next.activeEdit = next.editVersion;

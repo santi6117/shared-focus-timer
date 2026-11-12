@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="css/widgets.css?v=20261106-matched-pills" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261106-matched-pills" />
   <link rel="stylesheet" href="css/cottage.css?v=20261031" />
+  <link rel="stylesheet" href="css/progress.css" />
 </head>
 <body>
 
@@ -235,12 +236,10 @@
         <button id="resetBtn" type="button">Reset</button>
       </div>
 
-      <!-- Free-text category, editable any time, mid-session included. -->
-      <div class="category-row">
-        <input id="categoryInput" type="text" maxlength="40"
-               placeholder="working on…" autocomplete="off" />
-        <div id="categoryChips"></div>
-      </div>
+      <button id="openFocusPicker" type="button" aria-haspopup="dialog" aria-controls="focusPicker" hidden>
+        <span id="focusChoice">Working on…</span><span aria-hidden="true">⌄</span>
+      </button>
+      <p id="sessionSync" class="progress-muted" role="status" hidden></p>
 
       <!-- Laptop status stays reachable from the timer in a compact pill.
            Phone CSS keeps the existing editor visible in its original place. -->
@@ -267,7 +266,10 @@
   </main>
   </div>
 
-  <a id="dashboardNav" class="view-nav" href="#dashboard">Dashboard <span aria-hidden="true">→</span></a>
+  <nav id="timerLinks" aria-label="Timer navigation">
+    <a id="progressNav" class="view-nav" href="#progress">Progress</a>
+    <a id="dashboardNav" class="view-nav" href="#dashboard">Dashboard <span aria-hidden="true">→</span></a>
+  </nav>
   </section>
 
   <!-- Shared by both laptop views, so completion stays visible when the
@@ -288,6 +290,7 @@
       </div>
       <div class="dashboard-return">
         <p id="dashboardTimerStatus" aria-live="off">Timer ready · 25:00</p>
+        <a class="view-nav" href="#progress">Progress</a>
         <a id="timerNav" class="view-nav" href="#timer">← Timer</a>
       </div>
     </header>
@@ -433,8 +436,8 @@
               <input id="timeZone" type="text" autocomplete="off" required />
               <label for="timeMinutes">Minutes worked (decimals allowed)</label>
               <input id="timeMinutes" type="number" min="0.01" max="1440" step="any" required />
-              <label for="timeCategory">Category</label>
-              <select id="timeCategory"></select>
+              <label for="timeFocusChoice">Task, column, or category</label>
+              <button id="timeFocusChoice" type="button" aria-haspopup="dialog" aria-controls="focusPicker">Unassigned</button>
               <div class="time-form-actions">
                 <button id="timeSave" type="submit">Add work</button>
                 <button id="timeCancel" type="button">Cancel</button>
@@ -447,6 +450,7 @@
             </div>
             <p id="timeStatus" role="status" aria-live="polite"></p>
             <h3>Session history</h3>
+            <button id="timeFocusFilter" type="button" aria-haspopup="dialog" aria-controls="focusPicker">Filter by task or category</button>
             <p id="timeHistoryCount"></p>
             <ul id="timeHistory" aria-label="Your logged sessions"></ul>
             <div class="time-history-pages">
@@ -611,6 +615,54 @@
     </div>
   </main>
 
+  <main id="progressView" class="progress-view" aria-labelledby="progressHeading" hidden>
+    <div class="progress-surface">
+      <header class="progress-header">
+        <h1 id="progressHeading" tabindex="-1">Progress</h1>
+        <nav aria-label="Progress navigation">
+          <a class="view-nav" href="#timer">← Timer</a>
+          <a class="view-nav progress-dashboard-link" href="#dashboard">Dashboard</a>
+        </nav>
+      </header>
+      <p id="progressStatus" class="progress-muted" role="status">Connecting to your board…</p>
+      <div id="progressContent" hidden>
+        <div class="progress-toolbar">
+          <button id="progressArchive" class="progress-quiet" type="button">Archive &amp; Trash</button>
+        </div>
+        <p id="progressError" class="progress-error" role="status" hidden></p>
+        <p id="progressEmpty" class="progress-muted" hidden>Add a column for a project or area you want to spend time on.</p>
+        <div id="progressTrack" tabindex="0" role="region" aria-label="Progress columns">
+          <div id="progressColumns"></div>
+          <div class="progress-add-column">
+            <button id="showAddColumn" type="button">+ Add column</button>
+            <form id="addColumn" class="progress-inline" hidden>
+              <input name="title" required maxlength="140" aria-label="Column title" placeholder="Column name" autocomplete="off" />
+              <div id="addColumnColors"></div>
+              <button class="progress-primary" type="submit">Add column</button>
+              <button id="cancelColumn" type="button">Cancel</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <dialog id="progressDialog" aria-labelledby="progressDialogTitle"></dialog>
+  <dialog id="focusPicker" aria-labelledby="focusPickerTitle">
+    <header class="focus-picker-header">
+      <h2 id="focusPickerTitle">Working on</h2>
+      <button id="closeFocusPicker" type="button" aria-label="Close focus picker">×</button>
+    </header>
+    <p id="focusPickerHint" hidden>Reset to end this session before changing its task or column.</p>
+    <input id="focusSearch" type="search" aria-label="Find a focus choice" autocomplete="off" />
+    <div id="focusResults" role="group" aria-label="Focus choices"></div>
+    <p id="focusEmpty" role="status" hidden></p>
+    <footer class="focus-picker-actions">
+      <button id="browseFocusChoices" type="button">Browse all</button>
+      <button id="editFocusCategory" type="button">Add category</button>
+      <button id="clearFocusChoice" type="button">Clear selection</button>
+    </footer>
+  </dialog>
+
   <div id="uidDebug"></div>
 
   <!-- Browsers refuse to load JavaScript modules from a file opened by
@@ -631,6 +683,6 @@
 
   <!-- The app. type="module" runs after the page has parsed, so every
        element above exists by then. -->
-  <script type="module" src="js/main.js?v=20261106-compact-timer"></script>
+  <script type="module" src="js/main.js?v=20261112-progress"></script>
 </body>
 </html>

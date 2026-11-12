@@ -10,9 +10,8 @@
 // A laptop and a phone boot differently (see device.js). The phone is the
 // timer (read-only), the status and the other person's pill, nothing else:
 // no controls, alert, crash recovery or disconnect instruction, and none of
-// the stats, note or message widgets. Those aren't just hidden, they're
-// never started, so the phone doesn't download the whole session history
-// to draw widgets nobody sees.
+// the stats, note or message widgets. The phone only loads private history
+// after opening an authorized Progress board.
 
 import { signIn, startClockSync } from "./firebase.js";
 import { ME } from "./identity.js";
@@ -38,7 +37,9 @@ import * as sky from "./sky.js";
 import * as koi from "./koi.js";
 import * as swirl from "./swirl.js";
 import * as rain from "./rain.js?v=20261018";
-import * as navigation from "./navigation.js?v=20261018";
+import * as navigation from "./navigation.js?v=20261112-progress";
+import * as progress from "./progress.js";
+import * as focusPicker from "./focus-picker.js";
 
 async function boot() {
   let user;
@@ -58,14 +59,14 @@ async function boot() {
   startClockSync();
   // Loaded on a phone too, where it sits idle: other modules read its
   // state, and an idle timer that never acts is simpler than a missing one.
-  timer.init();
+  timer.init(user.uid);
   if (!REMOTE) timer.armDisconnect();
   ownRoom.init();
   (REMOTE ? remoteView : timerView).init();
   presence.init();
   status.init();
   if (!REMOTE) {
-    sessions.init();
+    sessions.init(user.uid);
     activityCalendar.init();
     categories.init();
     sharedToday.init();
@@ -83,7 +84,9 @@ async function boot() {
   swirl.init();
   sky.init();
   koi.init();
-  if (!REMOTE) navigation.init();
+  progress.init(user.uid);
+  if (!REMOTE) focusPicker.init(user.uid);
+  navigation.init();
 
   if (!REMOTE) {
     timer.recoverInterruptedRun();

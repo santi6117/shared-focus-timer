@@ -1,8 +1,8 @@
 // Firebase project settings and the two people who share the room.
 //
 // The apiKey is not a secret. Firebase web config is public by design; it
-// only says which project to talk to. What protects the data is the
-// security ruleset in database.rules.json.
+// only says which project to talk to. The published Realtime Database
+// rules protect the data.
 
 export const firebaseConfig = {
   apiKey: "AIzaSyD5QPIpjkOymkcVViRQ2W2ZZ-IG_6rl_zc",

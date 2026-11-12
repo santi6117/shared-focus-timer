@@ -589,7 +589,7 @@ describe("stopwatch", () => {
 
   it("stops itself at two hours, logs two hours once, and alerts", async () => {
     app = await openApp();
-    await app.page.locator("#categoryInput").fill("Thesis");
+    await typeCategory("Thesis");
     await app.click("modeToggle");
     await app.click("startBtn");
     await app.fastForward(2 * HOUR + 30_000);
@@ -662,14 +662,16 @@ describe("stopwatch", () => {
   });
 });
 
+async function typeCategory(text) {
+  await app.click("openFocusPicker");
+  const search = app.page.getByRole("searchbox", { name: "Find a focus choice" });
+  await search.fill(text);
+  await search.press("Enter");
+}
+
 // ---------------------------------------------------------------- categories
 
 describe("categories", () => {
-  async function typeCategory(text) {
-    await app.page.locator("#categoryInput").fill(text);
-    await app.page.locator("#categoryInput").blur();
-  }
-
   it("a session logs under its category and creates the vocabulary entry", async () => {
     app = await openApp();
     await typeCategory("Thesis");
@@ -686,20 +688,21 @@ describe("categories", () => {
   it("a typed variant snaps to the established spelling", async () => {
     app = await openApp({ seedDb: { categories: { santi: { thesis: { label: "Thesis", color: "#c1714a", lastUsedAt: 1 } } } } });
     await typeCategory("THESIS  ");
-    assert.equal(await app.page.locator("#categoryInput").inputValue(), "Thesis");
+    assert.equal(await app.text("focusChoice"), "Thesis");
   });
 
-  it("chips appear from the second category, most recent first, and set the input", async () => {
+  it("offers the two latest categories in the picker and can select either", async () => {
     app = await openApp({ seedDb: { categories: { santi: {
       thesis: { label: "Thesis", color: "#c1714a", lastUsedAt: 1 },
+      tutoring: { label: "Tutoring", color: "#7a9a6e", lastUsedAt: 3 },
+      reading: { label: "Reading", color: "#7a9a6e", lastUsedAt: 2 },
     } } } });
-    assert.equal(await app.has("categoryChips", "visible"), false);
-    await app.remote("categories/santi/tutoring", { label: "Tutoring", color: "#7a9a6e", lastUsedAt: 2 });
-    assert.equal(await app.has("categoryChips", "visible"), true);
-    const chips = await app.page.locator("#categoryChips .cat-chip").allTextContents();
-    assert.deepEqual(chips, ["Tutoring", "Thesis"]);
-    await app.page.locator("#categoryChips .cat-chip", { hasText: "Thesis" }).click();
-    assert.equal(await app.page.locator("#categoryInput").inputValue(), "Thesis");
+    await app.click("openFocusPicker");
+    const recent = app.page.getByRole("group", { name: "Recent choices" });
+    const choices = await recent.getByRole("button").evaluateAll((buttons) => buttons.map((button) => button.dataset.choice));
+    assert.deepEqual(choices, ["category:tutoring", "category:reading"]);
+    await recent.getByRole("button", { name: "Tutoring Category" }).click();
+    assert.equal(await app.text("focusChoice"), "Tutoring");
   });
 
   it("changing category mid-session updates presence without restarting it", async () => {
@@ -1016,7 +1019,7 @@ describe("messages", () => {
 describe("end-of-session alert", () => {
   it("repeats the chime until acknowledged, but sends only one notification", async () => {
     app = await openApp();
-    await app.page.locator("#categoryInput").fill("Thesis");
+    await typeCategory("Thesis");
     await app.setDuration(1);
     await app.click("startBtn");
     await app.run(MIN + 500);
@@ -1233,7 +1236,7 @@ describe("phone (remote) mode", () => {
   it("hides the controls and never claims the timer", async () => {
     app = await openApp({ device: "phone" });
     await app.run(1000);
-    for (const id of ["startBtn", "pauseBtn", "resetBtn", "durationInput", "modeToggle", "categoryInput"]) {
+    for (const id of ["startBtn", "pauseBtn", "resetBtn", "durationInput", "modeToggle", "openFocusPicker"]) {
       assert.equal(await app.page.locator("#" + id).isVisible(), false, id + " should be hidden");
     }
     const writes = await app.writes();

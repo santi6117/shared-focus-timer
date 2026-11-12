@@ -50,13 +50,12 @@ tests/                     automated tests (see below)
 docs/
   roadmap.md               what this project is, every decision and why
   sessions/                one short log per working session
-database.rules.json        the security rules to use now
-database.rules.pinned.json the final rules, once both UIDs are known
+database.rules*.json       rules templates and release proposals
 ```
 
 `timer.js` announces what happens ("started", "ended", "log this session")
-and the other modules listen. It never calls into them. So adding a feature
-means adding a listener; it never means editing the timer.
+and the other modules listen. The session logger records completed runs and
+Progress reads the session log to calculate task and column totals.
 
 ## How changes get made
 
@@ -88,20 +87,19 @@ version can be brought back from there.
 `npm run serve` previews the site locally at http://localhost:8080/?me=santi.
 It still talks to the real Firebase database.
 
+## Progress
+
+Each person can organize tasks in a private board and link existing timer
+sessions to a task or a column. See the [Progress guide and Firebase release
+checklist](docs/progress-release.md) for setup and device enrollment.
+
 ## Security rules
 
-The rules live in the Firebase console, not in this repo, so a change here
-does nothing until it's pasted there:
-**Firebase console → Realtime Database → Rules → paste → Publish.**
-
-- **`database.rules.json` should go in now.** Anyone signed in (which the app
-  does silently) can read and write the five known paths, and nobody else can
-  do anything.
-- **`database.rules.pinned.json` goes in once both anonymous UIDs are known.**
-  It locks each person's data to their own laptop and phone. Each UID is
-  shown in the bottom-right corner of the page. Replace `SANTI_UID`,
-  `SANTI_PHONE_UID`, `KRISTINA_UID` and `KRISTINA_PHONE_UID`, then paste. Collect the UIDs from the GitHub Pages address, not a local
-  file: a new address means a new UID.
+Published Realtime Database rules are managed in the Firebase console. The
+rules files in this repository are templates and release proposals. Use the
+[activity calendar release notes](docs/firebase-calendar-release.md) and the
+[Progress release checklist](docs/progress-release.md) to review the relevant
+proposal against the live rules.
 
 ## Cottage
 

@@ -11,6 +11,7 @@
 //   room/<person>        live timer state, status and today's split
 //                        summary, read by the other person's page
 //   sessions/<person>    append-only log of finished sessions
+//   progress/<person>    private board and session links for enrolled UIDs
 //   categories/<person>  that person's category vocabulary
 //   notes/<person>       that person's private note
 //   messages/<person>    a held message FOR that person — the one path the
@@ -38,6 +39,7 @@ export const refs = {
   // A sibling of room/ rather than inside it, so the presence listener
   // keeps receiving a tiny object instead of the whole history with it.
   sessions:   db.ref("sessions/" + ME),
+  progress:   db.ref("progress/" + ME),
   activity:   db.ref("activity"),
   categories: db.ref("categories/" + ME),
   notes:      db.ref("notes/" + ME),
