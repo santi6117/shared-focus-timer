@@ -224,6 +224,7 @@
   background: var(--surface-sunk);
   margin-bottom: 0.7rem;
 }
+#shareBar[hidden] { display: none; }
 #shareBar div { height: 100%; }
 
 .cat-row {
@@ -242,7 +243,7 @@
   padding-top: 0.15rem;
 }
 
-/* Two pills under the split: whose day (you / them) and which period.
+/* Two pills under the split: whose time (you / them) and which period.
    Separate from the chip so one click never means two things. */
 .breakdown-toggles {
   display: flex;

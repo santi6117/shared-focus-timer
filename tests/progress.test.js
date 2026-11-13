@@ -316,6 +316,7 @@ describe("Progress timer attribution", () => {
     assert.equal((await app.sessions()).length, 5);
     assert.equal(Object.keys(await app.db(linksPath)).length, 4);
     await app.page.getByRole("link", { name: "← Timer" }).click();
+    await app.page.locator("#timerView").waitFor({ state: "visible" });
     await openLatestSessionNote();
     await dialog().getByLabel("Session note").fill("Unassigned work.");
     await control("Save note", dialog()).click();

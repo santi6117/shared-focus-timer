@@ -239,9 +239,7 @@ wipes localStorage, which is why UIDs are collected only from the Pages URL.
 
 ```
 room/<person>        { running, mode, startedAt, remainingAtStart, category,
-                       status: { text, setAt },
-                       today: { until, seconds, top: [{label, color, seconds}],
-                                restCount, restSeconds } }
+                       status: { text, setAt }, lifetimeFocusSeconds }
 sessions/<person>/<pushId>  { endedAt, elapsedSeconds, categoryKey }
 categories/<person>/<key>   { label, color, lastUsedAt }
 notes/<person>       { text, updatedAt }
@@ -432,13 +430,10 @@ timing; `prefers-reduced-motion` freezes it. Never use
   (Today / This week / All time, default This week) above a proportion bar
   that includes a neutral remainder, so shares always sum to the real total.
 - **Kristina sees the label live** in the presence pill.
-- **Flips to the other person's day** (2026-10-03, Santi's call). A
-  `You / Kristina` pill beside the period pill. Theirs is **today only**,
-  from the summary they publish (`js/shared-today.js`), so the period pill
-  locks to Today while it shows. Published by each laptop on any session or
-  category change, debounced a second so the load burst writes once, and
-  skipped when unchanged. Phones publish nothing. Opens on your own split
-  each load. Kristina agreed to her day being visible.
+- **Shows the other person's lifetime focus time** through the name pill.
+  Each laptop shares one total from its complete session log, including
+  corrections and removals. The partner view updates as totals arrive and
+  opens on your own category split each load.
 
 ### 6e. Note (2026-09-11)
 

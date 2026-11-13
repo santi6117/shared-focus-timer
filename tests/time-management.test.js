@@ -144,8 +144,7 @@ describe('Dashboard time management', () => {
     await total('0m');
     await calendar(0, 0);
     assert.equal(await app.text('statCount'), '0 sessions logged');
-    await app.run(1200);
-    assert.equal((await app.db('room/santi/today')).seconds, 0, 'the peer must not keep the removed last session');
+    assert.equal(await app.db('room/santi/lifetimeFocusSeconds'), 0);
     await row().getByRole('button', { name: 'Restore', exact: true }).click();
     await total('30m');
     await calendar(1800, 1);

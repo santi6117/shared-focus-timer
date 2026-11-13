@@ -8,8 +8,8 @@
 //
 // The data model, one subtree per concern, each keyed by person:
 //
-//   room/<person>        live timer state, status and today's split
-//                        summary, read by the other person's page
+//   room/<person>        live timer state, status and lifetime focus seconds
+//                        shared with the other person's page
 //   sessions/<person>    append-only log of finished sessions
 //   progress/<person>    private board and session links for enrolled UIDs
 //   categories/<person>  that person's category vocabulary

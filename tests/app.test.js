@@ -794,93 +794,86 @@ describe("stats and breakdown", () => {
   });
 });
 
-// ---------------------------------------------------------------- shared today
+// ---------------------------------------------------------------- shared lifetime focus
 
-describe("the other person's split", () => {
+describe("shared lifetime focus", () => {
+  const olderSession = { endedAt: T0 - 14 * 24 * 60 * MIN, elapsedSeconds: 3600, categoryKey: "thesis" };
   const seedDb = {
     sessions: { santi: {
-      a: { endedAt: T0 - 24 * 60 * MIN, elapsedSeconds: 3600, categoryKey: "thesis" },
-      b: { endedAt: T0 - 60 * MIN, elapsedSeconds: 1800, categoryKey: "tutoring" },
-      c: { endedAt: T0 - 30 * MIN, elapsedSeconds: 600, categoryKey: "thesis" },
+      a: olderSession,
+      b: { endedAt: T0 - 30 * MIN, elapsedSeconds: 600, categoryKey: "thesis" },
     } },
-    categories: { santi: {
-      thesis: { label: "Thesis", color: "#c1714a", lastUsedAt: 1 },
-      tutoring: { label: "Tutoring", color: "#6b8ca8", lastUsedAt: 2 },
-    } },
-    room: { santi: { running: false, startedAt: null, remainingAtStart: 2700, status: { text: "eating", setAt: 1 } } },
+    categories: { santi: { thesis: { label: "Thesis", color: "#c1714a", lastUsedAt: 1 } } },
+    room: { santi: { status: { text: "eating", setAt: 1 } } },
   };
-  const hers = (until) => ({
-    until, seconds: 4200, restCount: 2, restSeconds: 600,
-    top: [
-      { label: "Essay", color: "#9a7aa0", seconds: 2400 },
-      { label: "Reading", color: "#7a9a6e", seconds: 1200 },
-    ],
-  });
+  const mine = "room/santi/lifetimeFocusSeconds";
+  const theirs = "room/kristina/lifetimeFocusSeconds";
 
-  it("publishes my today, labelled, beside the timer and status", async () => {
+  it("publishes the full log and updates after a session, removal, and undo", async () => {
     app = await openApp({ seedDb });
-    await app.run(1500);
-    const today = await app.db("room/santi/today");
-    assert.equal(today.seconds, 2400);
-    assert.deepEqual(Object.values(today.top), [
-      { label: "Tutoring", color: "#6b8ca8", seconds: 1800 },
-      { label: "Thesis", color: "#c1714a", seconds: 600 },
-    ]);
-    assert.equal(today.until, await app.page.evaluate(() => new Date(2026, 9, 1).getTime()));
+    assert.equal(await app.db(mine), 4200);
     assert.equal((await app.db("room/santi/status")).text, "eating");
-    // One write for the whole load burst, not one per record.
-    const writes = (await app.writes()).filter((w) => w.path === "room/santi/today");
-    assert.equal(writes.length, 1);
+    assert.equal(await app.db("room/santi/today"), null);
+    assert.equal((await app.writes()).filter((w) => w.path === mine).length, 1);
 
     await app.click("startBtn");
     await app.run(5 * MIN);
     await app.click("resetBtn");
-    await app.run(1500);
-    assert.equal((await app.db("room/santi/today")).seconds, 2700);
+    assert.equal(await app.db(mine), 4500);
+
+    const removed = { ...olderSession, editVersion: 1, activeEdit: 1, timeEdits: {
+      1: { ...olderSession, removed: true, previousEdit: 0 },
+    } };
+    await app.remote("sessions/santi/a", removed);
+    assert.equal(await app.db(mine), 900);
+    await app.remote("sessions/santi/a", { ...removed, editVersion: 2, activeEdit: 0 });
+    assert.equal(await app.db(mine), 4500);
   });
 
-  it("flips the split to theirs, today only, and back", async () => {
+  it("flips to their lifetime total and back to your selected category period", async () => {
     app = await openApp({ seedDb });
-    await app.remote("room/kristina/today", hers(T0 + 60 * MIN));
-    await app.run(300);
+    await app.remote(theirs, 4200);
     await goTo(app, "dashboard");
     assert.equal(await app.text("whoseToggle"), "You");
 
     await app.click("whoseToggle");
     assert.equal(await app.text("whoseToggle"), "Kristina");
     assert.equal(await app.text("breakdownLabel"), "Kristina");
-    assert.equal(await app.text("breakdownTop"), "Essay");
-    assert.equal(await app.text("periodToggle"), "Today");
+    assert.equal(await app.text("breakdownTop"), "1h 10m");
+    assert.equal(await app.text("breakdownMore"), "Lifetime focus time · 1h 10m");
+    assert.equal(await app.text("periodToggle"), "All time");
     assert.equal(await app.page.locator("#periodToggle").isDisabled(), true);
-    assert.deepEqual(await app.page.locator("#breakdownRows .cat-row .name").allTextContents(), ["Essay", "Reading"]);
-    assert.equal(await app.text("breakdownMore"), "+ 2 more · 10m");
-    assert.equal(await app.page.locator("#shareBar div").count(), 3);
+    assert.equal(await app.page.locator("#shareBar").isVisible(), false);
+    assert.equal(await app.page.locator("#breakdownRows .cat-row").count(), 0);
 
     await app.click("whoseToggle");
     assert.equal(await app.text("periodToggle"), "This week");
     assert.equal(await app.text("breakdownTop"), "Thesis");
     assert.equal(await app.page.locator("#periodToggle").isDisabled(), false);
+    assert.equal(await app.page.locator("#shareBar").isVisible(), true);
   });
 
-  it("their summary expires at their midnight, and is empty when missing", async () => {
-    app = await openApp({ seedDb });
-    await app.run(300);
+  it("updates live, survives midnight, and distinguishes missing data from zero", async () => {
+    app = await openApp({ time: new Date(2026, 8, 30, 23, 59).getTime() });
+    assert.equal(await app.db(mine), 0);
     await goTo(app, "dashboard");
     await app.click("whoseToggle");
-    assert.equal(await app.text("breakdownMore"), "Kristina hasn't logged anything today");
+    assert.equal(await app.text("breakdownMore"), "Lifetime focus time unavailable");
 
-    await app.remote("room/kristina/today", hers(T0 + 2 * MIN));
-    await app.run(300);
-    assert.equal(await app.text("breakdownTop"), "Essay");
-    await app.run(3 * MIN);
-    assert.equal(await app.text("breakdownTop"), "—");
-    assert.equal(await app.text("breakdownMore"), "Kristina hasn't logged anything today");
+    await app.remote(theirs, 0);
+    assert.equal(await app.text("breakdownTop"), "0m");
+    await app.remote(theirs, 1200);
+    assert.equal(await app.text("breakdownTop"), "20m");
+    await app.run(2 * MIN);
+    assert.equal(await app.text("breakdownTop"), "20m");
+    await app.remote(theirs, 1800);
+    assert.equal(await app.text("breakdownTop"), "30m");
   });
 
   it("the phone publishes nothing", async () => {
     app = await openApp({ seedDb, device: "phone" });
     await app.run(3000);
-    assert.equal(await app.db("room/santi/today"), null);
+    assert.equal(await app.db(mine), null);
   });
 });
 
