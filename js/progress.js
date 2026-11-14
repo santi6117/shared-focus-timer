@@ -1,3 +1,4 @@
+// Render the private Progress board and handle its task and column controls.
 import { REMOTE } from "./device.js";
 import { serverNow } from "./firebase.js";
 import * as timer from "./timer.js";
@@ -246,14 +247,32 @@ function taskRow(task) {
       event.currentTarget.focus();
     }
   }, { class: "progress-task-focus", "aria-label": "Focus on " + task.title }) : null;
-  const row = el("li", { class: "progress-task", "data-completed": String(Boolean(task.completedAt)) },
+  const highlighted = task.highlighted === true;
+  const highlight = button(highlighted ? "★" : "☆", (event) => {
+    act(event.currentTarget, () => store.change((data) => {
+      const current = store.requireItem(data.tasks, task.id);
+      if (current.deletedAt) throw new Error("Restore this task from Trash first.");
+      // This display flag shares the board's sync without changing the task revision.
+      if (highlighted) delete current.highlighted;
+      else current.highlighted = true;
+    }));
+  }, {
+    id: "highlight-task-" + task.id, class: "progress-task-highlight",
+    "aria-label": "Highlight " + task.title, "aria-pressed": String(highlighted),
+    title: highlighted ? "Remove highlight" : "Highlight task",
+  });
+  const row = el("li", {
+    class: "progress-task",
+    "data-completed": String(Boolean(task.completedAt)),
+    "data-highlighted": String(highlighted),
+  },
     check,
     el("div", { class: "progress-task-main" }, title, task.dueDate || summary?.total
       ? el("div", { class: "progress-task-meta" }, [
         task.dueDate ? "Due " + dueDate(task.dueDate) : "",
         summary?.total ? duration(summary.total) : "",
       ].filter(Boolean).join(" · ")) : null),
-    focus);
+    focus, highlight);
   if (!task.completedAt) {
     row.draggable = true;
     row.addEventListener("dragstart", (event) => {

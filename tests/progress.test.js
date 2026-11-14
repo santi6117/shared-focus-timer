@@ -115,6 +115,35 @@ describe("personal Progress board", () => {
     assert.deepEqual(app.errors, []);
   });
 
+  it("toggles a visual highlight and keeps the task and its order intact after refresh", async () => {
+    const secondTask = { title: "Write notes", columnId: "research", position: 1 };
+    const original = { ...basicBoard.tasks.read, revision: 2, dueDate: "2026-10-04" };
+    app = await openApp({ seedDb: { progress: { santi: { board: {
+      ...basicBoard, tasks: { read: original, notes: secondTask },
+    } } } } });
+    await app.click("progressNav");
+    const toggle = control("Highlight Read paper");
+    await toggle.press("Space");
+    assert.equal(await toggle.getAttribute("aria-pressed"), "true");
+    const taskRow = column("Research").locator(".progress-task").first();
+    assert.equal(await taskRow.getAttribute("data-highlighted"), "true");
+    assert.notEqual(await taskRow.evaluate((row) => getComputedStyle(row).boxShadow), "none");
+    assert.deepEqual((await app.db(boardPath)).tasks, {
+      read: { ...original, highlighted: true }, notes: secondTask,
+    });
+
+    await reload();
+    assert.equal(await toggle.getAttribute("aria-pressed"), "true");
+    assert.deepEqual(await column("Research").locator(".progress-task-title").allTextContents(),
+      ["Read paper", "Write notes"]);
+    await toggle.click();
+    assert.equal(await toggle.getAttribute("aria-pressed"), "false");
+    assert.equal(await taskRow.evaluate((row) => getComputedStyle(row).boxShadow), "none");
+    assert.deepEqual((await app.db(boardPath)).tasks, { read: original, notes: secondTask });
+    assert.equal(await app.db(linksPath), null);
+    assert.deepEqual(app.errors, []);
+  });
+
   it("drags a task across columns and restores archived columns and trashed tasks", async () => {
     app = await openApp({ seedDb: seeded });
     await app.click("progressNav");

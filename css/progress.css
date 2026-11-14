@@ -1,3 +1,4 @@
+/* Layout and controls for the private Progress board. */
 #timerLinks {
   position: fixed;
   inset: auto 1.25rem 1.25rem auto;
@@ -149,6 +150,29 @@
   transition: background-color 150ms ease, opacity 150ms ease;
 }
 .progress-task:hover, .progress-task:focus-within { background: var(--progress-hover); border-radius: 6px; }
+/* An inset ring leaves the row dimensions and drag indicator intact. */
+.progress-task[data-highlighted="true"] {
+  border-radius: 6px;
+  background: #fff8e5;
+  box-shadow: inset 0 0 0 2px #c18b34;
+}
+.progress-task[data-highlighted="true"]:hover,
+.progress-task[data-highlighted="true"]:focus-within { background: #fff1cb; }
+.progress-task-highlight {
+  flex: 0 0 1.5rem;
+  min-height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--progress-muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+.progress-task-highlight:hover, .progress-task-highlight[aria-pressed="true"] {
+  background: #f7e6be;
+  color: #805314;
+}
 .progress-task-main { flex: 1; min-width: 0; }
 .progress-task-title, .progress-quiet, .progress-add-task, .progress-task-focus {
   padding: 0.36rem 0.5rem;

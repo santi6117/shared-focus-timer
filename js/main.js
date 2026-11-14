@@ -37,7 +37,7 @@ import * as koi from "./koi.js";
 import * as swirl from "./swirl.js";
 import * as rain from "./rain.js?v=20261018";
 import * as navigation from "./navigation.js?v=20261112-progress";
-import * as progress from "./progress.js";
+import * as progress from "./progress.js?v=20261114-task-highlight";
 import * as focusPicker from "./focus-picker.js";
 
 async function boot() {
