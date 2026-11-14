@@ -398,11 +398,11 @@ describe("timer", () => {
     assert.equal(room.remainingAtStart, 1500);
     assert.equal(typeof room.startedAt, "number");
 
-    await app.run(MIN - 250);
+    await app.fastForward(MIN - 250);
     assert.equal(await app.text("timerDisplay"), "24:00");
 
     await app.click("pauseBtn");
-    await app.run(3 * MIN);
+    await app.fastForward(3 * MIN);
     assert.equal(await app.text("timerDisplay"), "24:00");
     assert.equal(await app.text("stageLabel"), "Focus");
     assert.equal((await app.db("room/santi")).running, false);
@@ -575,7 +575,7 @@ describe("stopwatch", () => {
     assert.equal(room.running, true);
 
     await app.click("pauseBtn");
-    await app.run(5 * MIN);
+    await app.fastForward(5 * MIN);
     assert.equal(await app.text("timerDisplay"), "1:00");
     await app.click("startBtn");
     await app.fastForward(HOUR);
@@ -616,7 +616,7 @@ describe("stopwatch", () => {
   it("switching mode while paused logs the pending time and restores the minutes", async () => {
     app = await openApp({ seedStorage: { "timerData:santi": timerState({}) } });
     await app.click("startBtn");
-    await app.run(10 * MIN);
+    await app.fastForward(10 * MIN);
     await app.click("pauseBtn");
     await app.click("modeToggle");
     assert.deepEqual((await app.sessions()).map((s) => s.elapsedSeconds), [600]);
@@ -635,7 +635,7 @@ describe("stopwatch", () => {
     app = await openApp();
     await app.click("modeToggle");
     await app.click("startBtn");
-    await app.run(3 * MIN);
+    await app.fastForward(3 * MIN);
     await app.page.reload();
     await app.run(250);
     assert.equal(await app.text("modeToggle"), "\u2191 Stopwatch");
@@ -787,7 +787,7 @@ describe("stats and breakdown", () => {
   it("a finished session updates the totals live", async () => {
     app = await openApp();
     await app.click("startBtn");
-    await app.run(10 * MIN);
+    await app.fastForward(10 * MIN);
     await app.click("resetBtn");
     assert.equal(await app.text("chipValue"), "10m");
     assert.equal(await app.text("statCount"), "1 session logged");
@@ -817,7 +817,7 @@ describe("shared lifetime focus", () => {
     assert.equal((await app.writes()).filter((w) => w.path === mine).length, 1);
 
     await app.click("startBtn");
-    await app.run(5 * MIN);
+    await app.fastForward(5 * MIN);
     await app.click("resetBtn");
     assert.equal(await app.db(mine), 4500);
 
@@ -1098,13 +1098,14 @@ describe("title flash", () => {
     app = await openApp();
     await app.setDuration(1);
     await app.click("startBtn");
-    await app.run(MIN + 500);
+    await app.fastForward(MIN + 500);
   }
 
   it("blinks, and is still blinking long after the session ended", async () => {
     await finishSession();
     assert.deepEqual(await titlesOver(2500), new Set([ALERT, BASE]));
-    await app.run(30 * MIN);
+    // Only the wall-clock gap matters. The real worker still has to blink on both sides.
+    await app.fastForward(30 * MIN);
     assert.deepEqual(await titlesOver(2500), new Set([ALERT, BASE]), "no time limit");
   });
 
@@ -1139,7 +1140,7 @@ describe("title flash", () => {
     await app.page.evaluate(() => import("./js/timer.js").then((t) => t.start()));
     assert.deepEqual(await titlesOver(1500), new Set([BASE]));
 
-    await app.run(MIN + 500);
+    await app.fastForward(MIN + 500);
     assert.ok((await titlesOver(1500)).has(ALERT), "a second session flashes again");
     await app.page.evaluate(() => import("./js/timer.js").then((t) => t.reset()));
     assert.deepEqual(await titlesOver(1500), new Set([BASE]));

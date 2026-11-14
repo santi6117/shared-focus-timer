@@ -59,30 +59,25 @@ Progress reads the session log to calculate task and column totals.
 
 ## How changes get made
 
-Claude does the work in a session with this repo attached:
-
-1. edits the files
-2. runs the tests (`npm test`) and fixes anything that breaks
-3. commits with a message saying what changed and why
-4. pushes to `main`, and GitHub Pages redeploys the site within a minute
-   or two
-
-Git history replaces the old `index-pre-*-backup.html` files. Any earlier
-version can be brought back from there.
+1. Run the affected tests while iterating. For example, a Progress change can
+   start with `TZ=America/New_York node --test tests/progress.test.js`. Add
+   `--test-name-pattern='pattern'` before the file to focus on one behavior.
+2. Run `npm test` on the final change before committing and pushing. If that
+   exact commit already passed locally, reuse the result when publishing it.
+3. Push to `main` when ready to publish. GitHub Pages serves the static files
+   directly. Check the live page or the changed assets after deployment.
 
 ## Tests
 
-`npm test` runs two sets:
+`npm test` runs the full suite serially. The pure tests cover timer math,
+timezones, session edits, and Firebase rules templates. The browser tests
+exercise the real page with an in-memory Firebase substitute, including
+timer recovery, sharing, calendar, Progress, and time management.
 
-- **`tests/lib.test.js`** checks the pure logic: time formatting, week
-  boundaries across daylight-saving changes, crash-recovery maths, category
-  totals and message states.
-- **`tests/app.test.js`** opens the real page in a headless Chrome with
-  Firebase swapped for an in-memory fake (`tests/helpers/`), then clicks
-  through every behaviour earlier sessions checked by hand: countdown,
-  pause/resume, logging exactly once, crash recovery, categories, presence,
-  stats, the note, messages, and the end-of-session alert. The test clock is
-  controlled, so a 25-minute session takes milliseconds.
+The browser harness controls page time. Jump to the target time when the
+assertion only needs the final state. Replay clock callbacks when checking
+intermediate behavior such as chime cadence or retries. Title flashing
+also uses a real browser worker, so those tests still observe its real beats.
 
 `npm run serve` previews the site locally at http://localhost:8080/?me=santi.
 It still talks to the real Firebase database.

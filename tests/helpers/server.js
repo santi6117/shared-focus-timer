@@ -37,8 +37,10 @@ export function startServer(port = 0) {
       res.writeHead(404).end("not found");
     }
   });
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
     server.listen(port, "127.0.0.1", () => {
+      server.off("error", reject);
       resolve({ url: `http://127.0.0.1:${server.address().port}/`, close: () => server.close() });
     });
   });

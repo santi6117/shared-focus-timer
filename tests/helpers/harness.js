@@ -18,14 +18,19 @@ let browser, server;
 
 export async function setup() {
   server = await startServer();
-  browser = await chromium.launch(
-    process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}
-  );
+  try {
+    browser = await chromium.launch(
+      process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}
+    );
+  } catch (error) {
+    server.close();
+    throw error;
+  }
 }
 
 export async function teardown() {
-  await browser?.close();
-  server?.close();
+  try { await browser?.close(); }
+  finally { server?.close(); }
 }
 
 // Runs before any page script. Stubs the two browser APIs that can't be
@@ -109,8 +114,8 @@ export async function openApp({
     errors,
     close: () => context.close(),
     run: (ms) => page.clock.runFor(ms),
-    // Long stopwatch stretches need their final state, not a callback for
-    // every quarter-second. Short run() tests still check normal ticking.
+    // Jump to an elapsed-time checkpoint. Use run() when intermediate
+    // callbacks, retries, or sampling cadence are part of the assertion.
     fastForward: (ms) => page.clock.fastForward(ms),
     text: (id) => page.locator("#" + id).evaluate((el) => el.textContent.trim()),
     click: (id) => page.locator("#" + id).click(),
