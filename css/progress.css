@@ -143,18 +143,19 @@
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.35rem;
   min-height: 2.55rem;
-  padding: 0.4rem 0.35rem 0.4rem 0.2rem;
+  padding: 0.4rem 0.35rem 0.4rem 0.55rem;
   border-bottom: 1px solid color-mix(in srgb, var(--progress-stroke) 55%, transparent);
   transition: background-color 150ms ease, opacity 150ms ease;
 }
 .progress-task:hover, .progress-task:focus-within { background: var(--progress-hover); border-radius: 6px; }
-/* An inset ring leaves the row dimensions and drag indicator intact. */
+/* An inset outline and tint highlight the row without changing its dimensions. */
 .progress-task[data-highlighted="true"] {
-  border-radius: 6px;
-  background: #fff8e5;
-  box-shadow: inset 0 0 0 2px #c18b34;
+  border-radius: 1rem;
+  border-bottom-color: transparent;
+  background: #fff4d8;
+  box-shadow: inset 0 0 0 1.5px #b9832b;
 }
 .progress-task[data-highlighted="true"]:hover,
 .progress-task[data-highlighted="true"]:focus-within { background: #fff1cb; }
@@ -163,7 +164,7 @@
   min-height: 1.5rem;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 50%;
   background: transparent;
   color: var(--progress-muted);
   font-size: 1rem;
@@ -204,7 +205,7 @@
 }
 .progress-task[data-completed="true"] .progress-check { color: var(--column-accent); border-color: var(--column-accent); }
 .progress-task[data-completed="true"] .progress-task-title { color: var(--progress-muted); text-decoration: line-through; }
-.progress-task-focus { color: var(--column-accent); }
+.progress-task-focus { padding-inline: 0.25rem; color: var(--column-accent); }
 @media (hover: hover) {
   .progress-task-focus { opacity: 0; }
   .progress-task:hover .progress-task-focus, .progress-task:focus-within .progress-task-focus { opacity: 1; }
