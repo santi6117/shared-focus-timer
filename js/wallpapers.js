@@ -20,7 +20,7 @@ import { REMOTE } from "./device.js";
 import * as sessions from "./sessions.js";
 import {
   WALLPAPERS, isUnlocked, progressLabel, resolveWallpaper, newlyUnlocked,
-} from "./lib/wallpapers.js";
+} from "./lib/wallpapers.js?v=20261114-autumn";
 
 const CHOICE_KEY = "wallpaper:" + ME;
 const SEEN_KEY = "wallpapersSeen:" + ME;
@@ -60,7 +60,7 @@ function totalSeconds() {
 }
 
 function choose(id) {
-  if (!isUnlocked(id, totalSeconds())) return;
+  if (!WALLPAPERS.some((w) => w.id === id && w.built) || !isUnlocked(id, totalSeconds())) return;
   current = id;
   store(CHOICE_KEY, id);
   apply();
@@ -78,6 +78,7 @@ function render() {
   const total = totalSeconds();
   const list = $("wallpaperList");
   list.innerHTML = "";
+  let variants;
   for (const w of WALLPAPERS) {
     const open = w.built && isUnlocked(w.id, total);
     const row = document.createElement("button");
@@ -85,6 +86,7 @@ function render() {
     row.className = "wp-option";
     row.dataset.id = w.id;
     row.disabled = !open;
+    row.setAttribute("aria-pressed", String(w.id === current));
     row.classList.toggle("selected", w.id === current);
 
     const thumb = document.createElement("span");
@@ -97,12 +99,23 @@ function render() {
     state.textContent =
       w.id === current ? "on"
       : open ? ""
-      : isUnlocked(w.id, total) ? "soon"     // earned, not drawn yet
+      : isUnlocked(w.id, total) ? w.hours + " h"
       : progressLabel(w.id, total);
 
     row.append(thumb, name, state);
     row.addEventListener("click", () => choose(w.id));
-    list.appendChild(row);
+    if (w.parent) {
+      variants.appendChild(row);
+    } else {
+      list.appendChild(row);
+      if (WALLPAPERS.some((variant) => variant.parent === w.id)) {
+        variants = document.createElement("div");
+        variants.className = "wp-variants";
+        variants.setAttribute("role", "group");
+        variants.setAttribute("aria-label", w.name + " variants");
+        list.appendChild(variants);
+      }
+    }
   }
   $("statsChip").classList.toggle("has-new", newlyUnlocked(total, load(SEEN_KEY, [])).length > 0);
 }

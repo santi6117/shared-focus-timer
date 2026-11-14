@@ -562,3 +562,7 @@
   opacity: 0.7;
   font-family: ui-monospace, Consolas, monospace;
 }
+
+.wp-variants { padding-left: 1.85rem; }
+.wp-variants .wp-option { grid-template-columns: 1fr auto; font-size: 0.78rem; }
+.wp-variants .wp-thumb { display: none; }

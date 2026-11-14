@@ -275,8 +275,11 @@ describe("wallpapers", () => {
   it("counts only built, unseen unlocks as new", () => {
     assert.deepEqual(newlyUnlocked(120 * H, []), ["rain"]);
     assert.deepEqual(newlyUnlocked(120 * H, ["rain"]), []);
-    assert.deepEqual(newlyUnlocked(250 * H, ["rain"]), ["hills"]);
-    assert.deepEqual(newlyUnlocked(350 * H, ["rain", "hills"]), ["koi"]);
+    assert.deepEqual(newlyUnlocked(150 * H - 1, ["rain"]), []);
+    assert.deepEqual(newlyUnlocked(150 * H, ["rain"]), ["rain-autumn"]);
+    assert.deepEqual(newlyUnlocked(175 * H, ["rain", "rain-autumn"]), []);
+    assert.deepEqual(newlyUnlocked(250 * H, ["rain", "rain-autumn"]), ["hills"]);
+    assert.deepEqual(newlyUnlocked(350 * H, ["rain", "rain-autumn", "hills"]), ["koi"]);
   });
 });
 

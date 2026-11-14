@@ -1362,6 +1362,25 @@ describe("wallpapers", () => {
     assert.equal(await bg(app), "rain", "the stored choice paints before the log loads");
   });
 
+  it("selects Autumn Dusk beneath Rainy Window at 150 hours", async () => {
+    app = await openApp({ seedDb: hours(150) });
+    await app.run(250);
+    await goTo(app, "dashboard");
+    const variants = app.page.getByRole("group", { name: "Rainy window variants" });
+    assert.equal(await variants.getByRole("button").count(), 2);
+    assert.equal(await option(app, "rain-next").isDisabled(), true);
+    await option(app, "rain-autumn").click();
+    assert.equal(await bg(app), "rain-autumn");
+    assert.equal(await app.page.locator(".autumn-leaves").isVisible(), true);
+    assert.equal(await app.page.locator(".rain-moving-drops").isVisible(), false);
+    await app.page.reload();
+    await app.run(50);
+    assert.equal(await bg(app), "rain-autumn");
+    await app.page.locator("#dashboardView").waitFor({ state: "visible" });
+    await option(app, "rain").click();
+    assert.equal(await bg(app), "rain");
+  });
+
   it("marks a new unlock until the dashboard is opened", async () => {
     app = await openApp({ seedDb: hours(120) });
     await app.run(250);

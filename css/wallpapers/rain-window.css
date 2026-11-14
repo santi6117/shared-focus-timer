@@ -61,3 +61,37 @@ html:not(.remote) #backgroundLayer .wp-rain.rain-phone,
 /* A background tab and an unselected wallpaper do no animation work. */
 .rain-study.rain-paused .rain-slide,
 .rain-study.rain-paused .rain-window-glow { animation-play-state: paused; }
+
+.autumn-leaves { display: none; overflow: hidden; }
+[data-bg="rain-autumn"] .rain-painted-city {
+  background-image: url('../../assets/rain-autumn-dusk.jpg');
+  filter: blur(var(--softness));
+}
+[data-bg="rain-autumn"] .rain-study :is(.rain-moving-drops, .rain-glass, .rain-window-glow, .rain-window-warmth) { display: none; }
+[data-bg="rain-autumn"] .autumn-leaves { display: block; }
+
+.autumn-leaves span {
+  position: absolute;
+  left: 18%;
+  top: 79%;
+  width: clamp(7px, .95vw, 15px);
+  aspect-ratio: 1.15;
+  background: linear-gradient(130deg, #ecac4e, #b85022 69%, #733820);
+  clip-path: polygon(49% 0, 61% 27%, 78% 18%, 75% 43%, 100% 49%, 76% 65%, 80% 81%, 55% 80%, 51% 100%, 46% 80%, 19% 83%, 24% 65%, 0 49%, 24% 42%, 22% 19%, 38% 28%);
+  opacity: 0;
+  animation: fallen-leaf 14s -8s linear infinite;
+}
+.autumn-leaves span:nth-child(2) { left: 53%; top: 85%; animation-duration: 21s; animation-delay: -15s; }
+.autumn-leaves span:nth-child(3) { left: 70%; top: 90%; animation-duration: 27s; animation-delay: -18s; }
+@keyframes fallen-leaf {
+  0%, 64% { opacity: 0; transform: translate(0, 0) rotate(-25deg) scale(.65); }
+  72% { opacity: .8; transform: translate(2vw, -1vh) rotate(30deg) scale(.8); }
+  82% { transform: translate(6vw, 2vh) rotate(155deg) scale(.7); }
+  91% { opacity: .75; transform: translate(10vw, 1vh) rotate(235deg) scale(.95); }
+  100% { opacity: 0; transform: translate(14vw, 5vh) rotate(310deg) scale(.85); }
+}
+
+.rain-paused .autumn-leaves span { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .autumn-leaves span { animation: none; }
+}

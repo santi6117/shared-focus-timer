@@ -3,8 +3,8 @@
 // no per-frame JavaScript loop or canvas is needed. Phones keep their scene.
 import { REMOTE } from './device.js';
 
-export function init() {
-  if (REMOTE) return;
+export function init({ preview = false } = {}) {
+  if (REMOTE && !preview) return;
   const scene = document.querySelector('.rain-study');
   if (!scene || scene.dataset.initialized) return;
   scene.dataset.initialized = 'true';
@@ -32,7 +32,7 @@ export function init() {
   }
   // CSS handles the motion; this observer only suspends it when unused.
   function syncMotion() {
-    scene.classList.toggle('rain-paused', document.hidden || layer.dataset.bg !== 'rain');
+    scene.classList.toggle('rain-paused', document.hidden || !['rain', 'rain-autumn'].includes(layer.dataset.bg));
   }
   new MutationObserver(syncMotion).observe(layer, { attributes: true, attributeFilter: ['data-bg'] });
   document.addEventListener('visibilitychange', syncMotion);
