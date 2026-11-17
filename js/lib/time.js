@@ -28,6 +28,13 @@ export function formatTotal(seconds) {
   return Math.floor(minutes / 60) + "h " + (minutes % 60) + "m";
 }
 
+// Keep short sessions and the sum of task durations visible in a breakdown.
+export function formatDuration(seconds) {
+  const leftover = seconds % 60;
+  if (seconds < 60) return seconds ? seconds + "s" : "0m";
+  return leftover ? formatTotal(seconds - leftover) + " " + leftover + "s" : formatTotal(seconds);
+}
+
 // Boundaries are built from the local calendar rather than by subtracting
 // 86,400,000ms: a DST change makes a day something other than 24 hours, and
 // the arithmetic version quietly misfiles sessions for a week.

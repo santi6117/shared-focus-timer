@@ -35,23 +35,25 @@ export function totals(sessions, { startOfToday, startOfWeek }) {
   return { today, week, all };
 }
 
-// Per-category totals since `from`, ranked, with everything past the top
-// three collapsed into one remainder. The remainder exists so the
-// proportion bar always sums to the real total: a top three on its own
-// would render a week spread over six categories as though those three
-// were the whole week.
-export function breakdown(sessions, from, topN = 3) {
-  const byKey = {};
+// A private Progress assignment takes precedence over the text category.
+// Separate key spaces keep a standalone label and a same-named column distinct.
+export function breakdown(sessions, from, targetFor) {
+  const byKey = new Map();
   let grand = 0;
   for (const s of sessions) {
-    if (s.endedAt < from) continue;
-    const key = s.categoryKey || UNCATEGORIZED_KEY;
-    byKey[key] = (byKey[key] || 0) + s.elapsedSeconds;
+    if (s.endedAt < from || s.removed || !s.elapsedSeconds) continue;
+    const target = targetFor(s);
+    const columnId = target?.columnId;
+    const categoryKey = columnId ? undefined : s.categoryKey || UNCATEGORIZED_KEY;
+    const key = columnId ? "column:" + columnId : "category:" + categoryKey;
+    const group = byKey.get(key) || { key, categoryKey, columnId, seconds: 0, tasks: new Map() };
+    group.seconds += s.elapsedSeconds;
+    if (columnId) {
+      const taskId = target.taskId || null;
+      group.tasks.set(taskId, (group.tasks.get(taskId) || 0) + s.elapsedSeconds);
+    }
+    byKey.set(key, group);
     grand += s.elapsedSeconds;
   }
-  const ranked = Object.keys(byKey).sort((a, b) => byKey[b] - byKey[a]);
-  const top = ranked.slice(0, topN).map((key) => ({ key, seconds: byKey[key] }));
-  const rest = ranked.slice(topN);
-  const restSeconds = rest.reduce((n, k) => n + byKey[k], 0);
-  return { grand, top, restCount: rest.length, restSeconds };
+  return { grand, ranked: [...byKey.values()].sort((a, b) => b.seconds - a.seconds || a.key.localeCompare(b.key)) };
 }

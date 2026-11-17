@@ -45,11 +45,15 @@ describe('Dashboard time management', () => {
   it("filters by task, adds missed task time, and undoes a reassignment with its duration", async () => {
     app = await openApp({ seedDb: {
       sessions: { santi: { a: record } },
+      categories: { santi: { reading: { label: "Reading", color: "#c1714a" } } },
       progress: { santi: {
         board: {
-          columns: { work: { title: "Work", status: "active", position: 0 } },
+          columns: {
+            work: { title: "Work", status: "active", position: 0 },
+            writing: { title: "Writing", status: "active", position: 1 },
+          },
           tasks: {
-            notes: { title: "Write notes", columnId: "work", position: 0, completedAt: T0 - 1000 },
+            notes: { title: "Write notes", columnId: "writing", position: 0, completedAt: T0 - 1000 },
             reading: { title: "Read paper", columnId: "work", position: 1 },
           },
         },
@@ -58,22 +62,28 @@ describe('Dashboard time management', () => {
     } });
     await app.click("dashboardNav");
     await app.page.locator("#timeManager summary").click();
+    const categories = app.page.locator("#breakdownRows .cat-row .name");
+    assert.deepEqual(await categories.allTextContents(), ["Work"]);
+    await pick("timeFocusFilter", "Reading", "Reading Category");
+    assert.match(await app.text("timeHistoryCount"), /No sessions match/);
     await pick("timeFocusFilter", "Read paper", "Read paper Task · Work");
     assert.match(await row().innerText(), /30m · Read paper/);
     await row().getByRole("button", { name: "Edit", exact: true }).click();
-    await pick("timeFocusChoice", "Write notes", "Write notes Task · Work");
+    await pick("timeFocusChoice", "Write notes", "Write notes Task · Writing");
     await app.page.locator("#timeMinutes").fill("20");
     await app.click("timeSave");
     assert.match(await app.text("timeHistoryCount"), /No sessions match/);
-    await pick("timeFocusFilter", "Write notes", "Write notes Task · Work");
+    assert.deepEqual(await categories.allTextContents(), ["Writing"]);
+    await pick("timeFocusFilter", "Write notes", "Write notes Task · Writing");
     assert.match(await row().innerText(), /20m · Write notes/);
     const edited = await app.db("sessions/santi/a");
     const revision = edited.timeEdits[edited.activeEdit].progressRevision;
     assert.deepEqual(await app.db("progress/santi/links/a/targets/" + revision),
-      { columnId: "work", taskId: "notes" });
+      { columnId: "writing", taskId: "notes" });
     assert.equal(await app.db("progress/santi/links/a/note"), "Keep this note");
     assert.doesNotMatch(JSON.stringify(edited), /taskId|columnId|Write notes/);
     await row().getByRole("button", { name: "Undo", exact: true }).click();
+    assert.deepEqual(await categories.allTextContents(), ["Work"]);
     await pick("timeFocusFilter", "Read paper", "Read paper Task · Work");
     assert.match(await row().innerText(), /30m · Read paper/);
 

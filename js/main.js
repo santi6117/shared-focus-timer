@@ -24,9 +24,9 @@ import * as timerView from "./timer-view.js?v=20261106-compact-timer";
 import * as remoteView from "./remote-view.js";
 import * as presence from "./presence.js";
 import * as status from "./status.js";
-import * as stats from "./stats.js?v=20261113-lifetime-focus";
+import * as stats from "./stats.js?v=20261117-categories";
 import * as cottage from "./cottage.js";
-import * as timeManagement from "./time-management.js";
+import * as timeManagement from "./time-management.js?v=20261117-categories";
 import * as activityCalendar from "./activity-calendar.js";
 import * as note from "./note.js";
 import * as messages from "./messages.js";
@@ -37,8 +37,8 @@ import * as koi from "./koi.js";
 import * as swirl from "./swirl.js";
 import * as rain from "./rain.js?v=20261114-autumn";
 import * as navigation from "./navigation.js?v=20261112-progress";
-import * as progress from "./progress.js?v=20261114-task-highlight";
-import * as focusPicker from "./focus-picker.js";
+import * as progress from "./progress.js?v=20261117-categories";
+import * as focusPicker from "./focus-picker.js?v=20261117-categories";
 
 async function boot() {
   let user;

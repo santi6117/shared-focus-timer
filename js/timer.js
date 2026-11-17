@@ -73,6 +73,12 @@ export function focusTargetLocked() {
 
 export function setFocusTarget(target) {
   if (focusTargetLocked()) return false;
+  // A shared label belongs to the selected work. Keep it if the same task
+  // moves columns, and clear it when selecting different work.
+  const current = timer.focusTarget;
+  const sameTarget = current?.taskId || target?.taskId
+    ? current?.taskId === target?.taskId : current?.columnId === target?.columnId;
+  if (!sameTarget) timer.categoryLabel = "";
   timer.focusTarget = target ? { ...target, uid: ownerUid } : null;
   save();
   emit("target");

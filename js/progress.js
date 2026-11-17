@@ -3,7 +3,7 @@ import { REMOTE } from "./device.js";
 import { serverNow } from "./firebase.js";
 import * as timer from "./timer.js";
 import * as sessions from "./sessions.js";
-import { formatTotal } from "./lib/time.js";
+import { formatDuration as duration } from "./lib/time.js?v=20261117-categories";
 import * as store from "./progress-store.js";
 
 const $ = (id) => document.getElementById(id);
@@ -47,12 +47,6 @@ function colorPicker(selected = "default") {
   return el("fieldset", { class: "progress-colors" }, el("legend", {}, "Accent color"), ...choices);
 }
 function blankStats() { return { total: 0, week: 0, sessions: [] }; }
-function duration(seconds) {
-  const leftover = seconds % 60;
-  if (seconds < 60) return seconds ? seconds + "s" : "0m";
-  return leftover ? formatTotal(seconds - leftover) + " " + leftover + "s"
-    : formatTotal(seconds);
-}
 function date(timestamp) {
   return new Date(timestamp).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }

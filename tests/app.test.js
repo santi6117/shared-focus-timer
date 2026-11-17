@@ -766,22 +766,37 @@ describe("stats and breakdown", () => {
     assert.equal(await app.text("statCount"), "5 sessions logged");
   });
 
-  it("breakdown shows the top three, a remainder, and cycles periods", async () => {
-    app = await openApp({ seedDb });
+  it("shows five categories, includes the remainder in the total, and remembers Show all across periods", async () => {
+    const extra = [
+      { endedAt: T0 - 5000, elapsedSeconds: 120, categoryKey: "planning" },
+      { endedAt: T0 - 6000, elapsedSeconds: 60 },
+    ];
+    app = await openApp({ seedDb: { ...seedDb, sessions: { santi: {
+      ...seedDb.sessions.santi, f: extra[0], g: extra[1],
+    } } } });
     await app.run(300);
     await goTo(app, "dashboard");
-    assert.equal(await app.text("periodToggle"), "This week");
-    assert.equal(await app.text("breakdownTop"), "Thesis");
-    const rows = await app.page.locator("#breakdownRows .cat-row .name").allTextContents();
-    assert.deepEqual(rows, ["Thesis", "Tutoring", "Reading"]);
-    assert.equal(await app.text("breakdownMore"), "+ 1 more · 5m");
-    assert.equal(await app.page.locator("#shareBar div").count(), 4);
+    const rows = app.page.locator("#breakdownRows .cat-row .name");
+    const period = (value) => app.page.locator('[data-breakdown-period="' + value + '"]');
+    assert.equal(await period("week").getAttribute("aria-pressed"), "true");
+    assert.equal(await app.text("breakdownTotal"), "1h 53m total");
+    assert.deepEqual(await rows.allTextContents(), ["Thesis", "Tutoring", "Reading", "Email", "planning"]);
+    assert.equal(await app.text("breakdownMore"), "Show 1 more · 1m");
+    assert.equal(await app.page.locator("#shareBar div").count(), 6);
+    const widths = await app.page.locator("#shareBar div").evaluateAll((segments) =>
+      segments.reduce((sum, segment) => sum + parseFloat(segment.style.width), 0));
+    assert.ok(Math.abs(widths - 100) < 0.01);
 
-    await app.click("periodToggle");
-    assert.equal(await app.text("periodToggle"), "All time");
-    await app.click("periodToggle");
-    assert.equal(await app.text("periodToggle"), "Today");
-    assert.deepEqual(await app.page.locator("#breakdownRows .cat-row .name").allTextContents(), ["Tutoring", "Email"]);
+    await app.click("breakdownMore");
+    assert.equal(await rows.last().textContent(), "Uncategorized");
+    await period("today").click();
+    assert.deepEqual(await rows.allTextContents(), ["Tutoring", "Email", "planning", "Uncategorized"]);
+    assert.equal(await app.page.locator("#breakdownMore").isVisible(), false);
+    await period("all").click();
+    assert.equal(await rows.count(), 6);
+    assert.equal(await app.text("breakdownTotal"), "2h 3m total");
+    await app.click("breakdownMore");
+    assert.equal(await rows.count(), 5);
   });
 
   it("a finished session updates the totals live", async () => {
@@ -830,44 +845,30 @@ describe("shared lifetime focus", () => {
     assert.equal(await app.db(mine), 4500);
   });
 
-  it("flips to their lifetime total and back to your selected category period", async () => {
+  it("shows the partner lifetime total in Activity alongside the private category breakdown", async () => {
     app = await openApp({ seedDb });
     await app.remote(theirs, 4200);
     await goTo(app, "dashboard");
-    assert.equal(await app.text("whoseToggle"), "You");
-
-    await app.click("whoseToggle");
-    assert.equal(await app.text("whoseToggle"), "Kristina");
-    assert.equal(await app.text("breakdownLabel"), "Kristina");
-    assert.equal(await app.text("breakdownTop"), "1h 10m");
-    assert.equal(await app.text("breakdownMore"), "Lifetime focus time · 1h 10m");
-    assert.equal(await app.text("periodToggle"), "All time");
-    assert.equal(await app.page.locator("#periodToggle").isDisabled(), true);
-    assert.equal(await app.page.locator("#shareBar").isVisible(), false);
-    assert.equal(await app.page.locator("#breakdownRows .cat-row").count(), 0);
-
-    await app.click("whoseToggle");
-    assert.equal(await app.text("periodToggle"), "This week");
-    assert.equal(await app.text("breakdownTop"), "Thesis");
-    assert.equal(await app.page.locator("#periodToggle").isDisabled(), false);
-    assert.equal(await app.page.locator("#shareBar").isVisible(), true);
+    assert.equal(await app.text("statPartnerLabel"), "Kristina · All time");
+    assert.equal(await app.text("statPartnerTotal"), "1h 10m");
+    assert.equal(await app.text("breakdownTotal"), "10m total");
+    assert.deepEqual(await app.page.locator("#breakdownRows .name").allTextContents(), ["Thesis"]);
   });
 
   it("updates live, survives midnight, and distinguishes missing data from zero", async () => {
     app = await openApp({ time: new Date(2026, 8, 30, 23, 59).getTime() });
     assert.equal(await app.db(mine), 0);
     await goTo(app, "dashboard");
-    await app.click("whoseToggle");
-    assert.equal(await app.text("breakdownMore"), "Lifetime focus time unavailable");
+    assert.equal(await app.text("statPartnerTotal"), "—");
 
     await app.remote(theirs, 0);
-    assert.equal(await app.text("breakdownTop"), "0m");
+    assert.equal(await app.text("statPartnerTotal"), "0m");
     await app.remote(theirs, 1200);
-    assert.equal(await app.text("breakdownTop"), "20m");
+    assert.equal(await app.text("statPartnerTotal"), "20m");
     await app.run(2 * MIN);
-    assert.equal(await app.text("breakdownTop"), "20m");
+    assert.equal(await app.text("statPartnerTotal"), "20m");
     await app.remote(theirs, 1800);
-    assert.equal(await app.text("breakdownTop"), "30m");
+    assert.equal(await app.text("statPartnerTotal"), "30m");
   });
 
   it("the phone publishes nothing", async () => {

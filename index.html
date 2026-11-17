@@ -21,8 +21,8 @@
   <link rel="stylesheet" href="css/wallpapers/rain-window.css?v=20261116-leaves" />
   <link rel="stylesheet" href="css/wallpapers/hills.css" />
   <link rel="stylesheet" href="css/wallpapers/koi.css" />
-  <link rel="stylesheet" href="css/layout.css" />
-  <link rel="stylesheet" href="css/widgets.css?v=20261114-autumn" />
+  <link rel="stylesheet" href="css/layout.css?v=20261117-categories" />
+  <link rel="stylesheet" href="css/widgets.css?v=20261117-categories" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261106-matched-pills" />
   <link rel="stylesheet" href="css/cottage.css?v=20261031" />
   <link rel="stylesheet" href="css/progress.css?v=20261114-highlight-outline" />
@@ -240,7 +240,11 @@
       </div>
 
       <button id="openFocusPicker" type="button" aria-haspopup="dialog" aria-controls="focusPicker" hidden>
-        <span id="focusChoice">Working on…</span><span aria-hidden="true">⌄</span>
+        <span class="focus-choice-text">
+          <span id="focusChoice">Working on…</span>
+          <small id="focusChoiceCategory" hidden></small>
+        </span>
+        <span aria-hidden="true">⌄</span>
       </button>
       <p id="sessionSync" class="progress-muted" role="status" hidden></p>
 
@@ -301,13 +305,14 @@
       <div class="dashboard-insights" aria-label="Activity and categories">
       <section class="dashboard-card dashboard-activity" aria-labelledby="activityHeading">
         <h2 id="activityHeading">Activity</h2>
-        <p class="dashboard-caption">Your totals and current reporting periods.</p>
+        <p class="dashboard-caption">Your focus totals and your partner’s lifetime focus time.</p>
         <div id="cornerDock">
           <div id="statsWidget" class="expanded">
             <div id="statsPanel">
               <div class="stat-row"><span>Today</span><span id="statToday">—</span></div>
               <div class="stat-row"><span>This week</span><span id="statWeek">—</span></div>
               <div class="stat-row"><span>All time</span><span id="statAll">—</span></div>
+              <div class="stat-row stat-partner"><span id="statPartnerLabel">Partner · All time</span><span id="statPartnerTotal">—</span></div>
               <div class="stat-note" id="statCount">no sessions logged yet</div>
             </div>
             <button id="statsChip" type="button">
@@ -320,20 +325,23 @@
       </section>
       <section class="dashboard-card dashboard-breakdown" aria-labelledby="breakdownHeading">
         <h2 id="breakdownHeading">Category breakdown</h2>
-        <p class="dashboard-caption">Your categories by period and your partner’s lifetime focus time.</p>
         <div id="breakdownWidget" class="expanded">
           <div id="breakdownPanel">
-            <div id="shareBar"></div>
-            <div id="breakdownRows"></div>
-            <div id="breakdownMore"></div>
-            <div class="breakdown-toggles">
-              <button id="whoseToggle" type="button">You</button>
-              <button id="periodToggle" type="button">This week</button>
+            <div class="breakdown-controls">
+              <p id="breakdownTotal" role="status"></p>
+              <div class="breakdown-toggles" role="group" aria-label="Category period">
+                <button type="button" data-breakdown-period="today" aria-pressed="false">Today</button>
+                <button type="button" data-breakdown-period="week" aria-pressed="true">This week</button>
+                <button type="button" data-breakdown-period="all" aria-pressed="false">All time</button>
+              </div>
             </div>
+            <div id="shareBar" aria-hidden="true"></div>
+            <div id="breakdownRows"></div>
+            <button id="breakdownMore" type="button" aria-expanded="false" aria-controls="breakdownRows" hidden></button>
           </div>
-          <button id="breakdownChip" type="button">
-            <span id="breakdownCaret">▲</span>
-            <span class="chip-label" id="breakdownLabel">Categories</span>
+          <button id="breakdownChip" type="button" aria-expanded="true" aria-controls="breakdownPanel">
+            <span id="breakdownCaret" aria-hidden="true">▲</span>
+            <span class="chip-label">Categories</span>
             <span id="breakdownTop">—</span>
           </button>
         </div>
@@ -661,7 +669,7 @@
     <p id="focusEmpty" role="status" hidden></p>
     <footer class="focus-picker-actions">
       <button id="browseFocusChoices" type="button">Browse all</button>
-      <button id="editFocusCategory" type="button">Add category</button>
+      <button id="editFocusCategory" type="button" hidden>Add shared label</button>
       <button id="clearFocusChoice" type="button">Clear selection</button>
     </footer>
   </dialog>
@@ -686,6 +694,6 @@
 
   <!-- The app. type="module" runs after the page has parsed, so every
        element above exists by then. -->
-  <script type="module" src="js/main.js?v=20261114-autumn"></script>
+  <script type="module" src="js/main.js?v=20261117-categories"></script>
 </body>
 </html>

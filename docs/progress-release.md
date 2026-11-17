@@ -8,13 +8,21 @@ column picker and Move up / Move down actions for touch and keyboard use.
 
 Use **Focus** on a task, or open **Working on…** on the timer. The picker shows
 your two most recent choices in this browser. Search or browse for a task,
-column, or category, or type a new category. When a task or column is selected,
-you can also set an optional category from the picker. **Clear selection**
+column, or category, or type a new standalone category. A task shows its
+column on the timer. When a task or column is selected, you can set an
+optional shared label for your partner’s live timer view. **Clear selection**
 returns the timer to an unassigned session. Once a run starts, the target is
 locked through pauses. Reset ends the run and allows a new target. Open session
 notes from the task’s history, the column’s column-only history, or the
 Dashboard’s Time management list.
 The selected target stays in place for another run while it remains available.
+
+**Dashboard → Category breakdown** includes standalone categories and
+Progress columns. A task session contributes to its recorded column and
+appears in that column’s task breakdown. Expand a column to see its tasks
+and any time logged directly to it. The five largest categories appear first,
+and you can expand the full list for Today, This week, or All time. The
+partner’s lifetime focus time appears in **Activity**.
 
 In **Dashboard → Time management → Manage logged time**, use the focus picker
 to filter the session list by task, column, or category. Edit a matching

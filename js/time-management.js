@@ -6,9 +6,10 @@ import * as categories from "./categories.js";
 import { serverNow } from "./firebase.js";
 import { formatTotal } from "./lib/time.js";
 import { dateTimeInZone, validateWork } from "./lib/session-edits.js";
-import { showSession } from "./progress.js";
+import { showSession } from "./progress.js?v=20261117-categories";
 import * as progressStore from "./progress-store.js";
-import { openForTime, targetLabel } from "./focus-picker.js";
+import { openForTime, targetLabel, columnLabel } from "./focus-picker.js?v=20261117-categories";
+import { UNCATEGORIZED_KEY } from "./lib/categories.js";
 
 const $ = (id) => document.getElementById(id);
 const PAGE_SIZE = 5;
@@ -24,22 +25,22 @@ function sessionTarget(entry) {
 
 function renderDraftFocus() {
   if (!draftFocus) return;
-  $("timeFocusChoice").textContent = [targetLabel(draftFocus.target), draftFocus.categoryLabel]
-    .filter(Boolean).join(" · ") || "Unassigned";
+  const { target, categoryLabel } = draftFocus;
+  $("timeFocusChoice").textContent = assignmentLabel(target) || categoryLabel || "Unassigned";
+}
+
+function assignmentLabel(target) {
+  return target?.taskId ? targetLabel(target) + " · " + columnLabel(target) : targetLabel(target);
 }
 
 function pickDraftFocus() {
   openForTime({
     ...draftFocus, title: "Assign time to",
-    choose(choice, editingCategory) {
-      if (choice.target) {
-        draftFocus.target = choice.target;
-      } else {
-        if (!editingCategory) draftFocus.target = null;
-        draftFocus.categoryKey = choice.key;
-        draftFocus.categoryLabel = choice.label;
-        draftFocus.categorySelected = true;
-      }
+    choose(choice) {
+      draftFocus.target = choice.target || null;
+      draftFocus.categoryKey = choice.key || UNCATEGORIZED_KEY;
+      draftFocus.categoryLabel = choice.target ? "" : choice.label;
+      draftFocus.categorySelected = !choice.target;
       renderDraftFocus();
     },
   });
@@ -78,10 +79,10 @@ function openForm(entry = null) {
   $("timeZone").value = zone;
   $("timeMinutes").value = entry ? entry.elapsedSeconds / 60 : "";
   originalTarget = sessionTarget(entry);
-  const categoryKey = entry?.categoryKey || (!entry && historyFilter?.key) || "uncategorized";
+  const categoryKey = entry?.categoryKey || (!entry && historyFilter?.key) || UNCATEGORIZED_KEY;
   draftFocus = {
     target: entry ? originalTarget : historyFilter?.target || null, categoryKey,
-    categoryLabel: categoryKey === "uncategorized" ? "" : categories.labelFor(categoryKey),
+    categoryLabel: categoryKey === UNCATEGORIZED_KEY ? "" : categories.labelFor(categoryKey),
   };
   renderDraftFocus();
   $("timeSave").textContent = entry ? "Save correction" : "Add work";
@@ -99,8 +100,8 @@ function renderHistory() {
     : "Filter by task or category";
   const entries = sessions.history().filter((entry) => {
     if (!historyFilter) return true;
-    if (!filterTarget) return entry.categoryKey === historyFilter.key;
     const target = sessionTarget(entry);
+    if (!filterTarget) return !target && entry.categoryKey === historyFilter.key;
     return filterTarget.taskId ? target?.taskId === filterTarget.taskId : target?.columnId === filterTarget.columnId;
   }).sort((a, b) => b.endedAt - a.endedAt || a.id.localeCompare(b.id));
   page = Math.min(page, Math.max(0, Math.ceil(entries.length / PAGE_SIZE) - 1));
@@ -119,8 +120,8 @@ function renderHistory() {
     const title = document.createElement("strong");
     const target = sessionTarget(entry);
     title.textContent = (entry.elapsedSeconds < 60 ? entry.elapsedSeconds + "s" : formatTotal(entry.elapsedSeconds))
-      + (target ? " · " + targetLabel(target) : "")
-      + " · " + categories.labelFor(entry.categoryKey) + (entry.removed ? " · Removed" : "");
+      + " · " + (assignmentLabel(target) || categories.labelFor(entry.categoryKey))
+      + (entry.removed ? " · Removed" : "");
     const date = document.createElement("span");
     const zone = entry.timeZone || browserZone();
     try { date.textContent = new Date(entry.endedAt).toLocaleString(undefined, { timeZone: zone }) + " · " + zone; }

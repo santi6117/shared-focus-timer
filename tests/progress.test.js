@@ -233,12 +233,12 @@ describe("Progress timer attribution", () => {
     await pickFocus("Read paper", "Read paper Task · Research");
     await reload();
     assert.equal(await app.text("focusChoice"), "Read paper");
+    assert.equal(await app.text("focusChoiceCategory"), "Research");
     await openFocus();
     const recent = app.page.getByRole("group", { name: "Recent choices" });
     const choices = await recent.getByRole("button").evaluateAll((buttons) => buttons.map((button) => button.dataset.choice));
     assert.deepEqual(choices, ["task:read", "category:reading"]);
-    await control("Category · Reading").click();
-    await control("Clear category").click();
+    await control("Close focus picker").click();
     assert.equal(await app.text("focusChoice"), "Read paper");
     await app.click("startBtn");
     const room = await app.db("room/santi");
@@ -254,11 +254,12 @@ describe("Progress timer attribution", () => {
     await control("Focus on Read paper").click();
     assert.equal(await app.text("focusChoice"), "Read paper");
     await openFocus();
-    await control("Add category").click();
+    await control("Add shared label").click();
     await focusSearch().fill("Study");
     await focusSearch().press("Enter");
     assert.equal(await app.text("focusChoice"), "Read paper");
     await app.click("startBtn");
+    assert.equal((await app.db("room/santi")).category, "Study");
     await app.run(45_000);
     await app.click("pauseBtn");
     await app.run(25_000);
@@ -299,7 +300,11 @@ describe("Progress timer attribution", () => {
       taskId: "read", columnId: "research", note: "Worked through the examples.",
     });
     assert.equal((await app.sessions()).length, 1);
-    assert.equal(await app.text("focusChoice"), "Study");
+    assert.equal(await app.text("focusChoice"), "Working on…");
+    const rollup = app.page.locator("#breakdownRows");
+    assert.equal(await rollup.locator(".cat-row .name").allTextContents().then((labels) => labels.join()), "Research");
+    await rollup.locator("summary").click();
+    assert.match(await rollup.innerText(), /Read paper\s+1m 30s/);
 
     await app.page.locator("#dashboardView").getByRole("link", { name: "Progress" }).click();
     assert.match(await column("Research").textContent(), /Total 1m 30s · This week 1m 30s/);
@@ -340,6 +345,11 @@ describe("Progress timer attribution", () => {
     await app.click("startBtn");
     await app.run(MIN + 250);
     await app.click("resetBtn");
+    await app.click("dashboardNav");
+    const rollup = app.page.locator("#breakdownRows");
+    await rollup.locator("summary").click();
+    assert.match(await rollup.innerText(), /Research\s+11m\s+Without a task\s+11m\s+Uncategorized\s+1m/);
+    await app.page.locator("#dashboardView").getByRole("link", { name: "← Timer" }).click();
     await app.click("progressNav");
     assert.match(await column("Research").textContent(), /Total 1h 11m · This week 11m/);
     assert.equal((await app.sessions()).length, 5);

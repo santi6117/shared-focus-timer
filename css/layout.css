@@ -163,7 +163,10 @@ button:active { transform: translateY(1px); }
   font-size: 0.86rem;
 }
 #openFocusPicker[hidden], .remote #openFocusPicker, .is-compact #openFocusPicker { display: none; }
-#focusChoice { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.focus-choice-text { min-width: 0; text-align: left; }
+#focusChoice, #focusChoiceCategory { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#focusChoiceCategory { color: var(--ink-soft); }
+#focusChoiceCategory[hidden] { display: none; }
 #openFocusPicker [aria-hidden] { color: var(--ink-soft); }
 
 #focusPicker {

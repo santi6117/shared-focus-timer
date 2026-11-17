@@ -188,20 +188,20 @@ describe("categories", () => {
     ];
     assert.deepEqual(totals(s, { startOfToday: 200, startOfWeek: 100 }), { today: 30, week: 50, all: 60 });
   });
-  it("breakdown keeps the remainder so shares sum to the total", () => {
+  it("counts each session once and keeps a column's task and direct time within that column", () => {
     const s = [
       { endedAt: 10, elapsedSeconds: 100, categoryKey: "a" },
-      { endedAt: 10, elapsedSeconds: 50, categoryKey: "b" },
+      { endedAt: 10, elapsedSeconds: 50, categoryKey: "b", target: { columnId: "a", taskId: "t" } },
       { endedAt: 10, elapsedSeconds: 40 },
-      { endedAt: 10, elapsedSeconds: 30, categoryKey: "d" },
-      { endedAt: 10, elapsedSeconds: 20, categoryKey: "e" },
+      { endedAt: 10, elapsedSeconds: 30, target: { columnId: "a" } },
+      { endedAt: 10, elapsedSeconds: 20, target: { columnId: "a", taskId: "t" } },
+      { endedAt: 10, elapsedSeconds: 999, removed: true },
       { endedAt: 1, elapsedSeconds: 999, categoryKey: "old" },
     ];
-    const b = breakdown(s, 5);
+    const b = breakdown(s, 5, (session) => session.target);
     assert.equal(b.grand, 240);
-    assert.deepEqual(b.top.map((x) => x.key), ["a", "b", UNCATEGORIZED_KEY]);
-    assert.equal(b.restCount, 2);
-    assert.equal(b.restSeconds, 50);
+    assert.deepEqual(b.ranked.map(({ key }) => key), ["category:a", "column:a", "category:" + UNCATEGORIZED_KEY]);
+    assert.deepEqual(b.ranked[1].tasks, new Map([["t", 70], [null, 30]]));
   });
 });
 

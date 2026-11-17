@@ -1,3 +1,4 @@
+// Pick a standalone category, a Progress column, or a task within a column.
 import { ME } from "./identity.js";
 import * as categories from "./categories.js";
 import * as timer from "./timer.js";
@@ -12,7 +13,7 @@ const targetId = (target) => target.taskId ? "task:" + target.taskId : "column:"
 let storageKey;
 let recent = [];
 let browsing = false;
-let editingCategory = false;
+let editingSharedLabel = false;
 let previousTarget;
 let timeContext;
 
@@ -36,7 +37,7 @@ function availableChoices(board, categoryLabel, locked) {
     const choice = categoryChoice(currentCategory);
     if (!choices.has(choice.id)) choices.set(choice.id, choice);
   }
-  if (board && !locked && !editingCategory) {
+  if (board && !locked && !editingSharedLabel) {
     const visibleColumn = timeContext ? (column) => column.status !== "deleted" : store.activeColumn;
     const visibleTask = timeContext ? (task) => !task.deletedAt : store.activeTask;
     for (const column of store.ordered(board.columns, visibleColumn)) {
@@ -57,16 +58,16 @@ function availableChoices(board, categoryLabel, locked) {
 
 function applyChoice(choice) {
   if (timeContext) {
-    timeContext.choose(choice, editingCategory);
+    timeContext.choose(choice);
     $("focusPicker").close();
     return;
   }
   if (choice.target) {
     if (!store.state().ready || !timer.setFocusTarget(choice.target)) return;
   } else {
-    if (!editingCategory && !timer.focusTargetLocked() && timer.state().focusTarget) timer.setFocusTarget(null);
+    if (!editingSharedLabel && !timer.focusTargetLocked() && timer.state().focusTarget) timer.setFocusTarget(null);
     categories.setSelection(choice.label);
-    if (!editingCategory && choice.label) remember(choice);
+    if (!editingSharedLabel && choice.label) remember(choice);
   }
   $("focusPicker").close();
   render();
@@ -78,7 +79,7 @@ function resultButton(choice) {
   button.className = "focus-result";
   const label = document.createElement("span");
   label.textContent = choice.label;
-  if (choice.create) label.textContent = "Use “" + choice.label + "” as category";
+  if (choice.create) label.textContent = "Use “" + choice.label + "” as " + (editingSharedLabel ? "shared label" : "category");
   const detail = document.createElement("small");
   detail.textContent = choice.create ? "" : choice.detail;
   button.append(label, detail);
@@ -92,6 +93,9 @@ function render() {
   const { focusTarget, categoryLabel: timerCategory } = timer.state();
   const timerTarget = board ? focusTarget : null;
   $("focusChoice").textContent = targetLabel(timerTarget) || timerCategory || "Working on…";
+  const category = $("focusChoiceCategory");
+  category.hidden = !timerTarget?.taskId;
+  category.textContent = timerTarget?.taskId ? columnLabel(timerTarget) : "";
   if (!$("focusPicker").open) return;
 
   const target = timeContext ? timeContext.target : timerTarget;
@@ -99,7 +103,7 @@ function render() {
   const locked = !timeContext && timer.focusTargetLocked();
   const search = $("focusSearch");
   const term = search.value.trim();
-  const canSearch = !locked || !target || editingCategory;
+  const canSearch = !locked || !target || editingSharedLabel;
   const choices = availableChoices(board, categoryLabel, locked);
   const lower = term.toLocaleLowerCase();
   let results;
@@ -112,7 +116,7 @@ function render() {
     if (!timeContext?.filter && term.length <= 40 && category.key !== categories.keyFor("") && !choices.has(category.id)) {
       results.push({ ...category, create: true });
     }
-  } else if (browsing || editingCategory) {
+  } else if (browsing || editingSharedLabel) {
     results = [...choices.values()];
   } else {
     const selected = target ? targetId(target) : categoryLabel ? categoryChoice(categoryLabel).id : null;
@@ -123,46 +127,50 @@ function render() {
 
   const resultsEl = $("focusResults");
   const focused = resultsEl.contains(document.activeElement) ? document.activeElement.dataset.choice : null;
-  resultsEl.setAttribute("aria-label", !term && !browsing && !editingCategory ? "Recent choices" : "Focus choices");
+  resultsEl.setAttribute("aria-label", !term && !browsing && !editingSharedLabel ? "Recent choices" : "Focus choices");
   resultsEl.replaceChildren(...results.map((choice) => {
     const button = resultButton(choice);
     button.dataset.choice = choice.id;
     return button;
   }));
-  $("focusPickerTitle").textContent = editingCategory ? "Category" : timeContext?.title || "Working on";
-  $("focusPickerHint").hidden = Boolean(timeContext) || (!editingCategory && !locked);
-  $("focusPickerHint").textContent = editingCategory
-    ? "Your partner can see this category while you focus."
+  $("focusPickerTitle").textContent = editingSharedLabel ? "Shared label" : timeContext?.title || "Working on";
+  $("focusPickerHint").hidden = Boolean(timeContext) || (!editingSharedLabel && !locked);
+  $("focusPickerHint").textContent = editingSharedLabel
+    ? "Your partner can see this label while you focus."
     : "Reset to end this session before changing its task or column.";
   search.hidden = !canSearch;
   if (focused) {
     const previous = [...resultsEl.children].find((button) => button.dataset.choice === focused);
     (previous || (canSearch ? search : $("closeFocusPicker"))).focus();
   }
-  search.placeholder = board && !editingCategory && !locked
-    ? "Search tasks, columns, or categories" : "Search or type a category";
+  search.placeholder = editingSharedLabel ? "Search or type a shared label"
+    : board && !locked ? "Search tasks, columns, or categories" : "Search or type a category";
   const empty = $("focusEmpty");
   empty.hidden = !canSearch || !term || results.length > 0;
   empty.textContent = "No matches";
-  $("browseFocusChoices").hidden = !canSearch || editingCategory || browsing || Boolean(term) || !choices.size;
+  $("browseFocusChoices").hidden = !canSearch || editingSharedLabel || browsing || Boolean(term) || !choices.size;
   const edit = $("editFocusCategory");
-  edit.hidden = !target || Boolean(timeContext?.filter);
-  edit.textContent = editingCategory ? "Back to focus choices" : categoryLabel ? "Category · " + categoryLabel : "Add category";
+  edit.hidden = !target || Boolean(timeContext);
+  edit.textContent = editingSharedLabel ? "Back to focus choices"
+    : categoryLabel ? "Shared label · " + categoryLabel : "Add shared label";
   const clear = $("clearFocusChoice");
-  clear.hidden = editingCategory ? !categoryLabel : !(categoryLabel || target) || (locked && Boolean(target));
-  clear.textContent = editingCategory ? "Clear category" : timeContext?.filter ? "Clear filter" : "Clear selection";
+  clear.hidden = editingSharedLabel ? !categoryLabel : !(categoryLabel || target) || (locked && Boolean(target));
+  clear.textContent = editingSharedLabel ? "Clear shared label" : timeContext?.filter ? "Clear filter" : "Clear selection";
 }
 
 export function targetLabel(target) {
   if (!target) return "";
-  const board = store.state().board;
-  return board?.tasks[target.taskId]?.title || board?.columns[target.columnId]?.title || "Private focus";
+  return target.taskId ? store.state().board?.tasks[target.taskId]?.title || "Progress task" : columnLabel(target);
+}
+
+export function columnLabel(target) {
+  return store.state().board?.columns[target.columnId]?.title || "Progress column";
 }
 
 export function openForTime(context) {
   timeContext = context;
   browsing = false;
-  editingCategory = false;
+  editingSharedLabel = false;
   const search = $("focusSearch");
   search.value = "";
   $("focusPicker").showModal();
@@ -189,7 +197,7 @@ export function init(uid) {
     search.focus();
   });
   $("editFocusCategory").addEventListener("click", () => {
-    editingCategory = !editingCategory;
+    editingSharedLabel = !editingSharedLabel;
     search.value = "";
     render();
     (search.hidden ? $("editFocusCategory") : search).focus();

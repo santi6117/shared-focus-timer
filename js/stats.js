@@ -1,42 +1,47 @@
-// The two bottom-left widgets: total focused time (Today / This week / All
-// time) and the category split, which can show the partner’s lifetime total.
+// Dashboard focus totals and the period breakdown of the private session log.
 
 import * as sessions from "./sessions.js";
 import * as categories from "./categories.js";
+import * as progress from "./progress-store.js";
 import * as sharedFocus from "./shared-focus.js";
 import { THEM } from "./identity.js";
 import { DISPLAY_NAME } from "./config.js";
-import { OTHER_COLOR, totals, breakdown } from "./lib/categories.js";
-import { formatTotal, startOfDay, startOfWeek } from "./lib/time.js";
+import { CATEGORY_PALETTE, OTHER_COLOR, totals, breakdown } from "./lib/categories.js?v=20261117-categories";
+import { formatDuration, formatTotal, startOfDay, startOfWeek } from "./lib/time.js?v=20261117-categories";
 
-const PERIOD_LABELS = ["Today", "This week", "All time"];
-// Defaults to the week: today is often one category or empty, and all time
-// stops moving after a month and stops saying anything.
-let periodIndex = 1;
-// Each visit opens on your own category split.
-let showingTheirs = false;
-
+const VISIBLE_CATEGORIES = 5;
+const openColumns = new Set();
 const $ = (id) => document.getElementById(id);
+let period = "week";
+let showAll = false;
 
 export function init() {
   $("statsChip").addEventListener("click", () => $("statsWidget").classList.toggle("expanded"));
-  $("breakdownChip").addEventListener("click", () => $("breakdownWidget").classList.toggle("expanded"));
-  $("periodToggle").addEventListener("click", () => {
-    periodIndex = (periodIndex + 1) % PERIOD_LABELS.length;
-    renderBreakdown();
+  $("breakdownChip").addEventListener("click", (event) => {
+    const expanded = $("breakdownWidget").classList.toggle("expanded");
+    event.currentTarget.setAttribute("aria-expanded", expanded);
   });
-  $("whoseToggle").addEventListener("click", () => {
-    showingTheirs = !showingTheirs;
+  const periods = document.querySelectorAll("[data-breakdown-period]");
+  for (const button of periods) {
+    button.addEventListener("click", () => {
+      period = button.dataset.breakdownPeriod;
+      for (const control of periods) control.setAttribute("aria-pressed", control === button);
+      renderBreakdown();
+    });
+  }
+  $("breakdownMore").addEventListener("click", () => {
+    showAll = !showAll;
     renderBreakdown();
   });
 
   sessions.onChange(renderAll);
   categories.onChange(renderBreakdown);
-  sharedFocus.init(renderBreakdown);
+  progress.onChange(renderBreakdown);
+  $("statPartnerLabel").textContent = DISPLAY_NAME[THEM] + " · All time";
+  sharedFocus.init(renderPartnerTotal);
 
-  // Re-summed twice a minute so the buckets roll over at midnight without a
-  // refresh. A loop over a few hundred numbers.
-  setInterval(renderAll, 30000);
+  // Re-sum so Today and This week roll forward without a refresh.
+  setInterval(renderAll, 30_000);
   renderAll();
 }
 
@@ -56,84 +61,122 @@ function renderTotals() {
   $("statCount").textContent = log.length === 1 ? "1 session logged" : log.length + " sessions logged";
 }
 
-function periodStart() {
-  const now = Date.now();
-  if (periodIndex === 0) return startOfDay(now);
-  if (periodIndex === 1) return startOfWeek(now);
+function renderPartnerTotal() {
+  const total = sharedFocus.partnerTotal();
+  $("statPartnerTotal").textContent = total === null ? "—" : formatTotal(total);
+}
+
+function periodStart(now) {
+  if (period === "today") return startOfDay(now);
+  if (period === "week") return startOfWeek(now);
   return 0;
 }
 
-function swatchRow(color, label, seconds) {
-  const row = document.createElement("div");
-  row.className = "cat-row";
-  const swatch = document.createElement("span");
-  swatch.className = "swatch";
-  swatch.style.background = color;
+function categoryAppearance(group, board) {
+  if (!group.columnId) {
+    return { label: categories.labelFor(group.categoryKey), color: categories.colorFor(group.categoryKey) };
+  }
+  const column = board?.columns[group.columnId];
+  // Give columns with the default color a stable swatch even as their rank changes.
+  const hue = [...group.columnId].reduce((hash, letter) => (hash * 31 + letter.codePointAt(0)) % CATEGORY_PALETTE.length, 0);
+  return {
+    label: column?.title || "Progress column",
+    columnColor: column?.color || "default",
+    color: "var(--column-accent, " + CATEGORY_PALETTE[hue] + ")",
+  };
+}
+
+function rowContent(row, label, seconds) {
   const name = document.createElement("span");
   name.className = "name";
   name.textContent = label;
   const time = document.createElement("span");
   time.className = "time";
-  time.textContent = formatTotal(seconds);
-  row.append(swatch, name, time);
-  return row;
+  time.textContent = formatDuration(seconds);
+  row.append(name, time);
 }
 
-function segment(seconds, grand, color) {
+function categoryRow(group, board) {
+  const appearance = categoryAppearance(group, board);
+  const row = document.createElement(group.columnId ? "summary" : "div");
+  row.className = "cat-row";
+  const swatch = document.createElement("span");
+  swatch.className = "swatch";
+  paint(swatch, appearance);
+  row.append(swatch);
+  rowContent(row, appearance.label, group.seconds);
+  if (!group.columnId) return row;
+
+  const details = document.createElement("details");
+  details.className = "cat-column";
+  details.dataset.columnId = group.columnId;
+  details.open = openColumns.has(group.columnId);
+  details.append(row);
+
+  const tasks = document.createElement("div");
+  tasks.className = "cat-tasks";
+  // Keep direct column time below the tasks so it reads as part of the same total.
+  const ranked = [...group.tasks].sort(([a, aTime], [b, bTime]) =>
+    Number(a === null) - Number(b === null) || bTime - aTime);
+  for (const [taskId, seconds] of ranked) {
+    const task = document.createElement("div");
+    task.className = "cat-task";
+    const label = taskId ? board?.tasks[taskId]?.title || "Progress task" : "Without a task";
+    rowContent(task, label, seconds);
+    tasks.append(task);
+  }
+  details.append(tasks);
+  return details;
+}
+
+function paint(element, { color, columnColor }) {
+  if (columnColor) element.dataset.color = columnColor;
+  element.style.background = color;
+}
+
+function segment(seconds, grand, appearance) {
   const el = document.createElement("div");
   el.style.width = (seconds / grand * 100) + "%";
-  el.style.background = color;
+  paint(el, appearance);
   return el;
 }
 
-// Resolve the category keys for display using the owner's vocabulary.
-function mySplit() {
-  const b = breakdown(sessions.all(), periodStart());
-  return {
-    ...b,
-    top: b.top.map(({ key, seconds }) => ({
-      label: categories.labelFor(key), color: categories.colorFor(key), seconds,
-    })),
-  };
-}
-
 function renderBreakdown() {
-  const name = DISPLAY_NAME[THEM];
-  const bar = $("shareBar"), rows = $("breakdownRows"), more = $("breakdownMore");
+  const { board, links } = progress.state();
+  const { grand, ranked } = breakdown(sessions.all(), periodStart(Date.now()),
+    (session) => progress.sessionLink(session, links));
+  const bar = $("shareBar");
+  const rows = $("breakdownRows");
+  const more = $("breakdownMore");
+  const visible = showAll ? ranked : ranked.slice(0, VISIBLE_CATEGORIES);
+  const otherSeconds = grand - visible.reduce((sum, group) => sum + group.seconds, 0);
 
-  $("whoseToggle").textContent = showingTheirs ? name : "You";
-  $("periodToggle").textContent = showingTheirs ? "All time" : PERIOD_LABELS[periodIndex];
-  $("periodToggle").disabled = showingTheirs;
-  $("breakdownLabel").textContent = showingTheirs ? name : "Categories";
-  bar.hidden = showingTheirs;
-  bar.replaceChildren();
-  rows.replaceChildren();
-
-  if (showingTheirs) {
-    const total = sharedFocus.partnerTotal();
-    const formatted = total === null ? "—" : formatTotal(total);
-    $("breakdownTop").textContent = formatted;
-    more.textContent = total === null
-      ? "Lifetime focus time unavailable"
-      : "Lifetime focus time · " + formatted;
-    return;
+  // A time edit or clock refresh can reorder rows. Preserve the disclosures
+  // and keyboard focus by column ID, independently of each column's rank.
+  const focusedColumn = rows.contains(document.activeElement)
+    ? document.activeElement.closest("[data-column-id]")?.dataset.columnId : null;
+  for (const row of rows.querySelectorAll("[data-column-id]")) {
+    if (row.open) openColumns.add(row.dataset.columnId);
+    else openColumns.delete(row.dataset.columnId);
   }
 
-  const b = mySplit();
-  $("breakdownTop").textContent = b.top[0]?.label ?? "—";
-  if (!b.grand) {
-    more.textContent = "nothing logged " + PERIOD_LABELS[periodIndex].toLowerCase();
-    return;
-  }
-  // The neutral remainder keeps the bar proportional to the full total.
-  for (const { label, color, seconds } of b.top) {
-    bar.appendChild(segment(seconds, b.grand, color));
-    rows.appendChild(swatchRow(color, label, seconds));
-  }
-  if (b.restSeconds > 0) {
-    bar.appendChild(segment(b.restSeconds, b.grand, OTHER_COLOR));
-    more.textContent = "+ " + b.restCount + " more · " + formatTotal(b.restSeconds);
-  } else {
-    more.textContent = "";
+  const total = sessions.isInitialLoadComplete()
+    ? grand ? formatDuration(grand) + " total" : "No focus time in this period"
+    : "Loading focus time…";
+  if ($("breakdownTotal").textContent !== total) $("breakdownTotal").textContent = total;
+  $("breakdownTop").textContent = grand ? formatDuration(grand) : "—";
+  bar.hidden = !grand;
+  bar.replaceChildren(...visible.map((group) =>
+    segment(group.seconds, grand, categoryAppearance(group, board))));
+  if (otherSeconds) bar.append(segment(otherSeconds, grand, { color: OTHER_COLOR }));
+  rows.replaceChildren(...visible.map((group) => categoryRow(group, board)));
+
+  more.hidden = ranked.length <= VISIBLE_CATEGORIES;
+  more.setAttribute("aria-expanded", showAll);
+  more.textContent = showAll ? "Show top " + VISIBLE_CATEGORIES
+    : "Show " + (ranked.length - VISIBLE_CATEGORIES) + " more · " + formatDuration(otherSeconds);
+  if (focusedColumn) {
+    const summary = rows.querySelector('[data-column-id="' + CSS.escape(focusedColumn) + '"] summary');
+    (summary || (more.hidden ? $("breakdownChip") : more)).focus({ preventScroll: true });
   }
 }

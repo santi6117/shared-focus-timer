@@ -95,6 +95,7 @@
 }
 .stat-row span:first-child { color: var(--ink-soft); }
 .stat-row span:last-child { font-variant-numeric: tabular-nums; }
+.stat-partner { border-top: 1px solid var(--line); margin-top: 0.35rem; padding-top: 0.45rem; }
 
 .stat-note {
   margin-top: 0.5rem;
@@ -214,8 +215,7 @@
 }
 #breakdownWidget.expanded #breakdownPanel { display: block; }
 
-/* The proportion bar keeps the top three honest: everything outside them
-   is one neutral segment, so the shares always sum to the real total. */
+/* Keep the bar proportional to all focus time, including collapsed rows. */
 #shareBar {
   display: flex;
   height: 6px;
@@ -228,45 +228,63 @@
 #shareBar div { height: 100%; }
 
 .cat-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 0.65rem 8px minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.28rem 0;
+  min-height: 2.15rem;
+  padding: 0.3rem 0;
 }
-.cat-row .swatch { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.cat-row .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cat-row .time { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.cat-column > summary { list-style: none; cursor: pointer; }
+.cat-column > summary::-webkit-details-marker { display: none; }
+.cat-column > summary::before {
+  content: "";
+  width: 0.35rem;
+  height: 0.35rem;
+  border-right: 1px solid var(--ink-soft);
+  border-top: 1px solid var(--ink-soft);
+  transform: rotate(45deg);
+}
+.cat-column[open] > summary::before { transform: rotate(135deg); }
+.cat-column + *, #breakdownRows > .cat-row + * { border-top: 1px solid var(--line); }
+.cat-row .swatch { grid-column: 2; width: 8px; height: 8px; border-radius: 50%; }
+.cat-row .name, .cat-task .name { overflow-wrap: anywhere; }
+.cat-row .time, .cat-task .time { font-variant-numeric: tabular-nums; color: var(--ink-soft); white-space: nowrap; }
+.cat-tasks { padding: 0 0 0.45rem calc(1.65rem + 8px); }
+.cat-task { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.83rem; padding: 0.2rem 0; }
 
-#breakdownMore {
-  font-size: 0.78rem;
+.breakdown-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.7rem;
+}
+#breakdownTotal {
+  margin: 0;
   color: var(--ink-soft);
-  padding-top: 0.15rem;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Two pills under the split: whose time (you / them) and which period.
-   Separate from the chip so one click never means two things. */
 .breakdown-toggles {
   display: flex;
-  gap: 0.4rem;
-  margin-top: 0.55rem;
-  margin-bottom: 0.15rem;
+  flex-wrap: wrap;
+  gap: 0.3rem;
 }
-#whoseToggle,
-#periodToggle {
+.breakdown-toggles button, #breakdownMore {
   font: inherit;
   font-size: 0.75rem;
-  padding: 0.2rem 0.6rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--surface-sunk);
   color: var(--ink-soft);
   cursor: pointer;
 }
-#whoseToggle:hover,
-#periodToggle:hover { color: var(--ink); }
-/* Showing their day, the period is fixed at Today: only today is shared. */
-#periodToggle:disabled { cursor: default; opacity: 0.6; }
-#periodToggle:disabled:hover { color: var(--ink-soft); }
+.breakdown-toggles button:hover, #breakdownMore:hover { color: var(--ink); }
+.breakdown-toggles button[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+#breakdownMore { margin-top: 0.55rem; }
 
 /* ---- Note, bottom right ---- */
 #noteWidget {
