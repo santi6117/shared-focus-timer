@@ -126,13 +126,29 @@ export async function saveNote(id, expected, note) {
 
 // The session edit points to a private attribution. Stage it first so that
 // saving or undoing the session changes its time and attribution together.
+function attributionFor(target) {
+  return target ? { columnId: target.columnId, ...(target.taskId && { taskId: target.taskId }) }
+    : { unassigned: true };
+}
+
 export async function stageSessionTarget(id, target) {
   requireOnline();
   const revision = crypto.randomUUID();
-  const attribution = target ? { columnId: target.columnId, ...(target.taskId && { taskId: target.taskId }) }
-    : { unassigned: true };
-  await linksRef.child(id + "/targets/" + revision).set(attribution);
+  await linksRef.child(id + "/targets/" + revision).set(attributionFor(target));
   return revision;
+}
+
+export async function stageSessionTargets(entries) {
+  requireOnline();
+  const revisions = new Map();
+  const updates = {};
+  for (const { id, target } of entries) {
+    const revision = crypto.randomUUID();
+    revisions.set(id, revision);
+    updates[id + "/targets/" + revision] = attributionFor(target);
+  }
+  await linksRef.update(updates);
+  return revisions;
 }
 
 export function sessionLink(entry, associations = links) {

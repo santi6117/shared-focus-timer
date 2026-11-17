@@ -4,9 +4,10 @@ import * as sessions from "./sessions.js";
 import * as categories from "./categories.js";
 import * as progress from "./progress-store.js";
 import * as sharedFocus from "./shared-focus.js";
+import * as categoryEditor from "./category-editor.js?v=20261117-category-edit";
 import { THEM } from "./identity.js";
 import { DISPLAY_NAME } from "./config.js";
-import { CATEGORY_PALETTE, OTHER_COLOR, totals, breakdown } from "./lib/categories.js?v=20261117-categories";
+import { CATEGORY_PALETTE, OTHER_COLOR, totals, breakdown, normalizeKey } from "./lib/categories.js?v=20261117-categories";
 import { formatDuration, formatTotal, startOfDay, startOfWeek } from "./lib/time.js?v=20261117-categories";
 
 const VISIBLE_CATEGORIES = 5;
@@ -33,6 +34,7 @@ export function init() {
     showAll = !showAll;
     renderBreakdown();
   });
+  categoryEditor.init(renderBreakdown);
 
   sessions.onChange(renderAll);
   categories.onChange(renderBreakdown);
@@ -96,8 +98,7 @@ function rowContent(row, label, seconds) {
   row.append(name, time);
 }
 
-function categoryRow(group, board) {
-  const appearance = categoryAppearance(group, board);
+function categoryRow(group, board, appearance, duplicate) {
   const row = document.createElement(group.columnId ? "summary" : "div");
   row.className = "cat-row";
   const swatch = document.createElement("span");
@@ -105,7 +106,15 @@ function categoryRow(group, board) {
   paint(swatch, appearance);
   row.append(swatch);
   rowContent(row, appearance.label, group.seconds);
-  if (!group.columnId) return row;
+  const wrapper = document.createElement("div");
+  wrapper.className = "cat-group";
+  wrapper.dataset.categoryGroup = group.key;
+  const controls = categoryEditor.actions(group, appearance.label, board, duplicate);
+  if (!group.columnId) {
+    wrapper.append(row);
+    if (controls) wrapper.append(controls);
+    return wrapper;
+  }
 
   const details = document.createElement("details");
   details.className = "cat-column";
@@ -126,7 +135,9 @@ function categoryRow(group, board) {
     tasks.append(task);
   }
   details.append(tasks);
-  return details;
+  wrapper.append(details);
+  if (controls) wrapper.append(controls);
+  return wrapper;
 }
 
 function paint(element, { color, columnColor }) {
@@ -148,13 +159,21 @@ function renderBreakdown() {
   const bar = $("shareBar");
   const rows = $("breakdownRows");
   const more = $("breakdownMore");
-  const visible = showAll ? ranked : ranked.slice(0, VISIBLE_CATEGORIES);
+  const editing = categoryEditor.isEditing();
+  const visible = showAll || editing ? ranked : ranked.slice(0, VISIBLE_CATEGORIES);
   const otherSeconds = grand - visible.reduce((sum, group) => sum + group.seconds, 0);
+  const appearances = visible.map((group) => categoryAppearance(group, board));
+  const labelCounts = new Map();
+  if (editing) for (const { label } of appearances) {
+    const key = normalizeKey(label);
+    labelCounts.set(key, (labelCounts.get(key) || 0) + 1);
+  }
 
   // A time edit or clock refresh can reorder rows. Preserve the disclosures
   // and keyboard focus by column ID, independently of each column's rank.
-  const focusedColumn = rows.contains(document.activeElement)
-    ? document.activeElement.closest("[data-column-id]")?.dataset.columnId : null;
+  const focus = document.activeElement;
+  const focusGroup = rows.contains(focus) ? focus.closest("[data-category-group]")?.dataset.categoryGroup : null;
+  const focusLabel = focus.getAttribute("aria-label");
   for (const row of rows.querySelectorAll("[data-column-id]")) {
     if (row.open) openColumns.add(row.dataset.columnId);
     else openColumns.delete(row.dataset.columnId);
@@ -166,17 +185,21 @@ function renderBreakdown() {
   if ($("breakdownTotal").textContent !== total) $("breakdownTotal").textContent = total;
   $("breakdownTop").textContent = grand ? formatDuration(grand) : "—";
   bar.hidden = !grand;
-  bar.replaceChildren(...visible.map((group) =>
-    segment(group.seconds, grand, categoryAppearance(group, board))));
+  bar.replaceChildren(...visible.map((group, index) => segment(group.seconds, grand, appearances[index])));
   if (otherSeconds) bar.append(segment(otherSeconds, grand, { color: OTHER_COLOR }));
-  rows.replaceChildren(...visible.map((group) => categoryRow(group, board)));
+  rows.replaceChildren(...visible.map((group, index) => {
+    const appearance = appearances[index];
+    return categoryRow(group, board, appearance, labelCounts.get(normalizeKey(appearance.label)) > 1);
+  }));
 
-  more.hidden = ranked.length <= VISIBLE_CATEGORIES;
+  more.hidden = editing || ranked.length <= VISIBLE_CATEGORIES;
   more.setAttribute("aria-expanded", showAll);
   more.textContent = showAll ? "Show top " + VISIBLE_CATEGORIES
     : "Show " + (ranked.length - VISIBLE_CATEGORIES) + " more · " + formatDuration(otherSeconds);
-  if (focusedColumn) {
-    const summary = rows.querySelector('[data-column-id="' + CSS.escape(focusedColumn) + '"] summary');
-    (summary || (more.hidden ? $("breakdownChip") : more)).focus({ preventScroll: true });
+  if (focusGroup) {
+    const row = rows.querySelector('[data-category-group="' + CSS.escape(focusGroup) + '"]');
+    const control = focusLabel ? row?.querySelector('[aria-label="' + CSS.escape(focusLabel) + '"]')
+      : row?.querySelector("summary");
+    (control || $("breakdownEdit")).focus({ preventScroll: true });
   }
 }

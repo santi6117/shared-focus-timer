@@ -44,7 +44,14 @@ export function onChange(fn) { listeners.push(fn); }
 
 export function keyFor(typed) {
   const t = (typed || "").trim();
-  return t ? normalizeKey(t) : UNCATEGORIZED_KEY;
+  if (!t) return UNCATEGORIZED_KEY;
+  const normalized = normalizeKey(t);
+  if (Object.hasOwn(catMap, normalized)) return normalized;
+  // A rename preserves the storage key. Resolve the displayed label too so
+  // typing the new name reuses the renamed category.
+  return options().find(({ label }) => normalizeKey(label) === normalized)?.key
+    || Object.entries(catMap).find(([, value]) => Object.values(value.aliases || {}).includes(normalized))?.[0]
+    || normalized;
 }
 
 export function colorFor(key) {
@@ -59,18 +66,44 @@ export function labelFor(key) {
   return (catMap[key] && catMap[key].label) || key;
 }
 
+export async function rename(key, expectedLabel, label, historyKeys) {
+  const normalized = normalizeKey(label);
+  if (!normalized || normalized === UNCATEGORIZED_KEY) throw new Error("Choose a category name.");
+  let error;
+  const result = await refs.categories.transaction((current) => {
+    const record = current?.[key];
+    if ((record?.label || key) !== expectedLabel) {
+      error = "This category changed. Close and reopen the editor.";
+      return;
+    }
+    if (historyKeys.some((other) => other !== key && other === normalized)
+        || Object.entries(current || {}).some(([other, value]) => other !== key
+          && (other === normalized || normalizeKey(value.label || other) === normalized
+            || Object.values(value.aliases || {}).includes(normalized)))) {
+      error = "That category already exists. Use Transfer time to combine them.";
+      return;
+    }
+    // Keep earlier spellings usable for running timers and offline sessions
+    // that still refer to the previous display name.
+    const aliases = [...new Set([...Object.values(record?.aliases || {}), normalizeKey(expectedLabel)])]
+      .filter((alias) => alias !== key && alias !== normalized);
+    return { ...current, [key]: { color: pickColor(current || {}), ...record, label, aliases } };
+  }, undefined, false);
+  if (!result.committed) throw new Error(error || "The category could not be renamed.");
+}
+
 // Upsert the vocabulary entry when a session is logged under it. First use
 // fixes the label and colour; later uses only bump lastUsedAt, which orders
 // the chips. An established label wins over what was just typed, so a
 // hurried "thesis" never rewrites "Thesis" everywhere.
 export function recordUse(key, typed) {
   if (key === UNCATEGORIZED_KEY) return;
-  const known = catMap[key];
-  return refs.categories.child(key).update({
-    label: (known && known.label) || typed.trim(),
-    color: (known && known.color) || pickColor(catMap),
+  return refs.categories.child(key).transaction((current) => ({
+    ...current,
+    label: current?.label || typed.trim(),
+    color: current?.color || pickColor(catMap),
     lastUsedAt: TIMESTAMP,
-  });
+  }), undefined, false);
 }
 
 export function recentOptions() {
@@ -87,6 +120,11 @@ export function setSelection(label) {
 export function init() {
   refs.categories.on("value", (snap) => {
     catMap = snap.val() || {};
+    const { categoryLabel, focusTarget } = timer.state();
+    if (!focusTarget && categoryLabel) {
+      const latestLabel = catMap[keyFor(categoryLabel)]?.label;
+      if (latestLabel && latestLabel !== categoryLabel) setSelection(latestLabel);
+    }
     if (!ready) markReady();
     listeners.forEach((fn) => fn());
   });

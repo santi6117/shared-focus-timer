@@ -24,7 +24,7 @@ import * as timerView from "./timer-view.js?v=20261106-compact-timer";
 import * as remoteView from "./remote-view.js";
 import * as presence from "./presence.js";
 import * as status from "./status.js";
-import * as stats from "./stats.js?v=20261117-categories";
+import * as stats from "./stats.js?v=20261117-category-edit";
 import * as cottage from "./cottage.js";
 import * as timeManagement from "./time-management.js?v=20261117-categories";
 import * as activityCalendar from "./activity-calendar.js";

@@ -13,7 +13,7 @@ import { refs, TIMESTAMP } from "./firebase.js";
 import * as timer from "./timer.js";
 import * as categories from "./categories.js";
 import { readSession, reviseSession } from "./lib/session-edits.js";
-import { stageSessionTarget } from "./progress-store.js";
+import { stageSessionTarget, stageSessionTargets } from "./progress-store.js";
 
 const log = [];
 const listeners = [];
@@ -143,6 +143,38 @@ export async function changeSession(id, expectedVersion, change, target) {
     catch (error) { failure = error; return; }
   });
   if (!result.committed || !result.snapshot.exists()) throw failure || new Error("This session is unavailable. Refresh your history and try again.");
+}
+
+// The session-log transaction publishes every revision together. Staged
+// private links are inert until a session points to them.
+export async function changeSessionCategories(entries, { undo = false } = {}) {
+  if (!connected || !initialLoadComplete) throw new Error("Connect and wait for your history before saving changes.");
+  const targets = undo ? [] : entries.filter(({ target }) => target !== undefined);
+  const revisions = targets.length ? await stageSessionTargets(targets) : new Map();
+  let failure;
+  const result = await refs.sessions.transaction((raw) => {
+    if (raw === null) return raw;
+    const next = { ...raw };
+    try {
+      for (const { id, editVersion, categoryKey } of entries) {
+        const entry = readSession(id, raw[id]);
+        if (!entry || entry.removed) throw new Error("A session is no longer available.");
+        const progressRevision = revisions.get(id);
+        const change = undo ? "undo" : {
+          endedAt: entry.endedAt, elapsedSeconds: entry.elapsedSeconds, timeZone: entry.timeZone,
+          categoryKey, removed: false, ...(progressRevision && { progressRevision }),
+        };
+        next[id] = reviseSession(raw[id], editVersion, change, TIMESTAMP);
+      }
+      return next;
+    } catch (error) {
+      failure = error;
+      return;
+    }
+  }, undefined, false);
+  if (!result.committed || !result.snapshot.exists()) {
+    throw failure || new Error("The transfer could not be saved. Review your history and try again.");
+  }
 }
 
 export function newManualId() { return refs.sessions.push().key; }

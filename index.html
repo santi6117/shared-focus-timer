@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="css/wallpapers/hills.css" />
   <link rel="stylesheet" href="css/wallpapers/koi.css" />
   <link rel="stylesheet" href="css/layout.css?v=20261117-categories" />
-  <link rel="stylesheet" href="css/widgets.css?v=20261117-categories" />
+  <link rel="stylesheet" href="css/widgets.css?v=20261117-category-edit" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261106-matched-pills" />
   <link rel="stylesheet" href="css/cottage.css?v=20261031" />
   <link rel="stylesheet" href="css/progress.css?v=20261114-highlight-outline" />
@@ -333,11 +333,16 @@
                 <button type="button" data-breakdown-period="today" aria-pressed="false">Today</button>
                 <button type="button" data-breakdown-period="week" aria-pressed="true">This week</button>
                 <button type="button" data-breakdown-period="all" aria-pressed="false">All time</button>
+                <button id="breakdownEdit" type="button" aria-label="Edit categories" aria-pressed="false">Edit</button>
               </div>
             </div>
             <div id="shareBar" aria-hidden="true"></div>
             <div id="breakdownRows"></div>
             <button id="breakdownMore" type="button" aria-expanded="false" aria-controls="breakdownRows" hidden></button>
+            <div id="categoryEditFeedback" class="category-edit-feedback">
+              <span id="categoryEditStatus" role="status"></span>
+              <button id="categoryUndoTransfer" type="button" hidden>Undo transfer</button>
+            </div>
           </div>
           <button id="breakdownChip" type="button" aria-expanded="true" aria-controls="breakdownPanel">
             <span id="breakdownCaret" aria-hidden="true">▲</span>
@@ -658,6 +663,26 @@
     </div>
   </main>
   <dialog id="progressDialog" aria-labelledby="progressDialogTitle"></dialog>
+  <dialog id="categoryEditor" aria-labelledby="categoryEditTitle">
+    <form id="categoryEditForm">
+      <h2 id="categoryEditTitle"></h2>
+      <p id="categoryEditSummary"></p>
+      <label id="categoryEditNameField" hidden>
+        Name
+        <input id="categoryEditName" type="text" autocomplete="off" />
+      </label>
+      <label id="categoryEditDestinationField" hidden>
+        Move time to
+        <select id="categoryEditDestination"></select>
+      </label>
+      <p id="categoryEditImpact" hidden></p>
+      <p id="categoryEditError" role="alert" hidden></p>
+      <div class="category-edit-actions">
+        <button id="categoryEditCancel" type="button">Cancel</button>
+        <button id="categoryEditSave" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
   <dialog id="focusPicker" aria-labelledby="focusPickerTitle">
     <header class="focus-picker-header">
       <h2 id="focusPickerTitle">Working on</h2>
@@ -694,6 +719,6 @@
 
   <!-- The app. type="module" runs after the page has parsed, so every
        element above exists by then. -->
-  <script type="module" src="js/main.js?v=20261117-categories"></script>
+  <script type="module" src="js/main.js?v=20261117-category-edit"></script>
 </body>
 </html>

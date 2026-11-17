@@ -24,6 +24,13 @@ and any time logged directly to it. The five largest categories appear first,
 and you can expand the full list for Today, This week, or All time. The
 partner’s lifetime focus time appears in **Activity**.
 
+Select **Edit** beside the period controls to rename a category or transfer
+all of its logged sessions to another category. **Undo transfer** reverses
+the latest transfer on that page. Transfers between Progress columns keep
+task assignments. Transfers to standalone categories clear those assignments
+from the affected sessions, and Undo restores them. Transferring history
+keeps the source category available for future sessions.
+
 In **Dashboard → Time management → Manage logged time**, use the focus picker
 to filter the session list by task, column, or category. Edit a matching
 session’s minutes or assignment, or assign a task when adding missed work.
