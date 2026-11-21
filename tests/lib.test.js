@@ -277,9 +277,10 @@ describe("wallpapers", () => {
     assert.deepEqual(newlyUnlocked(120 * H, ["rain"]), []);
     assert.deepEqual(newlyUnlocked(150 * H - 1, ["rain"]), []);
     assert.deepEqual(newlyUnlocked(150 * H, ["rain"]), ["rain-autumn"]);
-    assert.deepEqual(newlyUnlocked(175 * H, ["rain", "rain-autumn"]), []);
-    assert.deepEqual(newlyUnlocked(250 * H, ["rain", "rain-autumn"]), ["hills"]);
-    assert.deepEqual(newlyUnlocked(350 * H, ["rain", "rain-autumn", "hills"]), ["koi"]);
+    assert.deepEqual(newlyUnlocked(175 * H - 1, ["rain", "rain-autumn"]), []);
+    assert.deepEqual(newlyUnlocked(175 * H, ["rain", "rain-autumn"]), ["rain-summer"]);
+    assert.deepEqual(newlyUnlocked(250 * H, ["rain", "rain-autumn", "rain-summer"]), ["hills"]);
+    assert.deepEqual(newlyUnlocked(350 * H, ["rain", "rain-autumn", "rain-summer", "hills"]), ["koi"]);
   });
 });
 

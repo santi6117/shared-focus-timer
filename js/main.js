@@ -31,7 +31,7 @@ import * as activityCalendar from "./activity-calendar.js";
 import * as note from "./note.js";
 import * as messages from "./messages.js";
 import * as alert from "./alert.js";
-import * as wallpapers from "./wallpapers.js?v=20261114-autumn";
+import * as wallpapers from "./wallpapers.js?v=20261121-summer";
 import * as sky from "./sky.js";
 import * as koi from "./koi.js";
 import * as swirl from "./swirl.js";

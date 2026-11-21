@@ -1,0 +1,61 @@
+/* Summer keeps the softened painting on a static layer. The six blooms
+   and petals move independently above it, with the same paths on each load. */
+.wp-summer { background: #778e76; }
+.summer-village, .summer-flowers { position: absolute; inset: 0; pointer-events: none; }
+.summer-village {
+  background: url('../../assets/summer-village.jpg') center / cover no-repeat;
+  filter: blur(1.5px);
+  transform: scale(1.014);
+}
+.thumb-rain-summer { background: #778e76 url('../../assets/summer-village.jpg') center / cover; }
+
+.summer-flower {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: clamp(7px, var(--size), 23px);
+  aspect-ratio: 1;
+  opacity: 0;
+  animation: summer-drift var(--period) var(--delay) linear infinite;
+}
+.summer-cream { --light: #fff6d8; --shade: #e2bd8e; }
+.summer-rose { --light: #ffd0d4; --shade: #cc7d90; }
+.summer-apricot { --light: #ffdfa6; --shade: #db9c66; }
+.summer-flower > i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 .5px .8px #52462a55) blur(.25px);
+}
+
+/* Overlapping gradients keep the edges soft at the flowers' small sizes. */
+.summer-flower:not(.summer-petal) > i {
+  background:
+    radial-gradient(circle at 50% 50%, #efc777 0 9%, #aa743f 12%, transparent 16%),
+    radial-gradient(ellipse 24% 33% at 49% 29%, var(--light) 40%, var(--shade) 82%, transparent 90%),
+    radial-gradient(ellipse 30% 22% at 73% 46%, var(--light) 40%, var(--shade) 82%, transparent 90%),
+    radial-gradient(ellipse 23% 30% at 65% 71%, var(--light) 40%, var(--shade) 82%, transparent 90%),
+    radial-gradient(ellipse 23% 29% at 34% 69%, var(--light) 40%, var(--shade) 82%, transparent 90%),
+    radial-gradient(ellipse 29% 21% at 25% 44%, var(--light) 40%, var(--shade) 82%, transparent 90%);
+}
+.summer-petal > i {
+  border-radius: 74% 44% 58% 24%;
+  transform: scaleX(.68);
+  background: radial-gradient(ellipse at 66% 22%, var(--light) 20%, var(--shade) 92%);
+}
+
+@keyframes summer-drift {
+  0%   { opacity: 0; transform: translate(-23vw, 0) rotate(-40deg) scale(.72); }
+  13%  { opacity: .78; }
+  30%  { transform: translate(-9vw, -2.8vh) rotate(56deg) scale(.92, .75); }
+  57%  { transform: translate(4vw, -1vh) rotate(142deg) scale(.63, .98); }
+  79%  { transform: translate(17vw, 2.8vh) rotate(224deg) scale(.92, .7); opacity: .81; }
+  100% { opacity: 0; transform: translate(28vw, 7vh) rotate(318deg) scale(.8, .94); }
+}
+.wallpaper-paused .summer-flower { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .summer-flower { animation: none; }
+}
+@media (max-width: 600px) {
+  .summer-village { background-position: 30% center; }
+}

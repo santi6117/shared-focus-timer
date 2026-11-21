@@ -1369,7 +1369,7 @@ describe("wallpapers", () => {
     await goTo(app, "dashboard");
     const variants = app.page.getByRole("group", { name: "Rainy window variants" });
     assert.equal(await variants.getByRole("button").count(), 2);
-    assert.equal(await option(app, "rain-next").isDisabled(), true);
+    assert.equal(await option(app, "rain-summer").isDisabled(), true);
     await option(app, "rain-autumn").click();
     assert.equal(await bg(app), "rain-autumn");
     assert.equal(await app.page.locator(".autumn-leaves").isVisible(), true);
@@ -1380,6 +1380,56 @@ describe("wallpapers", () => {
     await app.page.locator("#dashboardView").waitFor({ state: "visible" });
     await option(app, "rain").click();
     assert.equal(await bg(app), "rain");
+  });
+
+  it("unlocks Summer at 175 hours and plays the breeze only in view", async () => {
+    app = await openApp({ seedDb: hours(175), reducedMotion: "no-preference" });
+    await app.run(250);
+    await goTo(app, "dashboard");
+    const summer = option(app, "rain-summer");
+    assert.equal((await summer.textContent()).trim(), "Summer");
+    await summer.click();
+    assert.equal(await bg(app), "rain-summer");
+    assert.equal(await app.page.locator(".wp-rain").first().isVisible(), false);
+    const painting = app.page.locator(".summer-village");
+    assert.equal(await painting.evaluate(el => getComputedStyle(el).filter), "blur(1.5px)");
+    await painting.evaluate(async el => {
+      const source = getComputedStyle(el).backgroundImage.match(/url\("([^"]+)"\)/)[1];
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+    });
+    const flowers = app.page.locator(".summer-flower");
+    assert.equal(await flowers.count(), 6);
+    const flower = flowers.first();
+    const playState = () => flower.evaluate(el => getComputedStyle(el).animationPlayState);
+    assert.equal(await playState(), "running");
+    await app.page.evaluate(() => {
+      Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    assert.equal(await playState(), "paused");
+    await app.page.evaluate(() => {
+      delete document.hidden;
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    assert.equal(await playState(), "running");
+    await app.page.reload();
+    await app.run(50);
+    assert.equal(await bg(app), "rain-summer");
+    await app.page.emulateMedia({ reducedMotion: "reduce" });
+    assert.equal(await flower.evaluate(el => getComputedStyle(el).animationName), "none");
+    await option(app, "rain-autumn").click();
+    assert.equal(await painting.isVisible(), false);
+  });
+
+  it("previews the Summer painting on the phone", async () => {
+    app = await openApp({ device: "phone" });
+    await app.page.goto(app.page.url().split("?")[0] + "?me=santi&device=phone&bg=rain-summer");
+    await app.run(250);
+    assert.equal(await bg(app), "rain-summer");
+    assert.equal(await app.page.locator(".summer-village").isVisible(), true);
+    assert.equal(await app.page.evaluate(() => localStorage.getItem("wallpaper:santi")), null);
   });
 
   it("marks a new unlock until the dashboard is opened", async () => {

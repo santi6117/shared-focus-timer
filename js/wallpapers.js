@@ -20,7 +20,7 @@ import { REMOTE } from "./device.js";
 import * as sessions from "./sessions.js";
 import {
   WALLPAPERS, isUnlocked, progressLabel, resolveWallpaper, newlyUnlocked,
-} from "./lib/wallpapers.js?v=20261114-autumn";
+} from "./lib/wallpapers.js?v=20261121-summer";
 
 const CHOICE_KEY = "wallpaper:" + ME;
 const SEEN_KEY = "wallpapersSeen:" + ME;
@@ -40,6 +40,10 @@ let current;
 export function init() {
   current = resolveWallpaper(load(CHOICE_KEY, null), preview);
   apply();
+  // Pause the independent flower layer when either device backgrounds the page.
+  const syncMotion = () => $("backgroundLayer").classList.toggle("wallpaper-paused", document.hidden);
+  document.addEventListener("visibilitychange", syncMotion);
+  syncMotion();
   // The phone has no stats panel to hold a picker; it shows whatever it
   // last had, which is the default unless previewed.
   if (REMOTE) return;

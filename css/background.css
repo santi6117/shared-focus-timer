@@ -38,6 +38,7 @@
 #backgroundLayer[data-bg="swirl"] .wp-swirl,
 #backgroundLayer[data-bg="rain"]  .wp-rain,
 #backgroundLayer[data-bg="rain-autumn"] .wp-rain,
+#backgroundLayer[data-bg="rain-summer"] .wp-summer,
 #backgroundLayer[data-bg="hills"] .wp-hills,
 #backgroundLayer[data-bg="koi"]   .wp-koi   { display: block; }
 

@@ -528,6 +528,8 @@ focus session). A phone is a remote.
 |---|---|---|
 | Swirl (§6c) | always | built |
 | Rainy window | 100 h | watercolor/glass redesign approved 2026-10-18 (laptop); existing phone scene retained |
+| Autumn Dusk | 150 h | built, with six drifting leaves on laptop |
+| Summer | 175 h | built, with six drifting blooms and petals |
 | Paper hills, live sky | 200 h | built 2026-10-03, awaiting feedback |
 | Koi pond | 300 h | built 2026-10-03, awaiting feedback |
 
@@ -546,6 +548,8 @@ focus session). A phone is a remote.
 - **Same rules as §6c:** only `transform` and `opacity` animate; no animated blur,
   gradients fade to the same hex at alpha `00`, reduced motion freezes.
 - **The phone has no picker** and shows the swirl unless previewed.
+- **Summer** uses the same still painting and breeze on laptop and phone, with
+  the crop shifted toward the couple and Yorkie on narrow screens.
 - **Rainy window, laptop (2026-10-18):** approved watercolor illustration on
   textured paper, with clearer foreground houses and a soft distant village.
   `css/wallpapers/rain-window.css` layers static haze/warmth and glass over
